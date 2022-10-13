@@ -1,0 +1,22 @@
+It was designed so that a victim downloads a 7z file from the link shown in figure 1 that contains this new variant of HawkEye and runs it on the victim's system.
+After the downloaded 7z file was decompressed, we retrieved the EXE file "TICKET%2083992883992AIR8389494VERVED37783PDF.exe", which is the new variant of HawkEye.
+Once HawkEye started, it spawned a suspended child process, "RegAsm.exe", from the Microsoft .Net framework installation directory – which is a tool for Assembly Registration.
+Meanwhile, HawkEye extracted a PE file into its memory and then moved the PE file into "RegAsm.exe".
+HawkEye_RegAsm performs a similar task as to the RegAsm.exe. 
+It spawns two suspended child processes, "vbc.exe", which are from the same directory as RegAsm.exe. 
+HawkEye dynamically extracts two PE files into its memory, which are then copied into the two newly created child processes of "vbc.exe". 
+It also modifies its ThreadContext data (It calls the API, SetThreadContext) and makes its entry point to the transfered PE file. 
+When "vbc.exe" resumes running it can be executed.
+They first call a function to collect credentials and save them in memory, and second, it reads the collected data, formats it, and saves it to a tmp file from its command line parameter.
+The first "vbs.exe" collects credentials from victim's browsers and the system credential manager for IE.
+The two "vbc.exe" processes collect credentials from the victim's system.
+The collected credentials are then saved into the tmp file from its command line parameter. 
+HawkEye_RegAsm keeps checking this tmp file, and once the credentials are collected, it is done. 
+HawkEye_RegAsm then reads the entire data of this tmp file into its memory and the deletes it immediately.
+You can see the full path of “vbc.exe”. “/stext ""C:\Users\*********\AppData\Local\Temp\tmpBE3D.tmp""" is the parameter passed to it. 
+The tmp file name is random and different from the two “vbc.exe” processes, which temporarily saves collected credentials.
+The second PE file in "vbc.exe" not only collects the client's login username and password, but also profile information, such as the recipent Server address, recipient Server Port, protocol Type (POP3), SMTP Server, SMTP Port, etc.
+The same tmp file is finally read by HawkEye_RegAsm and then deleted.
+In its main program, it calls Thread.Sleep(600000), and pauses while collecting credentials every 10 minutes.
+It first sends an HTTP request, http://bot.whatismyipaddress.com, to ask for my machine's public IP.
+The decompressed exe file is detected as "AutoIt/Injector.EAH!tr" by the FortiGuard Antivirus service.

@@ -1,13 +1,11 @@
 The first task of the malware is to install the file credprov.tlb in %APPDATA%\Microsoft\. This file is the main payload of the malware. 
-
 The dropper executes the following command in order to install a second file: rundll32.exe %APPDATA%\Microsoft\credprov.tlb, Install %APPDATA%\Microsoft\shdocvw.tlp
-
-To be started during the boot process of the infected machine, the malware creates the following registry key:
-HKCU\Software\Classes\CLSID\{42aedc87-2188-41fd-b9a3-0c966feabec1}\InprocServer32 = %APPDATA%\shdocvw.tlp
-
+To be started during the boot process of the infected machine, the malware creates the following registry key: HKCU\Software\Classes\CLSID\{42aedc87-2188-41fd-b9a3-0c966feabec1}\InprocServer32 = %APPDATA%\shdocvw.tlp
 If the version of the malware is older than 3.26, the dropper creates an additional file called winview.ocx.
-
+During the startup of the infected machine, the shdocvw.tlp library is loaded into all processes.
+If the process is explorer.exe, this library will load the other library called credprov.tlb.
 Two log files are created during the malware execution: mskfp32.ocx and msvcrtd.tlb.
+In any case, the ComRAT developers implemented new mechanisms, changed keys, removed log files to hide their activities and tried to disguise the connections between the RAT ComRAT, the rootkit Uroburos and the RAT Agent.BTZ as much as possible.
 06.11.2014 22:55:55 Removing C:\Documents and Settings\user1\Application Data\\Microsoft\\shdocvw.tlb [2]
 06.11.2014 22:55:55 Removing C:\Documents and Settings\user1\Application Data\\Microsoft\\oleaut32.dll [2]
 06.11.2014 22:55:55 Removing C:\Documents and Settings\user1\Application Data\\Microsoft\\oleaut32.tlb [2]

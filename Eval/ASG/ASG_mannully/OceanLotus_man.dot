@@ -1,0 +1,48 @@
+digraph "OceanLotus_man.dot" {
+rankdir="LR"
+size="9"
+fixedsize="false"
+splines="true"
+nodesep=0.3
+ranksep=0
+fontsize=10
+overlap="scalexy"
+engine= "neato"
+	"*.\%exe\%_P" [node_type=Process shape=box]
+	"*_P" [node_type=Process shape=box]
+	"\%Microsoft Word\%_P" [node_type=Process shape=box]
+	rastlsc_P [node_type=Process shape=box]
+	"\%temp\%\\_P" [node_type=Process shape=box]
+	"*\\rastlsc.\%exe\%_P" [node_type=Process shape=box]
+	"*.\%exe\%_F2" [node_type=File shape=ellipse]
+	"\%temp\%\\*_F3" [node_type=File shape=ellipse]
+	"\%temp\%\\[0-9].tmp.\%exe\%_F2" [node_type=File shape=ellipse]
+	"*\\rastlsc.\%exe\%_F2" [node_type=File shape=ellipse]
+	"*\\rastls.dll_F1" [node_type=File shape=ellipse]
+	"*\\(Sylog.bin|OUTLFLTR.DAT)_F3" [node_type=File shape=ellipse]
+	"*\\HTTPProv.dll_F1" [node_type=File shape=ellipse]
+	"\\SOFTWARE\\Classes\\AppX*_R1" [node_type=Registry shape=parallelogram]
+	"SOFTWARE\\Classes\\CLSID\\{E3517E26-8E93-458D-A6DF-8030BC80528B}_R1" [node_type=Registry shape=parallelogram]
+	"\%External IP address\%_S" [node_type=Socket shape=diamond]
+	"*_P" -> "*.\%exe\%_P" [label="1: write"]
+	"*.\%exe\%_P" -> "*.\%exe\%_F2" [label="2: exec"]
+	"*_P" -> "\%temp\%\\*_F3" [label="3: write"]
+	"*_P" -> "\%temp\%\\[0-9].tmp.\%exe\%_F2" [label="4: write"]
+	"*_P" -> "\%Microsoft Word\%_P" [label="5: fork"]
+	"\%Microsoft Word\%_P" -> "\%temp\%\\[0-9].tmp.\%exe\%_F2" [label="6: exec"]
+	"\%Microsoft Word\%_P" -> "\%temp\%\\_P" [label="7: fork"]
+	"\%temp\%\\_P" -> "\%temp\%\\*_F3" [label="8: exec"]
+	"*_P" -> "*\\rastlsc.\%exe\%_F2" [label="9: write"]
+	"*_P" -> "*\\rastls.dll_F1" [label="10: write"]
+	"*_P" -> "*\\(Sylog.bin|OUTLFLTR.DAT)_F3" [label="11: write"]
+	"*_P" -> rastlsc_P [label="12: fork"]
+	rastlsc_P -> "*\\rastlsc.\%exe\%_P" [label="13: fork"]
+	"*\\rastlsc.\%exe\%_P" -> "*\\rastlsc.\%exe\%_F2" [label="14: exec"]
+	rastlsc_P -> "*\\(Sylog.bin|OUTLFLTR.DAT)_F3" [label="15: load"]
+	rastlsc_P -> "*\\rastls.dll_F1" [label="16: read"]
+	rastlsc_P -> "\\SOFTWARE\\Classes\\AppX*_R1" [label="17: read"]
+	rastlsc_P -> "*\\HTTPProv.dll_F1" [label="18: load"]
+	rastlsc_P -> "SOFTWARE\\Classes\\CLSID\\{E3517E26-8E93-458D-A6DF-8030BC80528B}_R1" [label="19: write"]
+	rastlsc_P -> "\%External IP address\%_S" [label="20: write"]
+	"\%External IP address\%_S" -> rastlsc_P [label="21: read"]
+}

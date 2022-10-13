@@ -1,0 +1,1 @@
+useradd -M -N -r -s /bin/bash -c evil_account test218

@@ -1,0 +1,1 @@
+rm -f  /home/spade/CAM.zip

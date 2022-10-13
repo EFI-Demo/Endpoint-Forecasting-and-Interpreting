@@ -1,0 +1,36 @@
+digraph "ccleaner attack_man.dot" {
+rankdir="LR"
+size="9"
+fixedsize="false"
+splines="true"
+nodesep=0.3
+ranksep=0
+fontsize=10
+overlap="scalexy"
+engine= "neato"
+	scp_P [node_type=Process shape=box]
+	"unknown location_S" [node_type=Socket shape=diamond]
+	"unknown location_S" -> scp_P [label="1: receive"]
+	"/home/admin/ccleaner_F3" [node_type=File shape=ellipse]
+	scp_P -> "/home/admin/ccleaner_F3" [label="2: write"]
+	firefox_P [node_type=Process shape=box]
+	"64.95.25.213_S" [node_type=Socket shape=diamond]
+	firefox_P -> "64.95.25.213_S" [label="3: send"]
+	"64.95.25.213_S" -> firefox_P [label="4: receive"]
+	SrcSinkObject_F3 [node_type=File shape=ellipse]
+	firefox_P -> SrcSinkObject_F3 [label="5: write"]
+	scp_P -> SrcSinkObject_F3 [label="6: read"]
+	"/home/admin/ccleaner_P" [node_type=Process shape=box]
+	scp_P -> "/home/admin/ccleaner_P" [label="7: fork"]
+	"/home/admin/ccleaner_P" -> "/home/admin/ccleaner_F3" [label="8: exec"]
+	information_F3 [node_type=File shape=ellipse]
+	"/home/admin/ccleaner_P" -> information_F3 [label="9: read"]
+	"dbus daemon_P" [node_type=Process shape=box]
+	"/home/admin/ccleaner_P" -> "dbus daemon_P" [label="10: fork"]
+	"/proc/filesystem_F3" [node_type=File shape=ellipse]
+	"dbus daemon_P" -> "/proc/filesystem_F3" [label="11: read"]
+	"/proc/mount_F0" [node_type=File shape=ellipse]
+	"dbus daemon_P" -> "/proc/mount_F0" [label="12: read"]
+	"/etc/passwd_F0" [node_type=File shape=ellipse]
+	"dbus daemon_P" -> "/etc/passwd_F0" [label="13: read"]
+}

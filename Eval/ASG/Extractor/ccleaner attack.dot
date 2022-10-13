@@ -1,0 +1,47 @@
+digraph "ccleaner attack.dot" {
+rankdir="LR"
+size="9"
+fixedsize="false"
+splines="true"
+nodesep=0.3
+ranksep=0
+fontsize=10
+overlap="scalexy"
+engine= "neato"
+	"'from an unknown location'" [node_type=file shape=ellipse]
+	"'Ccleaner'" [node_type=Process shape=box]
+	"'from an unknown location'" -> "'Ccleaner'" [label="1: 'read'"]
+	"'using scp -t ./ccleaner'" [node_type=file shape=ellipse]
+	"'Ccleaner'" [node_type=Process shape=box]
+	"'using scp -t ./ccleaner'" -> "'Ccleaner'" [label="2: 'read'"]
+	"'Ccleaner'" [node_type=Process shape=box]
+	".*\scp -t ./ccleaner" [node_type=File shape=ellipse]
+	"'Ccleaner'" -> ".*\scp -t ./ccleaner" [label="3: exec"]
+	"'the file /home / admin / ccleaner'" [node_type=file shape=ellipse]
+	"'Ccleaner'" [node_type=Process shape=box]
+	"'Ccleaner'" -> "'the file /home / admin / ccleaner'" [label="4: write"]
+	"'/-firefox-/'" [node_type=file shape=ellipse]
+	"'We'" [node_type=file shape=ellipse]
+	We -> "/-firefox-/" [label="5: see"]
+	"'to 64.95.25.213:80'" [node_type=file shape=ellipse]
+	"'/-firefox-/'" [node_type=file shape=ellipse]
+	"/-firefox-/" -> "to 64.95.25.213":80 [label="6: connect"]
+	"'to a SrcSinkObject which was then read by the scp process that downloaded the ccleaner file'" [node_type=file shape=ellipse]
+	"'/-firefox-/'" [node_type=Process shape=box]
+	"'/-firefox-/'" -> "'to a SrcSinkObject which was then read by the scp process that downloaded the ccleaner file'" [label="7: write"]
+	"'by the scp process that downloaded the ccleaner file'" [node_type=file shape=ellipse]
+	"'a SrcSinkObject'" [node_type=Process shape=box]
+	"'by the scp process that downloaded the ccleaner file'" -> "'a SrcSinkObject'" [label="8: 'read'"]
+	"'the ccleaner file'" [node_type=file shape=ellipse]
+	"'the scp process'" [node_type=Process shape=box]
+	"'the ccleaner file'" -> "'the scp process'" [label="9: 'read'"]
+	"'the ccleaner file privilege escalated'" [node_type=file shape=diamond]
+	"'the ccleaner file'" [node_type=Process shape=box]
+	"'the ccleaner file privilege escalated'" -> "'the ccleaner file'" [label="11: receive"]
+	"'information about the system'" [node_type=file shape=ellipse]
+	"'the ccleaner file'" [node_type=Process shape=box]
+	"'information about the system'" -> "'the ccleaner file'" [label="12: 'read'"]
+	"'the ccleaner file'" [node_type=Process shape=box]
+	"'/-filesystem-/'" [node_type=Process shape=box]
+	"'the ccleaner file'" -> "'/-filesystem-/'" [label="13: fork"]
+}

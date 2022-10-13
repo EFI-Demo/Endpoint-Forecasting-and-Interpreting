@@ -1,0 +1,1 @@
+chmod 777 /tmp/T1496.sh

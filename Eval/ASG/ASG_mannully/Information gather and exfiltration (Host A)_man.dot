@@ -1,0 +1,48 @@
+digraph "Information gather and exfiltration (Host A)_man.dot" {
+rankdir="LR"
+size="9"
+fixedsize="false"
+splines="true"
+nodesep=0.3
+ranksep=0
+fontsize=10
+overlap="scalexy"
+engine= "neato"
+	hostA_P [node_type=Process shape=box]
+	cat_P [node_type=Process shape=box]
+	hostA_P -> cat_P [label="1: fork"]
+	cat_F2 [node_type=File shape=ellipse]
+	cat_P -> cat_F2 [label="2: exec"]
+	"/etc/shadow_F0" [node_type=File shape=ellipse]
+	cat_P -> "/etc/shadow_F0" [label="3: read"]
+	config_P [node_type=Process shape=box]
+	hostA_P -> config_P [label="4: fork"]
+	config_F2 [node_type=File shape=ellipse]
+	config_P -> config_F2 [label="5: exec"]
+	tcpdump_P [node_type=Process shape=box]
+	hostA_P -> tcpdump_P [label="6: fork"]
+	tcpdump_F2 [node_type=File shape=ellipse]
+	tcpdump_P -> tcpdump_F2 [label="7: exec"]
+	ps_P [node_type=Process shape=box]
+	hostA_P -> ps_P [label="8: fork"]
+	ps_F2 [node_type=File shape=ellipse]
+	ps_P -> ps_F2 [label="9: exec"]
+	groups_P [node_type=Process shape=box]
+	hostA_P -> groups_P [label="10: fork"]
+	groups_F2 [node_type=File shape=ellipse]
+	groups_P -> groups_F2 [label="11: exec"]
+	dirname_P [node_type=Process shape=box]
+	hostA_P -> dirname_P [label="12: fork"]
+	dirname_F2 [node_type=File shape=ellipse]
+	dirname_P -> dirname_F2 [label="13: exec"]
+	"/etc/passwd_F0" [node_type=File shape=ellipse]
+	hostA_P -> "/etc/passwd_F0" [label="14: read"]
+	"/dev/pts/1_F3" [node_type=File shape=ellipse]
+	hostA_P -> "/dev/pts/1_F3" [label="15: read"]
+	"128.55.12.118_S" [node_type=Socket shape=diamond]
+	"128.55.12.79_S" [node_type=Socket shape=diamond]
+	hostA_P -> "128.55.12.118_S" [label="16: send"]
+	"128.55.12.118_S" -> hostA_P [label="17: receive"]
+	hostA_P -> "128.55.12.79_S" [label="18: send"]
+	"128.55.12.79_S" -> hostA_P [label="19: receive"]
+}

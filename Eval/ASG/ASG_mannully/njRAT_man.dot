@@ -1,0 +1,41 @@
+digraph "njRAT_man.dot" {
+rankdir="LR"
+size="9"
+fixedsize="false"
+splines="true"
+nodesep=0.3
+ranksep=0
+fontsize=10
+overlap="scalexy"
+engine= "neato"
+	"*1_P" [node_type=Process shape=box]
+	"*2_P" [node_type=Process shape=box]
+	netsh_P [node_type=Process shape=box]
+	"\%APPDATA\%\\_P" [node_type=Process shape=box]
+	"*.exe.config_F0" [node_type=File shape=ellipse]
+	"*.tmp_F3" [node_type=File shape=ellipse]
+	"C \\WINDOWS\\Prefetch\\*.EXE-*.pf_F3" [node_type=File shape=ellipse]
+	"\%APPDATA\%\\_F3" [node_type=File shape=ellipse]
+	"C \\WINDOWS\\Prefetch\\*.EXE-*.pf_F3" [node_type=File shape=ellipse]
+	"\%USER_PROFILE\%\\Start Menu\\Programs\\Startup\\*_F3" [node_type=File shape=ellipse]
+	"C \\WINDOWS\\Prefetch\\NETSH.EXE-*.pf_F3" [node_type=File shape=ellipse]
+	"[HKCU]\\Software\\Microsoft\\Windows\\CurrentVersion\\Run\\_R2" [node_type=Registry shape=parallelogram]
+	"[HKLM]\\Software\\Microsoft\\Windows\\CurrentVersion\\Run\\_R1" [node_type=Registry shape=parallelogram]
+	"[HKLM]\\SYSTEM\\CurrentControlSet\\Services\\SharedAccess\\-Parameters\\FirewallPolicy\\StandardProfile\\Authorized-Applications\\List\\APPDATA\\_R1" [node_type=Registry shape=parallelogram]
+	"\%External IP address\%_S" [node_type=Socket shape=diamond]
+	"*1_P" -> "*.exe.config_F0" [label="1: read"]
+	"*1_P" -> "*.tmp_F3" [label="2: write"]
+	"*1_P" -> "C \\WINDOWS\\Prefetch\\*.EXE-*.pf_F3" [label="3: exec"]
+	"*1_P" -> "\%APPDATA\%\\_F3" [label="4: write"]
+	"*1_P" -> "*2_P" [label="5: fork"]
+	"*2_P" -> "\%APPDATA\%\\_P" [label="6: fork"]
+	"\%APPDATA\%\\_P" -> "\%APPDATA\%\\_F3" [label="7: exec"]
+	"*2_P" -> "C \\WINDOWS\\Prefetch\\*.EXE-*.pf_F3" [label="8: write"]
+	"*1_P" -> "\%USER_PROFILE\%\\Start Menu\\Programs\\Startup\\*_F3" [label="9: write"]
+	"*1_P" -> netsh_P [label="10: fork"]
+	netsh_P -> "C \\WINDOWS\\Prefetch\\NETSH.EXE-*.pf_F3" [label="11: write"]
+	"*1_P" -> "[HKCU]\\Software\\Microsoft\\Windows\\CurrentVersion\\Run\\_R2" [label="12: write"]
+	"*1_P" -> "[HKLM]\\Software\\Microsoft\\Windows\\CurrentVersion\\Run\\_R1" [label="13: write"]
+	"*1_P" -> "[HKLM]\\SYSTEM\\CurrentControlSet\\Services\\SharedAccess\\-Parameters\\FirewallPolicy\\StandardProfile\\Authorized-Applications\\List\\APPDATA\\_R1" [label="14: write"]
+	"*1_P" -> "\%External IP address\%_S" [label="15: send"]
+}

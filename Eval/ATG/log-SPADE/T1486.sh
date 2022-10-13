@@ -1,0 +1,1 @@
+echo "123456" | $which_gpg yes passphrase-fd 0 cipher-algo AES-256  -c /home/spade/test/aaa.txt

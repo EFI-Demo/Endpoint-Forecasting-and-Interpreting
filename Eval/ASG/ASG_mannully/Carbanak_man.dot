@@ -1,0 +1,35 @@
+digraph "Carbanak_man.dot" {
+rankdir="LR"
+size="9"
+fixedsize="false"
+splines="true"
+nodesep=0.3
+ranksep=0
+fontsize=10
+overlap="scalexy"
+engine= "neato"
+	"\%Mail Application\%_P" [node_type=Process shape=box]
+	"*_P" [node_type=Process shape=box]
+	svchost_P [node_type=Process shape=box]
+	"*Sys$_P" [node_type=Process shape=box]
+	"*.\%exe\%_P" [node_type=Process shape=box]
+	"\%system32\%\\svchost_P" [node_type=Process shape=box]
+	"*.\%exe\%_F2" [node_type=File shape=ellipse]
+	"\%system32\%\\svchost_F0" [node_type=File shape=ellipse]
+	"\%COMMON_APPDATA\%\\Mozilla\\*.\%exe\%_F2" [node_type=File shape=ellipse]
+	"\%AppData\%\\Mozilla\\Firefox\\*\\prefs.js_F2" [node_type=File shape=ellipse]
+	"[HKCU]\\Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings_R2" [node_type=Registry shape=parallelogram]
+	"\%External IP address\%_S" [node_type=Socket shape=diamond]
+	"\%Mail Application\%_P" -> "*.\%exe\%_F2" [label="1: write"]
+	"*_P" -> "*.\%exe\%_P" [label="2: fork"]
+	"*.\%exe\%_P" -> "*.\%exe\%_F2" [label="3: exec"]
+	"*_P" -> "\%system32\%\\svchost_F0" [label="4: write"]
+	svchost_P -> "\%system32\%\\svchost_P" [label="5: fork"]
+	"\%system32\%\\svchost_P" -> "\%system32\%\\svchost_F0" [label="6: exec"]
+	svchost_P -> "*.\%exe\%_F2" [label="7: unlink"]
+	svchost_P -> "*Sys$_P" [label="8: fork"]
+	svchost_P -> "\%COMMON_APPDATA\%\\Mozilla\\*.\%exe\%_F2" [label="9: write"]
+	svchost_P -> "[HKCU]\\Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings_R2" [label="10: read"]
+	svchost_P -> "\%AppData\%\\Mozilla\\Firefox\\*\\prefs.js_F2" [label="11: read"]
+	svchost_P -> "\%External IP address\%_S" [label="12: send"]
+}

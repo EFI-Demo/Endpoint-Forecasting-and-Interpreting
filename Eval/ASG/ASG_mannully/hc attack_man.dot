@@ -1,0 +1,40 @@
+digraph "hc attack_man.dot" {
+rankdir="LR"
+size="9"
+fixedsize="false"
+splines="true"
+nodesep=0.3
+ranksep=0
+fontsize=10
+overlap="scalexy"
+engine= "neato"
+	scp_P [node_type=Process shape=box]
+	"108.25.125.188_S" [node_type=Socket shape=diamond]
+	"108.25.125.188_S" -> scp_P [label="1: receive"]
+	"/usr/local/bin/hc_F3" [node_type=File shape=ellipse]
+	scp_P -> "/usr/local/bin/hc_F3" [label="2: write"]
+	hc_P [node_type=Process shape=box]
+	scp_P -> hc_P [label="3: fork"]
+	hc_P -> "/usr/local/bin/hc_F3" [label="4: exec"]
+	"bluetooth service.dll_F1" [node_type=File shape=ellipse]
+	hc_P -> "bluetooth service.dll_F1" [label="5: load"]
+	"volume monitor.dll_F1" [node_type=File shape=ellipse]
+	hc_P -> "volume monitor.dll_F1" [label="6: load"]
+	"power service.lib_F1" [node_type=File shape=ellipse]
+	hc_P -> "power service.lib_F1" [label="7: load"]
+	firefox_F3 [node_type=File shape=ellipse]
+	hc_P -> firefox_F3 [label="8: load"]
+	"/proc/net_F3" [node_type=File shape=ellipse]
+	hc_P -> "/proc/net_F3" [label="9: read"]
+	"/etc/passwd_F0" [node_type=File shape=ellipse]
+	hc_P -> "/etc/passwd_F0" [label="10: read"]
+	"128.55.12.185_S" [node_type=Socket shape=diamond]
+	hc_P -> "128.55.12.185_S" [label="11: send"]
+	"128.55.12.185_S" -> hc_P [label="12: receive"]
+	"/tmp/ext96481_F3" [node_type=File shape=ellipse]
+	hc_P -> "/tmp/ext96481_F3" [label="13: write"]
+	"/tmp/ext96481_P" [node_type=Process shape=box]
+	hc_P -> "/tmp/ext96481_P" [label="14: fork"]
+	"/tmp/ext96481_P" -> "/tmp/ext96481_F3" [label="15: exec"]
+	"/tmp/ext96481_P" -> "/etc/passwd_F0" [label="16: read"]
+}

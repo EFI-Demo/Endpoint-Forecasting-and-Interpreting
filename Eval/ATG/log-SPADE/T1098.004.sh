@@ -1,0 +1,1 @@
+if [ -f ~/.ssh/authorized_keys ]; then ssh_authorized_keys=$(cat ~/.ssh/authorized_keys); echo $ssh_authorized_keys > ~/.ssh/authorized_keys; fi;

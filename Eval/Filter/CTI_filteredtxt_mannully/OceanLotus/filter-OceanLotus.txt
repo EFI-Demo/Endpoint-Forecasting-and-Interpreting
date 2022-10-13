@@ -1,0 +1,29 @@
+When executed, this binary decrypts its resource (XOR with a 128-byte, hardcoded key) and decompresses the decrypted data (LZMA). The legitimate RobotoSlab-Regular.ttf 
+(SHA1:912895e6bb9e05af3a1e58a1da417e992a71a324) file is written into the %temp% folder and run via Win32 API function ShellExecute.
+The shellcode decrypted from the resource is executed. After its execution, the fake font updater drops another application whose sole purpose is to delete the dropper. This "eraser" application is dropped as %temp%\[0-9].tmp.exe.
+If the process is running with administrator privileges, then the malware achieves persistence by creating a service, else the classic Windows "Run" registry key is used (HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Run;DeviceAssociationService;rastlsc.exe).
+
+If the dropper is executed with administrator privileges, then it tries to write the following files in the C:\Program Files\Symantec\Symantec Endpoint Protection\12.1.671.4971.104a\DeviceAssociationService\ folder else it writes them in the %APPDATA%\Symantec\Symantec Endpoint Protection\12.1.671.4971.104a\DeviceAssociationService\ folder:
+• rastlsc.exe (SHA1:2616da1697f7c764ee7fb558887a6a3279861fac, copy of legitimate Symantec Network Access Control application, dot1xtra.exe)
+• SyLog.bin (SHA1:5689448b4b6260ec9c35f129df8b8f2622c66a45, encrypted backdoor)
+• rastls.dll (SHA1:82e579bd49d69845133c9aa8585f8bd26736437b,malicious DLL side-loaded by rastlsc.exe)
+
+Depending on its privileges, the malware drops the files in %ProgramFiles% or %appdata%.
+After achieving persistence and dropping the executable, the legitimate Symantec executable, rastlsc.exe, is executed using CreateProcessW.
+We've also seen another version ({BB7BDEC9-B59D-492E-A4AF-4C7B1C9E646B}.dll), which executes rastlsc.exe with the parameter krv. Its meaning is discussed below.
+
+If an IP address is resolved for this particular domain, then the malware tries to establish a connection on TCP port 25123. Each sample has three different domain names it can use to find its C&C server.
+
+As mentioned earlier, the legitimate executable rastlsc.exe is dropped and executed.  
+This executable imports the rastls.dll file, which in this case contains the malicious payload.
+
+This export tries to read the SyLog.bin file located inside the same folder. Other versions tried to open the file OUTLFLTR.DAT. 
+
+The shellcode decrypts and loads the library {E1E4CBED-5690-4749-819D-24FB660DF55F}.dll.
+
+The variant {92BA1818-0119-4F79-874E-E3BF79C355B8}.dll checks whether rastlsc.exe was executed with krv as the first parameter. If so, then a job is created and rastlsc.exe is executed again, but without the parameter.
+
+The backdoor includes a PE loader that loads the library HTTPProv.dll in memory, calls its entry-point and then calls the export function named CreateInstance.
+
+The latter is stored in the registry key as binary data: HKCU\SOFTWARE\Classes\AppXc52346ec40fb4061ad96be0e6cb7d16a\DefaultIcon
+Once its initialization is done, the following registry key is created to instruct the backdoor to use HTTP in future communication with the C&C server: HKCU\SOFTWARE\Classes\CLSID{E3517E26-8E93-458D-A6DF-8030BC80528B}.

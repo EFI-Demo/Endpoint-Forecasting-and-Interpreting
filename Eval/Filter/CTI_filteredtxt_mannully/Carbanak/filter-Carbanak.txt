@@ -1,0 +1,23 @@
+Carbanak copies itself into "%system32%\com" with the name "svchost.exe" with the file attributes: system, hidden and read-only.
+The original file created by the exploit payload is then deleted.
+
+Carbanak creates a file with a random name and a .bin extension in %COMMON_APPDATA%\Mozilla where it stores commands to be executed. 
+
+Then the malware gets the proxy configuration from the registry entry: [HKCU\Software\Microsoft\Windows\CurrentVersion\Internet Settings] and the Mozilla Firefox configuration file in: %AppData%\Mozilla\Firefox\<ProfileName>\prefs.js
+Additionally, Carbanak can obtain proxy configuration information from headers sent through an application via SOCKS or HTTP.
+
+Carbanak injects its code into svchost.exe. Most of the actions described below happen within this process.
+Carbanak downloads the file kldconfig.plug from its C2 server. This file includes the names of the processes to be monitored
+
+Also, after executing this service, it modifies the executable code in memory in order to establish simultaneous work processes for both remote and local users. Modules modified in this process are: termsrv.dll, csrsrv.dll, msgina.dll and winlogon.exe.
+
+If Carbanak detects the banking application BLIZKO (funds transfer software) in the infected computer, it sends a special notification to its C2 server.
+To communicate with its C2 server, Carbanak uses the HTTP protocol with RC2+Base64 encryption, adding additional characters not included in Base64. 
+
+It also inserts strings with different extensions (.gif,.htm, etc.) at random locations in the HTTP request.
+Specifically, the attackers have been detected uploading: Ammyy Admin 3.5 (f8cd52b70a11a1fb3f29c6f89ff971ec) as svchost.exe
+
+Attackers created fake transactions in the victim's internal database after the verification process, thus avoiding discovery of the fraudulent activity; 
+Attackers used the victim's internal command utilities to insert fraudulent operations in the transaction queue.
+
+SC QUERY state= all | find "SERVICE_NAME" | findstr "Sys$" if q%ERRORLEVEL% == q0 SC QUERY state= all | find "SERVICE_NAME" | findstr "Sys$" >> %name%.log

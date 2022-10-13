@@ -1,0 +1,26 @@
+digraph T1048 {
+rankdir="LR"
+size="9"
+fixedsize="false"
+splines="true"
+nodesep=0.3
+ranksep=0
+fontsize=10
+overlap="scalexy"
+engine= "neato"
+	"mal_P" [node_type=Process shape=box]
+	"ssh_P" [node_type=Process shape=box]
+	"cd_P" [node_type=Process shape=box]
+	"tar_P" [node_type=Process shape=box]
+	"/etc_F3" [node_type=File shape=ellipse]
+	"./etc.tar.gz_F3" [node_type=File shape=ellipse]
+	"target.example.com_S" [node_type=Socket shape=diamond]
+	"mal_P" -> "ssh_P" [label="1: fork"]
+	"ssh_P" -> "target.example.com_S" [label="2: send"]
+	"target.example.com_S" -> "ssh_P" [label="3: receive"]
+	"mal_P" -> "cd_P" [label="4: fork"]
+	"cd_P" -> "/etc_F3" [label="5: read"]
+	"mal_P" -> "tar_P" [label="6: fork"]
+	"tar_P" -> "/etc_F3" [label="7: read"]
+	"tar_P" -> "./etc.tar.gz_F3" [label="8: write"]
+}

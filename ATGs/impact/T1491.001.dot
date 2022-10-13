@@ -1,0 +1,34 @@
+digraph "T1491.001" {
+rankdir="LR"
+size="9"
+fixedsize="false"
+splines="true"
+nodesep=0.3
+ranksep=0
+fontsize=10
+overlap="scalexy"
+engine= "neato"
+	"mal_P" [node_type=Process shape=box]
+	"Get-ItemProperty_P" [node_type=Process shape=box]
+	"Out-File_P" [node_type=Process shape=box]
+	"New-Object_P" [node_type=Process shape=box]
+	"DownloadFile_P" [node_type=Process shape=box]
+	"add-type_P" [node_type=Process shape=box]
+	"SetWallpaper_P" [node_type=Process shape=box]
+	"HKEY_CURRENT_USER\\Control Panel\\Desktop\\_R2" [node_type=Registry shape=parallelogram]
+	"$env TEMP\\T1491.001-OrginalWallpaperLocation_F3" [node_type=File shape=ellipse]
+	"$env TEMP\\T1491.001-newWallpaper.png_F3" [node_type=File shape=ellipse]
+	"https //redcanary.com/wp-content/uploads/Atomic-Red-Team-Logo.png_S" [node_type=Socket shape=diamond]
+	"mal_P" -> "Get-ItemProperty_P" [label="1: fork"]
+	"Get-ItemProperty_P" -> "HKEY_CURRENT_USER\\Control Panel\\Desktop\\_R2" [label="2: read"]
+	"Get-ItemProperty_P" -> "Out-File_P" [label="3: fork"]
+	"Out-File_P" -> "$env TEMP\\T1491.001-OrginalWallpaperLocation_F3" [label="4: write"]
+	"mal_P" -> "New-Object_P" [label="5: fork"]
+	"New-Object_P" -> "DownloadFile_P" [label="6: fork"]
+	"DownloadFile_P" -> "https //redcanary.com/wp-content/uploads/Atomic-Red-Team-Logo.png_S" [label="7: send"]
+	"https //redcanary.com/wp-content/uploads/Atomic-Red-Team-Logo.png_S" -> "DownloadFile_P" [label="8: receive"]
+	"DownloadFile_P" -> "$env TEMP\\T1491.001-newWallpaper.png_F3" [label="9: write"]
+	"mal_P" -> "add-type_P" [label="10: fork"]
+	"add-type_P" -> "SetWallpaper_P" [label="11: fork"]
+	"SetWallpaper_P" -> "$env TEMP\\T1491.001-newWallpaper.png_F3" [label="12: read"]
+}

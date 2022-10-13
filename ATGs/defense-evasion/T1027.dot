@@ -1,0 +1,31 @@
+digraph T1027 {
+rankdir="LR"
+size="9"
+fixedsize="false"
+splines="true"
+nodesep=0.3
+ranksep=0
+fontsize=10
+overlap="scalexy"
+engine= "neato"
+	"mal1_P" [node_type=Process shape=box]
+	"sh_P" [node_type=Process shape=box]
+	"echo_P" [node_type=Process shape=box]
+	"cat_P" [node_type=Process shape=box]
+	"base64_P" [node_type=Process shape=box]
+	"chomd+x_P" [node_type=Process shape=box]
+	"mal2_P" [node_type=Process shape=box]
+	"/tmp/encoded.dat_F3" [node_type=File shape=ellipse]
+	"/tmp/art.sh_F2" [node_type=File shape=ellipse]
+	"mal1_P" -> "sh_P" [label="1: fork"]
+	"sh_P" -> "echo_P" [label="2: fork"]
+	"echo_P" -> "/tmp/encoded.dat_F3" [label="3: write"]
+	"mal1_P" -> "cat_P" [label="4: fork"]
+	"cat_P" -> "/tmp/encoded.dat_F3" [label="5: read"]
+	"cat_P" -> "base64_P" [label="6: fork"]
+	"base64_P" -> "/tmp/art.sh_F2" [label="7: write"]
+	"mal1_P" -> "chomd+x_P" [label="8: fork"]
+	"chomd+x_P" -> "/tmp/art.sh_F2" [label="9: read"]
+	"mal1_P" -> "mal2_P" [label="10: fork"]
+	"mal2_P" -> "/tmp/art.sh_F2" [label="11: exec"]
+}

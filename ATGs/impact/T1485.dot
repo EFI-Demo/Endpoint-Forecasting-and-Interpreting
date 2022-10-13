@@ -1,0 +1,25 @@
+digraph T1485 {
+rankdir="LR"
+size="9"
+fixedsize="false"
+splines="true"
+nodesep=0.3
+ranksep=0
+fontsize=10
+overlap="scalexy"
+engine= "neato"
+	"mal_P" [node_type=Process shape=box]
+	"Test-Path_P" [node_type=Process shape=box]
+	"New-Item_P" [node_type=Process shape=box]
+	"Invoke-Expression_P" [node_type=Process shape=box]
+	"$env TEMP\\T1485.txt_F3" [node_type=File shape=ellipse]
+	"$env \\TEMP\\Sdelete\\sdelete.exe_F2" [node_type=File shape=ellipse]
+	"sdelete_P" [node_type=Process shape=box]
+	"mal_P" -> "Test-Path_P" [label="1: fork"]
+	"Test-Path_P" -> "New-Item_P" [label="2: fork"]
+	"New-Item_P" -> "$env TEMP\\T1485.txt_F3" [label="3: write"]
+	"mal_P" -> "Invoke-Expression_P" [label="4: fork"]
+	"Invoke-Expression_P" -> "sdelete_P" [label="5: fork"]
+	"sdelete_P" -> "$env \\TEMP\\Sdelete\\sdelete.exe_F2" [label="6: exec"]
+	"sdelete_P" -> "$env TEMP\\T1485.txt_F3" [label="7: unlink"]
+}

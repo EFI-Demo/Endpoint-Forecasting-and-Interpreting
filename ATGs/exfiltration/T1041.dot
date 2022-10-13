@@ -1,0 +1,26 @@
+digraph T1041 {
+rankdir="LR"
+size="9"
+fixedsize="false"
+splines="true"
+nodesep=0.3
+ranksep=0
+fontsize=10
+overlap="scalexy"
+engine= "neato"
+	"mal_P" [node_type=Process shape=box]
+	"Test-Path_P" [node_type=Process shape=box]
+	"Add-Content_P" [node_type=Process shape=box]
+	"Get-Content_P" [node_type=Process shape=box]
+	"Invoke-WebRequest_P" [node_type=Process shape=box]
+	"$env TEMP\\LineNumbers.txt_F3" [node_type=File shape=ellipse]
+	"example.com_S" [node_type=Socket shape=diamond]
+	"mal_P" -> "Test-Path_P" [label="1: fork"]
+	"mal_P" -> "Add-Content_P" [label="2: fork"]
+	"Add-Content_P" -> "$env TEMP\\LineNumbers.txt_F3" [label="3: write"]
+	"mal_P" -> "Get-Content_P" [label="4: fork"]
+	"Get-Content_P" -> "$env TEMP\\LineNumbers.txt_F3" [label="5: read"]
+	"mal_P" -> "Invoke-WebRequest_P" [label="6: fork"]
+	"Invoke-WebRequest_P" -> "example.com_S" [label="7: send"]
+	"example.com_S" -> "Invoke-WebRequest_P" [label="8: receive"]
+}

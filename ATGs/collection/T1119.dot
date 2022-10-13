@@ -1,0 +1,36 @@
+digraph T1119 {
+rankdir="LR"
+size="9"
+fixedsize="false"
+splines="true"
+nodesep=0.3
+ranksep=0
+fontsize=10
+overlap="scalexy"
+engine= "neato"
+	"mal_P" [node_type=Process shape=box]
+	"New-Item_P" [node_type=Process shape=box]
+	"Get-ChildItem1_P" [node_type=Process shape=box]
+	"Copy-Item_P" [node_type=Process shape=box]
+	"Get-Service_P" [node_type=Process shape=box]
+	"Get-ChildItem2_P" [node_type=Process shape=box]
+	"Get-Process_P" [node_type=Process shape=box]
+	"$env TEMP\\T1119_powershell_collection_F3" [node_type=File shape=ellipse]
+	"F1_F3" [node_type=File shape=ellipse]
+	"$env TEMP\\T1119_1.txt_F3" [node_type=File shape=ellipse]
+	"$env TEMP\\T1119_2.txt_F3" [node_type=File shape=ellipse]
+	"$env TEMP\\T1119_3.txt_F3" [node_type=File shape=ellipse]
+	"mal_P" -> "New-Item_P" [label="1: fork"]
+	"New-Item_P" -> "$env TEMP\\T1119_powershell_collection_F3" [label="2: write"]
+	"mal_P" -> "Get-ChildItem1_P" [label="3: fork"]
+	"Get-ChildItem1_P" -> "F1_F3" [label="4: read"]
+	"mal_P" -> "Copy-Item_P" [label="5: fork"]
+	"Copy-Item_P" -> "F1_F3" [label="6: read"]
+	"Copy-Item_P" -> "$env TEMP\\T1119_powershell_collection_F3" [label="7: write"]
+	"mal_P" -> "Get-Service_P" [label="8: fork"]
+	"Get-Service_P" -> "$env TEMP\\T1119_1.txt_F3" [label="9: write"]
+	"mal_P" -> "Get-ChildItem2_P" [label="10: fork"]
+	"Get-ChildItem2_P" -> "$env TEMP\\T1119_2.txt_F3" [label="11: write"]
+	"mal_P" -> "Get-Process_P" [label="12: fork"]
+	"Get-Process_P" -> "$env TEMP\\T1119_3.txt_F3" [label="13: write"]
+}

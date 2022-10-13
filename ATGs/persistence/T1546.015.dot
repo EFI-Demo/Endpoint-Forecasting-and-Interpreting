@@ -1,0 +1,29 @@
+digraph "T1546.015" {
+rankdir="LR"
+size="9"
+fixedsize="false"
+splines="true"
+nodesep=0.3
+ranksep=0
+fontsize=10
+overlap="scalexy"
+engine= "neato"
+	"mal_P" [node_type=Process shape=box]
+	"New-Item1_P" [node_type=Process shape=box]
+	"New-Item2_P" [node_type=Process shape=box]
+	"New-ItemProperty_P" [node_type=Process shape=box]
+	"Start-Process_P" [node_type=Process shape=box]
+	"RUNDLL32.EXE_P" [node_type=Process shape=box]
+	"HKCU\\SOFTWARE\\Classes\\CLSID\\#{clsid}_R2" [node_type=Registry shape=parallelogram]
+	"HKCU\\SOFTWARE\\Classes\\CLSID\\#{clsid}\\InprocServer32_R2" [node_type=Registry shape=parallelogram]
+	"C \\Windows\\System32\\RUNDLL32.EXE_F2" [node_type=File shape=ellipse]
+	"mal_P" -> "New-Item1_P" [label="1: fork"]
+	"New-Item1_P" -> "HKCU\\SOFTWARE\\Classes\\CLSID\\#{clsid}_R2" [label="2: write"]
+	"mal_P" -> "New-Item2_P" [label="3: fork"]
+	"New-Item2_P" -> "HKCU\\SOFTWARE\\Classes\\CLSID\\#{clsid}\\InprocServer32_R2" [label="4: write"]
+	"mal_P" -> "New-ItemProperty_P" [label="5: fork"]
+	"New-ItemProperty_P" -> "HKCU\\SOFTWARE\\Classes\\CLSID\\#{clsid}\\InprocServer32_R2" [label="6: write"]
+	"mal_P" -> "Start-Process_P" [label="7: fork"]
+	"Start-Process_P" -> "RUNDLL32.EXE_P" [label="8: fork"]
+	"RUNDLL32.EXE_P" -> "C \\Windows\\System32\\RUNDLL32.EXE_F2" [label="9: exec"]
+}

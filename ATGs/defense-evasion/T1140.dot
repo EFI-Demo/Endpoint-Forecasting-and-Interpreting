@@ -1,0 +1,25 @@
+digraph T1140 {
+rankdir="LR"
+size="9"
+fixedsize="false"
+splines="true"
+nodesep=0.3
+ranksep=0
+fontsize=10
+overlap="scalexy"
+engine= "neato"
+	"mal_P" [node_type=Process shape=box]
+	"certutil_P" [node_type=Process shape=box]
+	"encode_P" [node_type=Process shape=box]
+	"decode_P" [node_type=Process shape=box]
+	"C \\Windows\\System32\\calc.exe_F2" [node_type=File shape=ellipse]
+	"\%temp%\\T1140_calc.txt_F3" [node_type=File shape=ellipse]
+	"\%temp%\\T1140_calc_decoded.exe_F2" [node_type=File shape=ellipse]
+	"mal_P" -> "certutil_P" [label="1: fork"]
+	"certutil_P" -> "encode_P" [label="2: fork"]
+	"encode_P" -> "C \\Windows\\System32\\calc.exe_F2" [label="3: read"]
+	"encode_P" -> "\%temp%\\T1140_calc.txt_F3" [label="4: write"]
+	"certutil_P" -> "decode_P" [label="5: fork"]
+	"decode_P" -> "\%temp%\\T1140_calc.txt_F3" [label="6: read"]
+	"decode_P" -> "\%temp%\\T1140_calc_decoded.exe_F2" [label="7: write"]
+}

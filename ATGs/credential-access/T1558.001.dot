@@ -1,0 +1,34 @@
+digraph "T1558.001" {
+rankdir="LR"
+size="9"
+fixedsize="false"
+splines="true"
+nodesep=0.3
+ranksep=0
+fontsize=10
+overlap="scalexy"
+engine= "neato"
+	"mal1_P" [node_type=Process shape=box]
+	"Replace_P" [node_type=Process shape=box]
+	"mal2_P" [node_type=Process shape=box]
+	"Start-Sleep_P" [node_type=Process shape=box]
+	"Get-Content_P" [node_type=Process shape=box]
+	"Remove-Item_P" [node_type=Process shape=box]
+	"mimikatz.exe_P" [node_type=Process shape=box]
+	"golden.txt_F3" [node_type=File shape=ellipse]
+	"golden.bat_F2" [node_type=File shape=ellipse]
+	"mimikatz.exe_F2" [node_type=File shape=ellipse]
+	"mal1_P" -> Replace_P [label="1: fork"]
+	"Replace_P" -> "golden.txt_F3" [label="2: read"]
+	"Replace_P" -> "golden.bat_F2" [label="3: write"]
+	"mal1_P" -> "mal2_P" [label="4: fork"]
+	"mal2_P" -> "golden.bat_F2" [label="5: exec"]
+	"mal2_P" -> "mimikatz.exe_P" [label="6: fork"]
+	"mimikatz.exe_P" -> "mimikatz.exe_F2" [label="7: exec"]
+	"mal1_P" -> "Start-Sleep_P" [label="8: fork"]
+	"mal1_P" -> "Get-Content_P" [label="9: fork"]
+	"Get-Content_P" -> "golden.txt_F3" [label="10: read"]
+	"mal1_P" -> "Remove-Item_P" [label="11: fork"]
+	"Remove-Item_P" -> "golden.bat_F2" [label="12: unlink"]
+	"Remove-Item_P" -> "golden.txt_F3" [label="13: unlink"]
+}

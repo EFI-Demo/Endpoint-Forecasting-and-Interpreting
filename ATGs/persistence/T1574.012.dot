@@ -1,0 +1,26 @@
+digraph "T1574.012" {
+rankdir="LR"
+size="9"
+fixedsize="false"
+splines="true"
+nodesep=0.3
+ranksep=0
+fontsize=10
+overlap="scalexy"
+engine= "neato"
+	"mal_P" [node_type=Process shape=box]
+	"New-Item_P" [node_type=Process shape=box]
+	"New-ItemProperty1_P" [node_type=Process shape=box]
+	"MMC.EXE_P" [node_type=Process shape=box]
+	"mmc.exe_F2" [node_type=File shape=ellipse]
+	"PathToAtomicsFolder\\T1574.012\\bin\\T1574.012x64.dll_F1" [node_type=File shape=ellipse]
+	"HKCU\\Software\\Classes\\CLSID\\#{clsid_guid}\InprocServer32_R2" [node_type=Registry shape=parallelogram]
+	"HKCU\\Environment_R2" [node_type=Registry shape=parallelogram]
+	"mal_P" -> "New-Item_P" [label="1: fork"]
+	"New-Item_P" -> "PathToAtomicsFolder\\T1574.012\\bin\\T1574.012x64.dll_F1" [label="2: read"]
+	"New-Item_P" -> "HKCU\\Software\\Classes\\CLSID\\#{clsid_guid}\InprocServer32_R2" [label="3: write"]
+	"mal_P" -> "New-ItemProperty1_P" [label="4: fork"]
+	"New-ItemProperty1_P" -> "HKCU\\Environment_R2" [label="5: write"]
+	"mal_P" -> "MMC.EXE_P" [label="6: fork"]
+	"MMC.EXE_P" -> "mmc.exe_F2" [label="7: exec"]
+}

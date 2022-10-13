@@ -1,0 +1,23 @@
+digraph "T1003.004" {
+rankdir="LR"
+size="9"
+fixedsize="false"
+splines="true"
+nodesep=0.3
+ranksep=0
+fontsize=10
+overlap="scalexy"
+engine= "neato"
+	"mal1_P" [node_type=Process shape=box]
+	"mal2_P" [node_type=Process shape=box]
+	"reg_P" [node_type=Process shape=box]
+	"HKLM\\security\\policy\\secrets_R1" [node_type=Registry shape=parallelogram]
+	"PsExec.exe_F2" [node_type=File shape=ellipse]
+	"Temp\\secrets_F3" [node_type=File shape=ellipse]
+	"mal1_P" -> "PsExec.exe_F2" [label="1: write"]
+	"mal1_P" -> mal2_P [label="2: fork"]
+	"mal2_P" -> "PsExec.exe_F2" [label="3: exec"]
+	"mal1_P" -> reg_P [label="4: fork"]
+	"reg_P" -> "HKLM\\security\\policy\\secrets_R1" [label="5: read"]
+	"reg_P" -> "Temp\\secrets_F3" [label="6: write"]
+}

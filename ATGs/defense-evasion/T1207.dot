@@ -1,0 +1,36 @@
+digraph T1207 {
+rankdir="LR"
+size="9"
+fixedsize="false"
+splines="true"
+nodesep=0.3
+ranksep=0
+fontsize=10
+overlap="scalexy"
+engine= "neato"
+	"mal_P" [node_type=Process shape=box]
+	"Remove-Item1_P" [node_type=Process shape=box]
+	"Start-Process_P" [node_type=Process shape=box]
+	"cmd.exe_P" [node_type=Process shape=box]
+	"Start-Sleep1_P" [node_type=Process shape=box]
+	"Wait-Process_P" [node_type=Process shape=box]
+	"Get-Content_P" [node_type=Process shape=box]
+	"Start-Sleep2_P" [node_type=Process shape=box]
+	"Remove-Item2_P" [node_type=Process shape=box]
+	"env TEMP\\art-T1207-mimikatz-DC.log_F3" [node_type=File shape=ellipse]
+	"C \\PSTools\\PsExec.exe_F2" [node_type=File shape=ellipse]
+	"env TEMP\\mimikatz\\x64\\mimikatz.exe_F2" [node_type=File shape=ellipse]
+	"mal_P" -> "Remove-Item1_P" [label="1: fork"]
+	"Remove-Item1_P" -> "env TEMP\\art-T1207-mimikatz-DC.log_F3" [label="2: unlink"]
+	"mal_P" -> "Start-Process_P" [label="3: fork"]
+	"Start-Process_P" -> "cmd.exe_P" [label="4: fork"]
+	"cmd.exe_P" -> "C \\PSTools\\PsExec.exe_F2" [label="5: exec"]
+	"cmd.exe_P" -> "env TEMP\\mimikatz\\x64\\mimikatz.exe_F2" [label="6: exec"]
+	"mal_P" -> "Start-Sleep1_P" [label="7: fork"]
+	"mal_P" -> "Wait-Process_P" [label="8: fork"]
+	"mal_P" -> "Get-Content_P" [label="9: fork"]
+	"Get-Content_P" -> "env TEMP\\art-T1207-mimikatz-DC.log_F3" [label="10: read"]
+	"mal_P" -> "Start-Sleep2_P" [label="11: fork"]
+	"mal_P" -> "Remove-Item2_P" [label="12: fork"]
+	"Remove-Item2_P" -> "env TEMP\\art-T1207-mimikatz-DC.log_F3" [label="13: unlink"]
+}

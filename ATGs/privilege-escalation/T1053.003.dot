@@ -1,0 +1,25 @@
+digraph "T1053.003" {
+rankdir="LR"
+size="9"
+fixedsize="false"
+splines="true"
+nodesep=0.3
+ranksep=0
+fontsize=10
+overlap="scalexy"
+engine= "neato"
+	"mal1_P" [node_type=Process shape=box]
+	"mal2_P" [node_type=Process shape=box]
+	"crontab -l_P" [node_type=Process shape=box]
+	"crontab_P" [node_type=Process shape=box]
+	"/tmp/notevil_F3" [node_type=File shape=ellipse]
+	"/tmp/evil.sh_F2" [node_type=File shape=ellipse]
+	"/tmp/persistevil_F3" [node_type=File shape=ellipse]
+	"mal1_P" -> "crontab -l_P" [label="1: fork"]
+	"crontab -l_P" -> "/tmp/notevil_F3" [label="2: write"]
+	"mal1_P" -> "mal2_P" [label="3: fork"]
+	"mal2_P" -> "/tmp/evil.sh_F2" [label="4: exec"]
+	"mal2_P" -> "/tmp/persistevil_F3" [label="5: write"]
+	"mal2_P" -> "crontab_P" [label="6: fork"]
+	"crontab_P" -> "/tmp/persistevil_F3" [label="7: read"]
+}

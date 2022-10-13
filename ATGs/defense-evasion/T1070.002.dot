@@ -1,0 +1,24 @@
+digraph "T1070.002" {
+rankdir="LR"
+size="9"
+fixedsize="false"
+splines="true"
+nodesep=0.3
+ranksep=0
+fontsize=10
+overlap="scalexy"
+engine= "neato"
+	"mal_P" [node_type=Process shape=box]
+	"sudo1_P" [node_type=Process shape=box]
+	"sudo2_P" [node_type=Process shape=box]
+	"rm1_P" [node_type=Process shape=box]
+	"rm2_P" [node_type=Process shape=box]
+	"/private/var/log/system.log*_F0" [node_type=File shape=ellipse]
+	"/private/var/audit/*_F0" [node_type=File shape=ellipse]
+	"mal_P" -> "sudo1_P" [label="1: fork"]
+	"sudo1_P" -> "rm1_P" [label="2: fork"]
+	"rm1_P" -> "/private/var/log/system.log*_F0" [label="3: unlink"]
+	"mal_P" -> "sudo2_P" [label="4: fork"]
+	"sudo2_P" -> "rm2_P" [label="5: fork"]
+	"rm2_P" -> "/private/var/audit/*_F0" [label="6: unlink"]
+}

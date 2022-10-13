@@ -1,0 +1,27 @@
+digraph "T1560.001#2" {
+rankdir="LR"
+size="9"
+fixedsize="false"
+splines="true"
+nodesep=0.3
+ranksep=0
+fontsize=10
+overlap="scalexy"
+engine= "neato"
+	"mal_P" [node_type=Process shape=box]
+	"mkdir_P" [node_type=Process shape=box]
+	"cd_P" [node_type=Process shape=box]
+	"rar_exe_P" [node_type=Process shape=box]
+	".\\tmp\\victim-files_F3" [node_type=File shape=ellipse]
+	"Rar.exe_F2" [node_type=File shape=ellipse]
+	"encrypted_file.txt_F3" [node_type=File shape=ellipse]
+	"hello.rar_F3" [node_type=File shape=ellipse]
+	"mal_P" -> "mkdir_P" [label="1: fork"]
+	"mkdir_P" -> ".\\tmp\\victim-files_F3" [label="2: write"]
+	"mal_P" -> "cd_P" [label="3: fork"]
+	"cd_P" -> ".\\tmp\\victim-files_F3" [label="4: open"]
+	"mal_P" -> "rar_exe_P" [label="5: fork"]
+	"rar_exe_P" -> "Rar.exe_F2" [label="6: exec"]
+	"rar_exe_P" -> "encrypted_file.txt_F3" [label="7: read"]
+	"rar_exe_P" -> "hello.rar_F3" [label="8: write"]
+}

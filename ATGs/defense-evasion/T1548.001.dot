@@ -1,0 +1,42 @@
+digraph "T1548.001" {
+rankdir="LR"
+size="9"
+fixedsize="false"
+splines="true"
+nodesep=0.3
+ranksep=0
+fontsize=10
+overlap="scalexy"
+engine= "neato"
+	"mal1_P" [node_type=Process shape=box]
+	"cp_P" [node_type=Process shape=box]
+	"sudo1_P" [node_type=Process shape=box]
+	"chown1_P" [node_type=Process shape=box]
+	"sudo2_P" [node_type=Process shape=box]
+	"make_P" [node_type=Process shape=box]
+	"sudo3_P" [node_type=Process shape=box]
+	"chown2_P" [node_type=Process shape=box]
+	"sudo4_P" [node_type=Process shape=box]
+	"chmod u+s_P" [node_type=Process shape=box]
+	"mal2_P" [node_type=Process shape=box]
+	"PathToAtomicsFolder/T1548.001/src/hello.c_F2" [node_type=File shape=ellipse]
+	"/tmp/hello.c_F2" [node_type=File shape=ellipse]
+	"/tmp/hello_F2" [node_type=File shape=ellipse]
+	"mal1_P" -> "cp_P" [label="1: fork"]
+	"cp_P" -> "PathToAtomicsFolder/T1548.001/src/hello.c_F2" [label="2: read"]
+	"cp_P" -> "/tmp/hello.c_F2" [label="3: write"]
+	"mal1_P" -> "sudo1_P" [label="4: fork"]
+	"sudo1_P" -> "chown1_P" [label="5: fork"]
+	"chown1_P" -> "/tmp/hello.c_F2" [label="6: write"]
+	"mal1_P" -> "sudo2_P" [label="7: fork"]
+	"sudo2_P" -> "make_P" [label="8: fork"]
+	"make_P" -> "/tmp/hello_F2" [label="9: write"]
+	"mal1_P" -> "sudo3_P" [label="10: fork"]
+	"sudo3_P" -> "chown2_P" [label="11: fork"]
+	"chown2_P" -> "/tmp/hello_F2" [label="12: write"]
+	"mal1_P" -> "sudo4_P" [label="13: fork"]
+	"sudo4_P" -> "chmod u+s_P" [label="14: fork"]
+	"chmod u+s_P" -> "/tmp/hello_F2" [label="15: write"]
+	"mal1_P" -> "mal2_P" [label="16: fork"]
+	"mal2_P" -> "/tmp/hello_F2" [label="17: exec"]
+}

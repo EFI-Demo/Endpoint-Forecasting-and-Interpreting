@@ -1,0 +1,21 @@
+digraph "T1059.001" {
+rankdir="LR"
+size="9"
+fixedsize="false"
+splines="true"
+nodesep=0.3
+ranksep=0
+fontsize=10
+overlap="scalexy"
+engine= "neato"
+	"mal_P" [node_type=Process shape=box]
+	"IEX_P" [node_type=Process shape=box]
+	"DownloadString_P" [node_type=Process shape=box]
+	"Invoke-Mimikatz_P" [node_type=Process shape=box]
+	"https //raw.githubusercontent.com/PowerShellMafia/PowerSploit/f650520c4b1004daf8b3ec08007a0b945b91253a/Exfiltration/Invoke-Mimikatz.ps1_S" [node_type=Socket shape=diamond]
+	"mal_P" -> "IEX_P" [label="1: fork"]
+	"IEX_P" -> "DownloadString_P" [label="2: fork"]
+	"DownloadString_P" -> "https //raw.githubusercontent.com/PowerShellMafia/PowerSploit/f650520c4b1004daf8b3ec08007a0b945b91253a/Exfiltration/Invoke-Mimikatz.ps1_S" [label="3: send"]
+	"https //raw.githubusercontent.com/PowerShellMafia/PowerSploit/f650520c4b1004daf8b3ec08007a0b945b91253a/Exfiltration/Invoke-Mimikatz.ps1_S" -> "DownloadString_P" [label="4: receive"]
+	"mal_P" -> "Invoke-Mimikatz_P" [label="5: fork"]
+}

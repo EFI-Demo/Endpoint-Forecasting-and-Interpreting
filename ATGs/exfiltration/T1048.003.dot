@@ -1,0 +1,32 @@
+digraph "T1048.003" {
+rankdir="LR"
+size="9"
+fixedsize="false"
+splines="true"
+nodesep=0.3
+ranksep=0
+fontsize=10
+overlap="scalexy"
+engine= "neato"
+	"mal_P" [node_type=Process shape=box]
+	"mkdir_P" [node_type=Process shape=box]
+	"echo_P" [node_type=Process shape=box]
+	"cd_P" [node_type=Process shape=box]
+	"python_P" [node_type=Process shape=box]
+	"wget_P" [node_type=Process shape=box]
+	"/tmp/victim-staging-area_F3" [node_type=File shape=ellipse]
+	"/tmp/victim-staging-area/victim-file.txt_F3" [node_type=File shape=ellipse]
+	"http //VICTIM_IP 1337/victim-file.txt_S" [node_type=Socket shape=diamond]
+	"SimpleHTTPServer 1337_S" [node_type=Socket shape=diamond]
+	"mal_P" -> "mkdir_P" [label="1: fork"]
+	"mkdir_P" -> "/tmp/victim-staging-area_F3" [label="2: write"]
+	"mal_P" -> "echo_P" [label="3: fork"]
+	"echo_P" -> "/tmp/victim-staging-area/victim-file.txt_F3" [label="4: write"]
+	"mal_P" -> "cd_P" [label="5: fork"]
+	"cd_P" -> "/tmp/victim-staging-area_F3" [label="6: read"]
+	"mal_P" -> "python_P" [label="7: fork"]
+	"python_P" -> "SimpleHTTPServer 1337_S" [label="8: send"]
+	"mal_P" -> "wget_P" [label="9: fork"]
+	"wget_P" -> "http //VICTIM_IP 1337/victim-file.txt_S" [label="10: send"]
+	"http //VICTIM_IP 1337/victim-file.txt_S" -> "wget_P" [label="11: receive"]
+}

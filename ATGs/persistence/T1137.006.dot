@@ -1,0 +1,26 @@
+digraph "T1137.006" {
+rankdir="LR"
+size="9"
+fixedsize="false"
+splines="true"
+nodesep=0.3
+ranksep=0
+fontsize=10
+overlap="scalexy"
+engine= "neato"
+	"mal_P" [node_type=Process shape=box]
+	"iwr_P" [node_type=Process shape=box]
+	"IEX_P" [node_type=Process shape=box]
+	"new-object_P" [node_type=Process shape=box]
+	"RegisterXLL_P" [node_type=Process shape=box]
+	"https//github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1137.006/bin/HelloWorldXll.xll_S" [node_type=Socket shape=diamond]
+	"$env tmp\\HelloWorldXll.xll_F3" [node_type=File shape=ellipse]
+	"mal_P" -> "iwr_P" [label="1: fork"]
+	"iwr_P" -> "https//github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1137.006/bin/HelloWorldXll.xll_S" [label="2: send"]
+	"https//github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1137.006/bin/HelloWorldXll.xll_S" -> "iwr_P" [label="3: receive"]
+	"iwr_P" -> "$env tmp\\HelloWorldXll.xll_F3" [label="4: write"]
+	"mal_P" -> "IEX_P" [label="5: fork"]
+	"IEX_P" -> "new-object_P" [label="6: fork"]
+	"IEX_P" -> "RegisterXLL_P" [label="7: fork"]
+	"RegisterXLL_P" -> "$env tmp\\HelloWorldXll.xll_F3" [label="8: read"]
+}

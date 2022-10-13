@@ -1,0 +1,22 @@
+digraph "T1059.006" {
+rankdir="LR"
+size="9"
+fixedsize="false"
+splines="true"
+nodesep=0.3
+ranksep=0
+fontsize=10
+overlap="scalexy"
+engine= "neato"
+	"mal_P" [node_type=Process shape=box]
+	"python_P" [node_type=Process shape=box]
+	"sh_P" [node_type=Process shape=box]
+	"https //github.com/carlospolop/PEASS-ng/releases/download/20220214/linpeas.sh_S" [node_type=Socket shape=diamond]
+	"T1059.006-payload_F2" [node_type=File shape=ellipse]
+	"mal_P" -> "python_P" [label="1: fork"]
+	"python_P" -> "https //github.com/carlospolop/PEASS-ng/releases/download/20220214/linpeas.sh_S" [label="2: send"]
+	"https //github.com/carlospolop/PEASS-ng/releases/download/20220214/linpeas.sh_S" -> "python_P" [label="3: receive"]
+	"python_P" -> "sh_P" [label="4: fork"]
+	"sh_P" -> "T1059.006-payload_F2" [label="5: load"]
+	"sh_P" -> "T1059.006-payload_F2" [label="6: exec"]
+}

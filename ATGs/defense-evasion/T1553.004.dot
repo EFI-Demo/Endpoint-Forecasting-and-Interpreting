@@ -1,0 +1,30 @@
+digraph "T1553.004" {
+rankdir="LR"
+size="9"
+fixedsize="false"
+splines="true"
+nodesep=0.3
+ranksep=0
+fontsize=10
+overlap="scalexy"
+engine= "neato"
+	"mal_P" [node_type=Process shape=box]
+	"openssl_P" [node_type=Process shape=box]
+	"genrsa_P" [node_type=Process shape=box]
+	"req_P" [node_type=Process shape=box]
+	"cp_P" [node_type=Process shape=box]
+	"update-ca-trust_P" [node_type=Process shape=box]
+	"rootCA.key_F3" [node_type=File shape=ellipse]
+	"rootCA.crt_F3" [node_type=File shape=ellipse]
+	"/etc/pki/ca-trust/source/anchors/_F3" [node_type=File shape=ellipse]
+	"mal_P" -> "openssl_P" [label="1: fork"]
+	"openssl_P" -> "genrsa_P" [label="2: fork"]
+	"genrsa_P" -> "rootCA.key_F3" [label="3: write"]
+	"openssl_P" -> "req_P" [label="4: fork"]
+	"req_P" -> "rootCA.key_F3" [label="5: read"]
+	"req_P" -> "rootCA.crt_F3" [label="6: write"]
+	"mal_P" -> "cp_P" [label="7: fork"]
+	"cp_P" -> "rootCA.crt_F3" [label="8: read"]
+	"cp_P" -> "/etc/pki/ca-trust/source/anchors/_F3" [label="9: write"]
+	"mal_P" -> "update-ca-trust_P" [label="10: write"]
+}

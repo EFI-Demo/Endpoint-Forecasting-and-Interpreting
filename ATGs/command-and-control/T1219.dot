@@ -1,0 +1,26 @@
+digraph T1219 {
+rankdir="LR"
+size="9"
+fixedsize="false"
+splines="true"
+nodesep=0.3
+ranksep=0
+fontsize=10
+overlap="scalexy"
+engine= "neato"
+	"mal_P" [node_type=Process shape=box]
+	"Invoke-WebRequest_P" [node_type=Process shape=box]
+	"Start-Process1_P" [node_type=Process shape=box]
+	"Start-Process2_P" [node_type=Process shape=box]
+	"C \\Users\\$env username\\Desktop\\TeamViewer_Setup.exe_F2" [node_type=File shape=ellipse]
+	"C \\Program Files (x86)\\TeamViewer\\TeamViewer.exe_F2" [node_type=File shape=ellipse]
+	"https //download.teamviewer.com/download/TeamViewer_Setup.exe_S" [node_type=Socket shape=diamond]
+	"mal_P" -> "Invoke-WebRequest_P" [label="1: fork"]
+	"Invoke-WebRequest_P" -> "https //download.teamviewer.com/download/TeamViewer_Setup.exe_S" [label="2: send"]
+	"https //download.teamviewer.com/download/TeamViewer_Setup.exe_S" -> "Invoke-WebRequest_P" [label="3: receive"]
+	"Invoke-WebRequest_P" -> "C \\Users\\$env username\\Desktop\\TeamViewer_Setup.exe_F2" [label="4: write"]
+	"mal_P" -> "Start-Process1_P" [label="5: fork"]
+	"Start-Process1_P" -> "C \\Users\\$env username\\Desktop\\TeamViewer_Setup.exe_F2" [label="6: exec"]
+	"mal_P" -> "Start-Process2_P" [label="7: fork"]
+	"Start-Process2_P" -> "C \\Program Files (x86)\\TeamViewer\\TeamViewer.exe_F2" [label="8: exec"]
+}

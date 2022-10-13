@@ -1,0 +1,25 @@
+digraph "T1218.011" {
+rankdir="LR"
+size="9"
+fixedsize="false"
+splines="true"
+nodesep=0.3
+ranksep=0
+fontsize=10
+overlap="scalexy"
+engine= "neato"
+	"mal_P" [node_type=Process shape=box]
+	"rundll32.exe_P" [node_type=Process shape=box]
+	"GetObject_P" [node_type=Process shape=box]
+	"https//raw.githubusercontent.com/redcanaryco/atomic-red-team/master/atomics/T1218.011/src/T1218.011.sct_S" [node_type=Socket shape=diamond]
+	"rundll32.exe_F2" [node_type=File shape=ellipse]
+	"T1218.011.sct_F3" [node_type=File shape=ellipse]
+	"\\..\\mshtml,RunHTMLApplication_F2" [node_type=File shape=ellipse]
+	"mal_P" -> "rundll32.exe_P" [label="1: fork"]
+	"rundll32.exe_P" -> "rundll32.exe_F2" [label="2: exec"]
+	"rundll32.exe_P" -> "\\..\\mshtml,RunHTMLApplication_F2" [label="3: exec"]
+	"rundll32.exe_P" -> "GetObject_P" [label="4: fork"]
+	"GetObject_P" -> "https//raw.githubusercontent.com/redcanaryco/atomic-red-team/master/atomics/T1218.011/src/T1218.011.sct_S" [label="5: send"]
+	"https//raw.githubusercontent.com/redcanaryco/atomic-red-team/master/atomics/T1218.011/src/T1218.011.sct_S" -> "GetObject_P" [label="6: receive"]
+	"rundll32.exe_P" -> "T1218.011.sct_F3" [label="7: load"]
+}

@@ -1,0 +1,29 @@
+digraph "T1543.001" {
+rankdir="LR"
+size="9"
+fixedsize="false"
+splines="true"
+nodesep=0.3
+ranksep=0
+fontsize=10
+overlap="scalexy"
+engine= "neato"
+	"mal_P" [node_type=Process shape=box]
+	"mkdir_P" [node_type=Process shape=box]
+	"sudo1_P" [node_type=Process shape=box]
+	"cp_P" [node_type=Process shape=box]
+	"sudo2_P" [node_type=Process shape=box]
+	"launchctl_P" [node_type=Process shape=box]
+	"~/Library/LaunchAgents_F3" [node_type=File shape=ellipse]
+	"$PathToAtomicsFolder/T1543.001/src/atomicredteam_T1543_001.plist_F3" [node_type=File shape=ellipse]
+	"~/Library/LaunchAgents/com.atomicredteam.plist_F3" [node_type=File shape=ellipse]
+	"mal_P" -> "mkdir_P" [label="1: fork"]
+	"mkdir_P" -> "~/Library/LaunchAgents_F3" [label="2: write"]
+	"mal_P" -> "sudo1_P" [label="3: fork"]
+	"sudo1_P" -> "cp_P" [label="4: fork"]
+	"cp_P" -> "$PathToAtomicsFolder/T1543.001/src/atomicredteam_T1543_001.plist_F3" [label="5: read"]
+	"cp_P" -> "~/Library/LaunchAgents/com.atomicredteam.plist_F3" [label="6: write"]
+	"mal_P" -> "sudo2_P" [label="7: fork"]
+	"sudo2_P" -> "launchctl_P" [label="8: fork"]
+	"launchctl_P" -> "~/Library/LaunchAgents/com.atomicredteam.plist_F3" [label="9: load"]
+}

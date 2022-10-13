@@ -1,0 +1,27 @@
+digraph "T1556.002" {
+rankdir="LR"
+size="9"
+fixedsize="false"
+splines="true"
+nodesep=0.3
+ranksep=0
+fontsize=10
+overlap="scalexy"
+engine= "neato"
+	"mal_P" [node_type=Process shape=box]
+	"Copy-Item_P" [node_type=Process shape=box]
+	"Get-Item_P" [node_type=Process shape=box]
+	"Set-ItemProperty_P" [node_type=Process shape=box]
+	"Restart-Computer_P" [node_type=Process shape=box]
+	"HKLM\\SYSTEM\\CurrentControlSet\\Control\\Lsa\_R1" [node_type=Registry shape=parallelogram]
+	"PathToAtomicsFolder\\T1556.002\\src\\AtomicPasswordFilter.dll_F1" [node_type=File shape=ellipse]
+	"C \\Windows\\System32_F3" [node_type=File shape=ellipse]
+	"mal_P" -> "Copy-Item_P" [label="1: fork"]
+	"Copy-Item_P" -> "PathToAtomicsFolder\\T1556.002\\src\\AtomicPasswordFilter.dll_F1" [label="2: read"]
+	"Copy-Item_P" -> "C \\Windows\\System32_F3" [label="3: write"]
+	"mal_P" -> "Get-Item_P" [label="4: fork"]
+	"Get-Item_P" -> "HKLM\\SYSTEM\\CurrentControlSet\\Control\\Lsa\_R1" [label="5: read"]
+	"mal_P" -> "Set-ItemProperty_P" [label="6: fork"]
+	"Set-ItemProperty_P" -> "HKLM\\SYSTEM\\CurrentControlSet\\Control\\Lsa\_R1" [label="7: write"]
+	"mal_P" -> "Restart-Computer_P" [label="8: fork"]
+}

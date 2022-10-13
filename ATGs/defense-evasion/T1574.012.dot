@@ -1,0 +1,30 @@
+digraph "T1574.012" {
+rankdir="LR"
+size="9"
+fixedsize="false"
+splines="true"
+nodesep=0.3
+ranksep=0
+fontsize=10
+overlap="scalexy"
+engine= "neato"
+	"mal_P" [node_type=Process shape=box]
+	"Write-Host1_P" [node_type=Process shape=box]
+	"New-Item_P" [node_type=Process shape=box]
+	"New-ItemProperty_P" [node_type=Process shape=box]
+	"Write-Host2_P" [node_type=Process shape=box]
+	"MMC.EXE_P" [node_type=Process shape=box]
+	"HKCU \\Software\\Classes\\CLSID\\_R2" [node_type=Registry shape=parallelogram]
+	"HKCU \\Environment_R2" [node_type=Registry shape=parallelogram]
+	"PathToAtomicsFolder\\T1574.012\\bin\\T1574.012x64.dll_F1" [node_type=File shape=ellipse]
+	"EVENTVWR.MSC_F2" [node_type=File shape=ellipse]
+	"mal_P" -> "Write-Host1_P" [label="1: fork"]
+	"mal_P" -> "New-Item_P" [label="2: fork"]
+	"New-Item_P" -> "PathToAtomicsFolder\\T1574.012\\bin\\T1574.012x64.dll_F1" [label="3: read"]
+	"New-Item_P" -> "HKCU \\Software\\Classes\\CLSID\\_R2" [label="4: write"]
+	"mal_P" -> "New-ItemProperty_P" [label="5: fork"]
+	"New-ItemProperty_P" -> "HKCU \\Environment_R2" [label="6: write"]
+	"mal_P" -> "Write-Host2_P" [label="7: fork"]
+	"mal_P" -> "MMC.EXE_P" [label="8: fork"]
+	"MMC.EXE_P" -> "EVENTVWR.MSC_F2" [label="9: exec"]
+}

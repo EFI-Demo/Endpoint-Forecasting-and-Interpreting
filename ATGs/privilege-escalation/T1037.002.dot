@@ -1,0 +1,32 @@
+digraph "T1037.002" {
+rankdir="LR"
+size="9"
+fixedsize="false"
+splines="true"
+nodesep=0.3
+ranksep=0
+fontsize=10
+overlap="scalexy"
+engine= "neato"
+	"mal_P" [node_type=Process shape=box]
+	"sudo1_P" [node_type=Process shape=box]
+	"sudo2_P" [node_type=Process shape=box]
+	"touch1_P" [node_type=Process shape=box]
+	"touch2_P" [node_type=Process shape=box]
+	"default1_P" [node_type=Process shape=box]
+	"defaults2_P" [node_type=Process shape=box]
+	"/private/var/root/Library/Preferences/com.apple.loginwindow.plist_F3" [node_type=File shape=ellipse]
+	"/Library/Scripts/AtomicRedTeam.sh_F2" [node_type=File shape=ellipse]
+	"/Users/$USER/Library/Preferences/com.apple.loginwindow.plist_F3" [node_type=File shape=ellipse]
+	"/Library/Scripts/AtomicRedTeam.sh_F2" [node_type=File shape=ellipse]
+	"mal_P" -> "sudo1_P" [label="1: fork"]
+	"sudo1_P" -> "touch1_P" [label="2: fork"]
+	"touch1_P" -> "/private/var/root/Library/Preferences/com.apple.loginwindow.plist_F3" [label="3: write"]
+	"mal_P" -> "sudo2_P" [label="4: fork"]
+	"sudo2_P" -> "default1_P" [label="5: fork"]
+	"default1_P" -> "/Library/Scripts/AtomicRedTeam.sh_F2" [label="6: write"]
+	"mal_P" -> "touch2_P" [label="7: fork"]
+	"touch2_P" -> "/Users/$USER/Library/Preferences/com.apple.loginwindow.plist_F3" [label="8: write"]
+	"mal_P" -> "defaults2_P" [label="9: fork"]
+	"defaults2_P" -> "/Library/Scripts/AtomicRedTeam.sh_F2" [label="10: write"]
+}

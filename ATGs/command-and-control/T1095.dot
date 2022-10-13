@@ -1,0 +1,26 @@
+digraph T1095 {
+rankdir="LR"
+size="9"
+fixedsize="false"
+splines="true"
+nodesep=0.3
+ranksep=0
+fontsize=10
+overlap="scalexy"
+engine= "neato"
+	"mal_P" [node_type=Process shape=box]
+	"IEX_P" [node_type=Process shape=box]
+	"New-Object_P" [node_type=Process shape=box]
+	"Downloadstring_P" [node_type=Process shape=box]
+	"Invoke-PowerShellIcmp_P" [node_type=Process shape=box]
+	"https //raw.githubusercontent.com/samratashok/nishang/c75da7f91fcc356f846e09eab0cfd7f296ebf746/Shells/Invoke-PowerShellIcmp.ps1_S" [node_type=Socket shape=diamond]
+	"127.0.0.1_S" [node_type=Socket shape=diamond]
+	"mal_P" -> "IEX_P" [label="1: fork"]
+	"IEX_P" -> "New-Object_P" [label="2: fork"]
+	"IEX_P" -> "Downloadstring_P" [label="3: fork"]
+	"Downloadstring_P" -> "https //raw.githubusercontent.com/samratashok/nishang/c75da7f91fcc356f846e09eab0cfd7f296ebf746/Shells/Invoke-PowerShellIcmp.ps1_S" [label="4: send"]
+	"https //raw.githubusercontent.com/samratashok/nishang/c75da7f91fcc356f846e09eab0cfd7f296ebf746/Shells/Invoke-PowerShellIcmp.ps1_S" -> "Downloadstring_P" [label="5: receive"]
+	"mal_P" -> "Invoke-PowerShellIcmp_P" [label="6: fork"]
+	"Invoke-PowerShellIcmp_P" -> "127.0.0.1_S" [label="7: send"]
+	"127.0.0.1_S" -> "Invoke-PowerShellIcmp_P" [label="8: receive"]
+}

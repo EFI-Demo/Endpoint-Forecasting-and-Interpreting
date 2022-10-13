@@ -1,0 +1,40 @@
+digraph "T1558.003" {
+rankdir="LR"
+size="9"
+fixedsize="false"
+splines="true"
+nodesep=0.3
+ranksep=0
+fontsize=10
+overlap="scalexy"
+engine= "neato"
+	"mal_P" [node_type=Process shape=box]
+	"Add-Type_P" [node_type=Process shape=box]
+	"setspn.exe_P" [node_type=Process shape=box]
+	"Select-String_P" [node_type=Process shape=box]
+	"New-Object_P" [node_type=Process shape=box]
+	"Import-Module_P" [node_type=Process shape=box]
+	"Get-TGSCipher_P" [node_type=Process shape=box]
+	"hashcat_P" [node_type=Process shape=box]
+	"Invoke-kerberoast_P" [node_type=Process shape=box]
+	"setspn.exe_F2" [node_type=File shape=ellipse]
+	"rubeus_output.txt_F3" [node_type=File shape=ellipse]
+	"hash.txt_F3" [node_type=File shape=ellipse]
+	"passwd.txt_F3" [node_type=File shape=ellipse]
+	"Invoke-kerberoast.ps1_F2" [node_type=File shape=ellipse]
+	"mal_P" -> "Add-Type_P" [label="1: fork"]
+	"mal_P" -> "setspn.exe_P" [label="2: fork"]
+	"setspn.exe_P" -> "setspn.exe_F2" [label="3: exec"]
+	"setspn.exe_P" -> "Select-String_P" [label="4: fork"]
+	"setspn.exe_P" -> "New-Object_P" [label="5: fork"]
+	"mal_P" -> "Import-Module_P" [label="6: fork"]
+	"Import-Module_P" -> "rubeus_output.txt_F3" [label="7: write"]
+	"mal_P" -> "Get-TGSCipher_P" [label="8: fork"]
+	"Get-TGSCipher_P" -> "rubeus_output.txt_F3" [label="9: exec"]
+	"mal_P" -> "hashcat_P" [label="10: fork"]
+	"hashcat_P" -> "hash.txt_F3" [label="11: read"]
+	"hashcat_P" -> "passwd.txt_F3" [label="12: write"]
+	"Import-Module_P" -> "Invoke-kerberoast.ps1_F2" [label="13: write"]
+	"mal_P" -> "Invoke-kerberoast_P" [label="14: write"]
+	"Invoke-kerberoast_P" -> "Invoke-kerberoast.ps1_F2" [label="15: exec"]
+}

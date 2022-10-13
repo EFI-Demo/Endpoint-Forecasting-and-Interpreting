@@ -1,0 +1,23 @@
+digraph "T1218.005" {
+rankdir="LR"
+size="9"
+fixedsize="false"
+splines="true"
+nodesep=0.3
+ranksep=0
+fontsize=10
+overlap="scalexy"
+engine= "neato"
+	"mal_P" [node_type=Process shape=box]
+	"mshta.exe_P" [node_type=Process shape=box]
+	"GetObject_P" [node_type=Process shape=box]
+	"close_P" [node_type=Process shape=box]
+	"https//raw.githubusercontent.com/redcanaryco/atomic-red-team/master/atomics/T1218.005/src/mshta.sct_S" [node_type=Socket shape=diamond]
+	"mshta.exe_F2" [node_type=File shape=ellipse]
+	"mal_P" -> "mshta.exe_P" [label="1: fork"]
+	"mshta.exe_P" -> "mshta.exe_F2" [label="2: exec"]
+	"mshta.exe_P" -> "GetObject_P" [label="3: fork"]
+	"GetObject_P" -> "https//raw.githubusercontent.com/redcanaryco/atomic-red-team/master/atomics/T1218.005/src/mshta.sct_S" [label="4: send"]
+	"https//raw.githubusercontent.com/redcanaryco/atomic-red-team/master/atomics/T1218.005/src/mshta.sct_S" -> "GetObject_P" [label="5: receive"]
+	"mshta.exe_P" -> "close_P" [label="6: fork"]
+}

@@ -1,0 +1,106 @@
+
+
+By Andrea Marcelli
+
+
+
+//<![CDATA[
+window.__mirage2 = {petok:"64619ac52f1f5f49b892a500283bf34bb216c3b9-1652772037-1800"};
+//]]>
+
+
+
+
+Executive Summary
+Cisco Talos is releasing two new tools for IDA Pro: GhIDA and Ghidraaas.
+
+GhIDA is an IDA Pro plugin that integrates the Ghidra decompiler in the IDA workflow, giving users the ability to rename and highlight symbols and improved navigation and comments. GhIDA assists the reverse-engineering process by decompiling x86 and x64 PE and ELF binary functions, using either a local installation of Ghidra, or Ghidraaas ( Ghidra as a Service) — a simple docker container that exposes the Ghidra decompiler through REST APIs.
+
+Here is a quick video walking users through this new tool:
+  
+
+Features
+This new IDA plugin provides the following features:
+
+
+Synchronization of the disassembler view with the decompiler view: In the default configuration, the disassembler view is synchronized with the decompiler view. By clicking on different functions, both in the IDA Graph view or Text View, the decompiler view is updated accordingly. When a function is decompiled, the result is cached, making the transition between functions quicker.
+
+Decompiled code syntax highlight: The decompiled code is syntax-highlighted as C code using the pygments Python library.
+
+Code navigation by double-clicking on symbol name: A double click (or right-click -> Goto) over the name of a function in the decompiler view, automatically opens the selected function in the decompiler and disassembler view. The same behaviour happens if the functions is selected through the disassembler view and the synchronization between the two views is active.
+
+Adding comments in the decompiler view: GhIDA allows users to insert and update comments in the decompiler view using the default IDA shortcut (or right-click -> Add comment). Each comment will be displayed at the end of the selected line, separated by a double slash. Comments are not added in the disassembler view, too, but they are cached and displayed in the decompiler view, even if the same function is decompiled multiple times.
+
+Symbols renaming: When a symbol is selected in the decompiler view, it is possible to rename it by pressing N (or right-click -> Rename) and then insert the new name in the dialog. The symbol name will be updated in the decompiler and disassembler view. Due to the different syntax used by the Ghidra decompiler and IDA, only a subset of the symbols can be renamed. If a symbol is renamed in the disassembler view, the function must be removed from cache and decompiled again to update the symbols name in the decompiler view, .
+
+Symbols highlight: When clicking on a symbol in the decompiler view, all the other occurrences of the same symbol are highlighted too. The plugin also highlights the corresponding symbols in the disassembler view, but as mentioned above, this is limited to subset of the available symbols.
+
+Storage of decompiled code and comments: If the corresponding option is selected in the configuration, GhIDA stores in two JSON files the decompiled code and comments when IDA is closed. They will be automatically restored the next time the IDB is opened.
+
+
+
+Installation
+
+
+GhIDA requires IDA Pro 7.x.
+
+Install the following two Python2 libraries:
+
+
+
+pip2 install requests
+
+pip2 install pygments
+
+
+
+Clone or download the GhIDA repository from GitHub and copy ghida.py and the ghida_plugin folder in the plugins folder of your IDA Pro installation.
+
+The first time GhIDA is launched (Ctrl+Alt+D or Edit -> Plugins -> GhIDA Decompiler) choose between a local Ghidra installation or the Ghidraaas server. If you want to use GhIDA with a local installation of Ghidra:
+
+
+
+Install Ghidra
+
+Add the path of the ghidra folder in the installation path
+
+Otherwise, launch a local instance of the server using the Ghidraaas docker container.
+
+
+Quick start
+Select a function in IDA's Graph or Text view. Then, press CTRL+ALT+D or (Edit -> Plugins -> GhIDA Decompiler). Wait a few seconds and a new window will open showing the decompiled code of the function.
+
+For the best user experience, we suggest to open the decompiler view side-to-side with the disassembler view and keep active the synchronization between the two views. It is best to rename a symbol in the decompiler view since it will automatically update in the disassembler view.
+
+
+Technical Details
+GhIDA exports the IDA project using idaxml.py, a Python library shipped with Ghidra, and then invokes Ghidra in headless mode to obtain the decompiled code, either directly using the local installation, or through the Ghidraaas server, without requiring any additional analysis.
+
+When GhIDA is called the first time, the idaxml library is used to create two files: an XML file that embeds a program description according to the IDA analysis (including functions, data, symbols, comments, etc.) and a bytes file that contains the binary code of the program under analysis. While the binary file does not change during the time, the XML file is recreated each time the user flushes the GhIDA cache, in order to take into account updates the user did in the program analysis. To obtain the decompiled code, GhIDA uses FunctionDecompile.py, a Ghidra plugin in Python that exports to a JSON file the decompiled code of a selected function.
+
+
+Ghidra decompiler under the hood
+The Ghidra decompiler is a standalone C++ project. Ghidra communicates with the decompiler over stdin and stout using a binary protocol specified in the DecompileProcess class, while the DecompInterface Java class implements the logic of the communication.
+
+The decompilation process requires the following steps:
+
+
+Decompiler initialization (requires the specification of the processor, etc.).
+
+The Java client ask to decompile a function.
+
+The decompiler asks the PCodePacked for each instruction of the function.
+
+The decompiler asks for symbols and comments.
+
+The decompiler returns an XML with the decompiled info. 
+
+
+This article runs down an initial attempt to directly communicate with the Ghidra decompiler. However, sending PCodePacked, symbols and comments to the decompiler, and finally translating the output to C code, requires a complicated process that goes beyond the scope of this project.
+
+Ghidra allows users to import a binary as either an XML or bytes file, a procedure that allows to import in Ghidra projects exported from IDA. Ghidra also provides an IDA plugin with a Python library to ease the exporting process. More importantly, Ghidra can execute Python scripts (using the command-line-based version Analyze Headless) directly on IDA exported XML and bytes files.
+
+By exporting the IDA IDB and calling the Ghidra decompiler through the Headless Analyzer, add a small overhead to the decompilation process, but it saves a huge amount of work by abstracting the low-level communication with the Ghidra decompiler.
+
+
+

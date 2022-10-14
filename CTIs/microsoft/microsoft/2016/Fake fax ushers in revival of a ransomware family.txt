@@ -1,0 +1,130 @@
+
+		“Criminal case against you” is a message that may understandably cause panic. That’s what a recent spam campaign hopes happens, increasing the likelihood of recipients opening the malicious attachment.
+
+
+
+
+The trend towards increasingly sophisticated malware behavior, highlighted by the use of exploits and other attack vectors, makes older platforms so much more susceptible to ransomware attacks. From June to November 2017, Windows 7 devices were 3.4 times more likely to encounter ransomware compared to Windows 10 devices.
+Read our latest report: A worthy upgrade: Next-gen security on Windows 10 proves resilient against ransomware outbreaks in 2017
+
+
+
+We recently discovered a new threat that uses email messages pretending to be fax messages, but in truth deliver a ransomware downloader. The attachment used in this campaign, “Criminal Case against_You-O00_Canon_DR-C240IUP-4VF.rar”, is password-protected RAR archive file that, when extracted, is a trojan detected as TrojanDownloader:JS/Crimace.A.
+The malicious email ticks all the boxes to fake a fax:
+
+The subject is a simple “PLEASE READ YOUR FAX T6931”
+The message body lists fax protocol, date and time, fax channel and number of pages
+The attachment file name spoofs a popular fax machine brand
+The attached archive file contains a file that has the fake meta-data “—RAW FAX DATA—“
+
+
+Figure 1. Email message masquerading as a fax but carrying TrojanDownloader:JS/Crimace.A as attachment
+The use of a password-protected RAR file attachment is a clear attempt to evade AV scanners. The password is provided in the email message body. The archive file contains no fax, but Crimace, a malicious Windows Script File (.WSF) developed in JScript.
+When the recipient falls for the lure and opens the attachment, Crimace displays the following message to complete the fax pretense:
+
+Figure 2. Crimace displays a message to signify the fake fax cannot be displayed
+Unsuspecting victims might think that is the end of it. But Crimace goes ahead with its intention to download its payload, a ransomware detected as Ransom:Win32/WinPlock.B.
+WinPlock is a family of ransomware that has been around since September 2015 but did not have significant activity until recently. The discovery of this new variant signals that it’s back to wreak havoc.
+Ransom:Win32/WinPlock.B can search for and encrypt a total of 2,630 file types.
+
+Figure 3. Ransom:Win32/WinPlock.B’s ransom note contains instructions to pay
+It asks for a ransom of .55 Bitcoin, which the ransom note indicates as converting to ~US$386. However, using current conversion rates, it converts a little higher:
+
+Figure 4. Bitcoin to US Dollar conversion on November 15, 2016 shows a higher rate than what is indicated in the ransom note (data from Coinbase)
+Interestingly, when this ransomware family was first discovered in September 2015, it asked for ransom of 1 Bitcoin, which at the time converted to ~US$300. The market has changed since then, with more and more ransomware families and better technologies to detect ransomware. The increase in ransom amount indicates the actors behind this ransomware family are tracking Bitcoin exchange rates, and aim for potentially bigger gain.
+And, just like the fake fax that delivers Crimace, Ransom:Win32/WinPlock.B attempts to cause panic by setting a timer that gives a victim 120 hours to pay the ransom:
+
+Figure 5. Ransom:Win32/WinPlock.B sets a timer
+TrojanDownloader:JS/Crimace.A has a lot of functions to download and execute
+TrojanDownloader:JS/Crimace.A arrives as a malicious .WSF file contained in a RAR archive attached to emails:
+
+ Figure 6. The attachment is a RAR archive containing a malicious .WSF file
+Inspecting the .WSF file shows that it is obfuscated script file:
+
+Figure 7. The .WSF file before unobfuscated form
+Decrypting the file reveals a lot of suspicious functions including download and execute capabilities:
+
+function CheckWSFInAutorun()
+function CheckWSFInFolder()
+function CopyWSFToFolder()
+function DecRequest()
+function Download()
+function EncRequest()
+function Execute()
+function GetCurrentFile()
+function GetInstallPath()
+function GetRandHASH()
+function GetRandomName()
+function GetStrHASH()
+function GetWSFGuid()
+function HTTPRequest()
+function HTTPRequestRaw()
+function IsUserAdmin()
+function MakeAutorun()
+function SelfDelete()
+function UnitChange()
+function UnitPing()
+function UnitRequest()
+
+The header of the file is its configuration code and is embedded on the file as an array:
+
+Figure 8. The header of the decrypted script is the configuration code
+When decrypted, the configuration includes data including campaign number, download links, and installation paths:
+
+Figure 9. Decrypted configuration
+Ransom:Win32/WinPlock.B encrypts 2,620 file types
+Ransom:Win32/WinPlock.B is downloaded by Crimace as a Nullsoft Scriptable Install System (NSIS) package. Once executed it may create the following desktop shortcut:
+
+Figure 10. NSIS package icon used by malware
+When the malicious file is extracted from the NSIS package, it uses the following icon:
+
+ Figure 11. Icon used by malware after extraction from package
+The malware’s file information also shows campaign ID as internal name and version:
+
+ Figure 12. The malware file information
+When successfully executed, Ransom:Win32/WinPlock.B encrypts files with extensions in its list of 2,630. Notably, the ransom note contains an email address to contact for support. It asks for ransom of .55 Bitcoins.
+
+ Figure 13. Ransom:Win32/WinPlock.B’s ransom note contains support information
+The ransom note also lists websites where victim can buy Bitcoins:
+
+ Figure 14. Ransom:Win32/WinPlock.B’s ransom note lists information for acquiring Bitcoins
+Clicking the “Show files” lists all the encrypted files. Unlike other ransomware, Ransom:Win32/WinPlock.B does not change the extension of the encrypted files:
+
+ Figure 15. List of encrypted files
+It also creates additional files to remind users that their computer is infected:
+
+ Figure 16. The malware creates additional files to indicate that files have been encrypted
+Prevention and mitigation
+To avoid falling prey to this new ransomware campaign, here are some tips:
+ For end users
+
+Use an up-to-date, real-time antimalware product, such as Windows Defender for Windows 10.
+Keep Windows and the rest of your software up-to-date to mitigate possible software exploits.
+Think before you click. Do not open emails from senders you don’t recognize. Upload any suspicious files here: https://www.microsoft.com/en-us/security/portal/submission/submit.aspx. This campaign uses a RAR archive file, which may be a common attachment type, but it contains a .WSF file. Be mindful of what the attachment is supposed to be (in this case, a fax) and the actual file type (a script).
+
+For IT Administrators
+
+Use Office 365 Advanced Threat Protection. It has a machine learning capability to help your network administrators block dangerous email threats. See the Overview of Advanced Threat Protection in Exchange: new tools to stop unknown attacks, for details.
+Use Windows Defender Advanced Threat Protection to help detect, investigate, and respond to advanced and targeted attacks on your enterprise networks. To test how Windows Defender ATP can help your organization, sign up for a free trial.
+Use the AppLocker group policy to prevent dubious software from running.
+
+Additional information
+To learn more about how Microsoft protects you from ransomware, you can read the following:
+
+Ransomware protection in Windows 10 Anniversary Update (PDF)
+Defending against ransomware with Windows 10 Anniversary Update
+What’s new in Windows 10 security
+
+ 
+Francis Tan Seng
+ 
+ 
+ 
+
+ 
+
+Talk to us
+Questions, concerns, or insights on this story? Join discussions at the Microsoft community and Windows Defender Security Intelligence.
+Follow us on Twitter @WDSecurity and Facebook Windows Defender Security Intelligence.
+ 
+	

@@ -1,0 +1,45 @@
+It’s safe to say that the last few years have been eventful when it comes to the Internet of Things (IoT) threat landscape, with new waves of distributed denial of service (DDoS) bots emerging with increasing regularity. Ever since the first reported incident of the Mirai botnet (Linux.Mirai) back in 2016, followed by the malware’s source code being leaked, the number of variants of this family has been growing steadily, their success helped along by an environment of poorly managed IoT devices. As it is, the IoT market is hugely fragmented and most of the devices do not receive software patches for the known vulnerabilities. To make things worse, the malware authors continue to evolve these variants, making the malware more powerful and portable across different platforms and architectures.
+
+Leveraging open-source projects
+
+One of the major pain points for a cross-platform IoT botnet is portability. The malware must be able to run on different architectures and platforms in a self-contained capsule without any runtime surprises or misconfiguration. This is also an area where many inexperienced malware authors, or script-kiddies, fail if they simply copy/paste and reuse the existing malware code base.
+
+At the end of July, I came across a live remote server hosting multiple malware variants, each for a specific platform. As with many Mirai infections, it starts by firing a shell script on a vulnerable device. That shell script sequentially tries downloading and executing individual executables one by one until a binary compliant with the current architecture is found.
+.The successfully executed executable file is responsible for the actual Mirai payload, such as enumerating a list of IP addresses by creating a list of random addresses and scanning for devices with default credentials, or vulnerabilities.
+
+While this is similar behavior to the Mirai variants we’ve seen so far, what makes it interesting is the compiled binary. These variants have been created by leveraging an open-source project called Aboriginal Linux that makes the process of cross-compilation easy, effective, and practically fail-proof. It should be noted that there is nothing malicious or wrong with this open-source project, the malware authors are once again leveraging legitimate tools to supplement their creations, this time with an effective cross compilation solution.
+
+What’s the result of this process?
+
+Given that the existing code base is combined with an elegant cross-compilation framework, the resultant malware variants are more robust and compatible with multiple architectures and devices, making it executable on a wide variety of devices ranging from routers, IP cameras, connected devices, and even Android devices. For example, Figure 2 shows an ARM7 malware variant running on an Android device running Android 4.4, and Figure 3 shows the sample running on Debian ARM.
+.The remainder of the malware’s functionalities are consistent with known Mirai behavior. For example, when I executed the sample in a contained environment, it attempted to scan more than 500,000 IP addresses generated through the random generation process previously described, and then tried to send raw packet data over port 23.
+
+Protection
+
+Symantec and Norton products detect the threats discussed in this blog as:
+
+
+
+
+
+	Linux.Mirai
+
+
+Mitigation
+
+Symantec has the following tips to protect your IoT device from becoming infected with malware:
+
+
+	Research the capabilities and security features of an IoT device before purchase.
+	Perform an audit of IoT devices used on your network.
+	Change the default credentials on devices. Use strong and unique passwords for device accounts and Wi-Fi networks.
+	Use a strong encryption method when setting up Wi-Fi network access (WPA).
+	Disable features and services that are not required.
+	Disable Telnet login and use SSH where possible.
+	Disable Universal Plug and Play (UPnP) on routers unless absolutely necessary.
+	Modify the default privacy and security settings of IoT devices according to your requirements and security policy.
+	Disable or protect remote access to IoT devices when not needed.
+	Use wired connections instead of wireless, where possible.
+	Regularly check the manufacturer’s website for firmware updates.
+	Ensure that a hardware outage does not result in an unsecure state of the device.
+

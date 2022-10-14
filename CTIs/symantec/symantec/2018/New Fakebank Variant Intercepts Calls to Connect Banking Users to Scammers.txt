@@ -1,0 +1,43 @@
+We’ve recently come across a new malicious behavior among apps infected with Android.Fakebank: interception of phone calls made by users to their banks. These apps are sourced from third-party Android markets and some social media sites. We’ve discovered 22 apps so far, targeting Korean bank clients. 
+
+
+The Fakebank variants we’ve seen in the past usually collect bank SMS, record phone calls to banks, and display a fake bank login UI. This new variant, however, is able to intercept calls both incoming and outgoing.
+.When the app is launched, it collects and submits user’s personal information to a command and control (C&C) server, and presents its display (Figure 1).
+.The server will respond with configuration specifying the phone numbers that will be used in the scam (Figure 2).
+.Four numbers are passed to the malware app:
+
+
+	phoneNum_ChangeNum: The legitimate bank’s phone number that will be replaced when the user dials it
+	phoneNum_To: The number of a scammer, ready to impersonate a bank agent. This number will actually be dialed when the user tries to call the bank
+	phoneNum_Come: The number of a scammer that will call the victim. When this number calls the phone, the fake caller ID overlay will appear
+	phoneNum_ShowNum: The legitimate bank number that should be used to overlay the scammer’s incoming/outgoing caller ID
+
+
+This allows the app to deceive users, when the configured phone numbers appear for an outgoing or incoming call:
+
+
+	Outgoing call: When users call a real banking phone number, the malware is able to intercept and transfer the call to the scammer’s configured phone number. Additionally, the app will overlay a fake UI to reflect the legitimate number. 
+	Incoming call: When a call comes in from a scammer, the app will overlay a fake UI dialog that spoofs a legitimate bank caller ID and number.
+
+.The APIs and associated permission used to carry out this deception (android.permission.SYSTEM_ALERT_WINDOW) have evolved across Android versions. This malware optimizes its version targets to avoid requesting permissions from the user:
+
+
+	For versions prior to Android 6, the permission is required to be declared in the manifest (and will appear in the dialog on install).
+	For Android 6 and Android 7, the permission is granted without prompting the user if the permission is declared in the manifest and the app originates in Google Play. However, this automatic grant is also grandfathered if the target version is set below Android 6. The malware targets Android 5 to gain this permission silently.
+	Starting in Android 8, overlaying a system window from an app is not allowed, and so the malware can’t carry out its deception.
+
+
+In addition to tricking users into conversations with scammers, this malicious app sends call events to the C&C server. It also has a number of layouts customized to popular phone layouts in Korea.
+.Mitigation
+Symantec recommends users follow these best practices to stay protected from mobile threats:
+
+
+	Keep your software up to date
+	Refrain from downloading apps from unfamiliar sites and only install apps from trusted sources
+	Pay close attention to the permissions requested by apps
+	Install a suitable mobile security app, such as Norton, to protect your device and data
+	Make frequent backups of important data
+
+
+Protection
+Symantec and Norton products detect this malware as Android.Fakebank.

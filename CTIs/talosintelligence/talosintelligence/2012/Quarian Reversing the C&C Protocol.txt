@@ -1,0 +1,33 @@
+
+Win.Trojan.Quarian was reportedly first found in a leaked email from the Syrian Ministry of Foreign Affairs. It arrives on the victim's machine via a PDF document. The PDF contains an exploit for CVE-2010-0188 which, if successful, passes execution to embedded shellcode. The shellcode then extracts 0x8A218 bytes at offset 0xD98 in the PDF decrypting this with a XOR cipher and saving it as "%TEMP%\explorer.exe", which is the main malware executable. An embedded PDF document "%TEMP%\964.PDF" is similarly dumped and a new Adobe Reader process is launched to display it. The user is presented with this PDF with the malware running in the background.
+
+The malware's CNC traffic will depend on the proxy settings of the infected machine. If a proxy is configured then the malware will attempt to connect to it with the following:
+
+CONNECT sureshreddy1.dns05.com:443 HTTP/1.0User-Agent: Mozilla/4.0Host: sureshreddy1.dns05.comContent_length: 0Proxy-Connetion: Keep-AlivePragma: no-cache
+
+The malware's CNC host "sureshreddy1.dns05.com" is hardcoded. Also notice the misspelled "Proxy-Connetion" and the underscore and lowercase 'l' in the header "Content_length". These anomalies in the proxy connection are easy to spot in the main malware executable and on the wire. However, the direct CNC traffic is not. Every time the malware loads it sends 8 bytes to "sureshreddy1.dns05.com". Since the CNC server was not online at the time we began our research we couldn't make any observations on the response to these 8 bytes. We decided to reverse the CNC protocol and see if we could send the malware commands:
+
+
+
+
+
+Starting with the hypothesis that the first 8 bytes sent to the CNC server were some kind of key, we attached the malware process in a debugger and began to observe the malware's behavior when bytes were sent as a response to the malware's initial 8 byte message.
+
+We noticed that when sending 8 NULLs in a response some of the comparisons made by the malware code would result in the 8 byte key that was sent. From this observation we knew the malware was expecting an XOR key from the CNC server in order to process commands. After some trial and error, we had a local CNC server up and running:
+
+
+
+
+
+The CNC protocol uses a XOR key on both sides to communicate commands and responses. If a direct connection exists (or after starting a proxy connection) the malware will send CNC an 8 byte XOR key. CNC will then respond with its own 8 byte XOR key XOR'd with the malware key. When CNC sends a command, it XORs each byte of the command with the cnc_key, and when the malware sends a response it XORs each byte of the response with the mal_key:
+
+   Malware            Command and Control-------------         -------------------      mal_key  ---->               <----   mal_key ^ cnc_key               <----       cmd ^ cnc_keyres ^ mal_key  ---->
+
+Commands are implemented in a switch statment where 0x01 dumps various system info and 0x06 starts a shell. If a command has an argument, it immediately follows the command byte. See the IDA dump below:
+
+
+
+
+
+As always, the VRT has coverage for this threat with SIDs 24858 & 24859 on the Snort side and Sig Win.Trojan.Quarian for Clamav.
+

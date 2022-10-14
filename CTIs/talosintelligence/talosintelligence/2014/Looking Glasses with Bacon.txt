@@ -1,0 +1,57 @@
+
+
+
+This is my first post on the VRT blog and I would like to introduce myself. I am Mariano Graziano, an Italian third-year Ph.D. student at the Software and Systems Security Group at Institut Eurecom in Sophia-Antipolis (France) under the supervision of professor Davide Balzarotti. My research interests are memory forensics and automated malware analysis and currently I am an intern at Cisco in the Talos Security Intelligence and Research Group under the guidance of Alain Zidouemba for the next three months. This post is not about my current project at Cisco but is about my DEF CON talk.
+
+
+
+At DEF CON 22 last month, I presented with my former colleague Luca Bruno an offensive research about Looking Glass software security. At the time we contacted all the Autonomous Systems (ASes) involved, as well as all the maintainers of the affected open-source Looking Glass software, but unfortunately, responsible disclosure is not the panacea and as result either some issues have not been addressed by the software maintainers or the AS local sysadmins did not update their Looking Glass instances.
+
+
+
+In this post I give a brief overview about the research, then I introduce the vulnerabilities and web misconfigurations we uncovered, and finally I show how the Talos Security Intelligence and Research Group covered  all the CVEs with Snort rules, so that users can protect their backbone infrastructure.
+
+
+
+Overview
+
+Let's start by defining what a looking-glass is. A looking-glass is a web-application that provides a restricted set of operations on AS routers and is commonly written in Perl or PHP. This web application is directly connected to the routers (via telnet or SSH), the commands go from the web form to the router console and the answer is printed back. The attack vector is obviously from the web, in this threat model we have two kind of problems: web misconfigurations and common web vulnerabilities in the web interface. Web misconfigurations might lead an attacker to the backbone router credentials with a simple Google Dork while a severe vulnerability might lead to a command injection from the web form to the router console. During our research we have found both issues and six CVE numbers have been assigned by the MITRE affecting 45 ASes all over the world.
+
+
+
+For a detailed analysis please have a look at either the WOOT 2014 paper or our DEF CON 22 slides.
+
+
+
+Vulnerabilities
+
+We have found six vulnerabilities on four open-source Looking Glass software (MRLG4PHP, Cougar LG, Cistron LG and MRLG). Two CVEs (CVE-2014-3927 and CVE-2014-3926) are common web vulnerabilities, three are simply web misconfigurations (CVE-2014-3928, CVE-2014-3929 and CVE-2014-3930) and the last one is a memory corruption in a third-party binary shipped in a Looking Glass installation package. Below you can find the list of these issues:
+
+
+
+CVE-2014-3927: Remote command injection in router's console via "argument" parameter
+
+CVE-2014-3926: XSS in <title> via "addr" parameter
+
+CVE-2014-3928: Unsafe configuration file path/ACL
+
+CVE-2014-3929: Unsafe SSH keypairs path in default config
+
+CVE-2014-3930: Unsafe configuration file path/ACL
+
+CVE-2014-3931: Remote memory corruption in fastping (SUID binary)
+
+
+
+
+
+The Snort way
+
+Talos wrote six Snort rules to address all the above issues. The rules for the web misconfigurations prevent the attacker to retrieve the configuration file or list the configuration directories (have a look at sid:31709, sid:31708 and sid:31727 for all the details). The memory corruption bug referenced by CVE-2014-3931 should be avoided by sid:31767, only the default ICMP Echo Reply payloads are allowed. The web vulnerabilities are addressed by sid:31741 and sid:31766, these rules provide the missing input sanitization and should avoid basic exploitation attempts.
+
+
+
+
+We recommend that all Snort users running the affected Looking Glass software deploy the mentioned rules.
+
+

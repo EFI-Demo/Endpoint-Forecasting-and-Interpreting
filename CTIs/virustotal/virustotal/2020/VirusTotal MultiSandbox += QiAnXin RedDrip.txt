@@ -1,0 +1,142 @@
+
+
+VirusTotal would like to welcome QiAnXin RedDrip to the multi-sandbox project!  QiAnXin is now sending execution behavior reports to the VirusTotal ecosystem for a wide variety of file types. 
+
+
+
+
+
+
+
+
+
+
+
+
+
+In their own words:
+
+QiAnXin RedDrip Sandbox, developed by QI-ANXIN Threat Intelligence Center, is a cloud‐based malware analysis service provided to security researchers, analysts as well as ordinary individuals. Based on hardware virtualization technology, the sandbox contains less traits inside the monitored guest system that the malware could be aware of. The runtime environment also gets tailored to behave like a potential victim, rather than an analysis machine.   We do this through invalidating available checkpoints, simulating keyboard/mouse interactions, and so on. It is able to handle many file types, probe and trigger infection vectors. These features help us to discover APTs easier and result in the discovery of zero-day attacks in the wild. By using the service, people gain better understanding of the malware and could perform intelligence hunting more conveniently.
+
+On VirusTotal you can find the QiAnXin reports on the Behavior tab:
+
+
+
+
+
+
+
+
+Here are some interesting samples to highlight QiAnXin RedDrip’s capabilities:
+
+
+
+LNK File 
+
+Example:
+529177610e30a96c2c8a5b40f5015ce449eb611e06d5d75e66730236cc83bdc6
+
+Within the processes and services actions section we can see that the victim would launch a VBE script silently in the background while opening the HWP document. HWP files are popular in South Korea.
+
+
+
+
+
+Knowing about this, advanced users can then leverage VT Intelligence modifiers to build logic to flag suspicious LNK files, for instance:
+type:lnk behaviour_processes:start
+
+
+ 
+
+RAR File with malicious DLL side loading with goodware EXE
+
+Example: 
+9155afcf50ee1c2a4b217034ddd43ceb48ea8ead94fa6d9e289753f2fadb82dc
+
+This RAR file is interesting because it contains a trusted, and digitally signed WinWord executable from Microsoft, as well as a malicious DLL to be side loaded. Attackers often use DLL side loading to avoid  detection. 
+
+
+
+
+
+
+
+As usual in our multisandbox effort, network observations contribute to the file’s relations, meaning that we can use VT Graph to shed light into a threat campaign:
+
+
+
+
+
+
+
+
+ 
+
+A ZIP file that contains executables and scripts
+
+Example: 
+97eabe0eda591b9a7059b71156f5d3a50f371c2a6a9ef7136943b8b80925704c
+
+RedDrip will use 7z to decompress ZIP packages, it will run through the package contents and identify interesting files to execute. This is particularly useful for multi-modular malware, where a given malicious file has certain dependencies and will not be executed unless it can find them. Packaging up all dependencies in a single bundle overcomes this limitation.
+
+
+
+Outlook email
+
+Example:
+216ac0a63ce9103a1b5c7d659806675e7188893e98fbaed56e9a90a2a17b53c7
+
+This example illustrates email being used as an attack vector by adversaries. In this example there is a malicious document attachment that gets extracted and runs a powershell script. RedDrip extracts the attachment and opens/executes it, revealing the entire attack chain and allowing us to tie network infrastructure to the original bait.  
+
+
+
+
+
+If we switch over to the relations tab, the network-recordings are immediately visible.  We can see that the contacted URLs, domains and IPs are most likely benign.   From here would could pivot and continue investigating in VT Graph:
+
+
+      
+
+
+
+Most importantly, the fact that RedDrip will follow subsequent executions allows performing advanced searches to identify suspicious patterns in VT Intelligence, for instance:
+
+type:outlook behaviour_processes:"winword.exe" have:behaviour_network
+
+This enables us to unearth malicious files that may not yet be detected. This particualr query is asking VirusTotal to return all those outlook messages that upon being opened have launched Microsoft Word (they contained a document attachment) and gave rise to network communications (the document reached out to some URL, domain or IP, probably as a consequence of an exploit or a macro execution).
+
+ 
+
+MS Word Document
+
+Example: 
+e5b3792c99251af6a9581cd2e27e5a52b9c39c6d704985c4631a0ea49173793e
+
+By now, given all of the previous examples, it is obvious that RedDrip will open documents and execute macros. It records all of the activity observed for the macro and any subsequent payloads that it may drop or download: 
+
+
+
+
+Switching over to the relations tab we can see how it relates to other contacted URLs, Domains, and IP addresses, and the detections of those entities. This is rich contextual information to make better decisions even when an individual file might not yet be widely detected.
+
+
+
+
+All of the actions are also indexed in VT Intelligence, such that a simple click on the pertinent observation allows us to discover other samples exhibiting a given pattern. For instance, we can click on the HTTP requests in order to get to other files that reach out to the same URL:
+
+
+
+VT Intelligence will then automatically surface commonalities (shared patterns) that may be used as IoCs in your security toolset:
+
+
+
+
+Seeing the wide variety of file types handled by QiAnXin RedDrip, it is a very interesting addition  to the VirusTotal multi-sandbox project.
+
+Welcome and happy hunting!  
+
+
+Email ThisBlogThis!Share to TwitterShare to Facebook
+
+
+

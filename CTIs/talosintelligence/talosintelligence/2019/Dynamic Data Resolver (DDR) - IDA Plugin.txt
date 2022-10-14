@@ -1,0 +1,243 @@
+
+
+
+This blog post was authored by Holger Unterbrink
+
+
+
+
+
+
+5/28/20 Update: A new version of this software and associated blog can be found here 
+Executive Summary
+Static reverse-engineering in IDA can often be problematic. Certain values are calculated at run time, which makes it difficult to understand what a certain basic block is doing. But, if you try to perform dynamic analysis by debugging a piece of malware, the malware will often detect it and start behaving differently. Cisco Talos is here with Dynamic Data Resolver (DDR) a new plugin for IDA that aims to make the reverse-engineering of malware easier.
+
+
+
+Features
+
+Code Flow Trace
+(Shows which basic blocks were executed how many times by approx. 20 different colors):
+
+
+Figure 1
+
+
+Searchable API call logging:
+(This includes all occurrences where certain instructions e.g call,jxx,etc., touch an API address)
+
+
+Figure 2
+
+Searchable string logging:
+
+
+Figure 3
+
+
+Resolving dynamic values and auto-commenting:
+
+
+Figure 4
+
+
+Technical Details
+
+ 
+
+Architecture and usage
+DDR has the client/server architecture shown in figure 5. The DDR IDA plugin and the DDR server are Python scripts. The DynamoRIO client is a DLL written in C, which is executed by the DynamoRIO tool drrun.exe. This DLL is using instrumentation techniques to analyze and monitor the malware sample at runtime. The IDA plugin is the frontend. Usually, all the processes are controlled via the plugin. Once the DynamoRIO client backend is done with the analysis, the result is sent back to the plugin. We picked JSON as the format for this data to make it easy for the user to read, and parsable by third-party Python scripts.
+
+
+
+
+
+
+
+
+
+Theoretically, you can run the plugin and the server on the same PC, but as far as the malware sample is executed, it is highly recommended to do this on a separate machine.
+
+In most circumstances, you can start an analysis from the DDR/Trace menu within IDA, following the plugin installation as described below, but if you want to execute the malware on an air-gapped, Python-free system or analyze an address space that is not supported by the plugin menu, you can also do the analysis manually. The DLL can be executed on the command line. Depending on the sample's architecture, the syntax is:
+
+<DYNRIO_DIR>\bin<ARCH>rrun.exe -c "<PATH_TO_DLL>dr<ARCH>.dll" -s <START_ADDR> -e <END_ADDR> -c <NUM_INSTR_TO_EXECUTE> -f "<JSON_FILE_TO_LOG_TO>" -- <MALWARE-SAMPLE>
+e.g.
+C:\DYNRIO_DIR\bin64rrun.exe -c "C:drdr64.dll" -s 0x140001000 -e 0x140002200 -c 10000 -f "C:drlog\sample_log64.json" -- sample64.exe
+C:\DYNRIO_DIR\bin32rrun.exe -c "C:drdr32.dll" -s 0x00401000 -e 0x00402000 -c 10000 -f "C:drlog\sample_log32.json" -- sample32.exe
+After the analysis is done, you will need to load the <JSON_FILE_TO_LOG_TO>, ex. sample_log32.json, via the File/Load file/Load DynRio File menu in IDA.
+
+But again, this is usually not necessary. All features in DDR are accessed via the right-click context menu in IDAs Disassembler View. Before you can run any DDR features, you need to analyse the sample first or load the JSON file manually as described above. If you don't want to do the manual process, DDR offers several different options for running the analysis. They can all be accessed via the Trace menu shown in Figure 6.
+
+
+
+Figure 6
+
+
+The full trace options are collecting far more runtime information. Their execution takes much more time and consumes much more memory than the light trace. The light trace is only doing a code coverage trace — in other words, it logs the instructions that are executed at runtime, as well as some basic information for control flow related instructions like call, jmp, ret and others. This means you usually want to pick the light trace if you want to log as many instructions as possible to get an overview of what the sample is doing. For example, to highlight as many basic blocks as possible, based on the number of times they were executed or to get an overview of the API calls touched by the sample. You can set the number of instructions to log via the "Config/Set number of instructions to log" menu to a high value. For a light trace on an average PC, you can set the number usually to 200.000. The default is 20.000, which works well for full traces. You are usually running the full traces for cases where you are interested in the start sequence of a sample (ex. "Run full trace for segment") or you are analysing a certain basic block such as a crypto routine, and you need details about all the instructions and it's operants (ex. "Run full trace for basic block"). The analysis should not take longer than 30 seconds, or you need to set the MAX_API_TIMEOUT in the DDR_plugin.py script to a higher value. For larger traces you can also use the manual analysis as described above.
+
+Keep in mind that all the DDR functions are using the JSON file from the last analysis/trace that you have run. For example, if you have just run a light trace and then you are trying to resolve a register value via "Get values for source operant," you will likely not find any data (except it was one of the mentioned control flow instructions like call, jmp, etc.). It is probably a good idea to check out the generated JSON files when you are using DDR the first time to get an idea about which data is logged depending on the different traces. 
+
+The traces are cached/saved in the directory where the sample is in. The full path can also be found in the IDA log window. This means, if you need information that is logged in a JSON file that is not loaded at the moment, you can just pick the right trace menu option again and the cached/saved file is loaded. Loading and parsing the file usually takes not much time, so you can quickly jump between different analyses without really rerunning them. This also means, if you really want to rerun a certain analysis, you have to either delete all cached/saved files via the "Trace" menu or delete the corresponding files manually from the samples directory. 
+
+The video below shows you the different DDR features and some example workflows.
+
+
+
+
+
+Disclaimer
+Talos is releasing this alpha version knowing that it may contain a few bugs and can be improved upon in the future. Nevertheless, we think it is a useful tool that we want to share with the community at an early stage. Please see the source code for where to send issues, bug reports and feature requests. Feel free to contact the author if you run into issues.
+
+
+Installation
+The plugin is build for IDA Version 7.2 on Windows x64, but might also work on 7.1.
+
+First, clone or download the DDR repository here.
+
+Install the Python module requirements and the DynamoRIO framework. Details can be found in the appendix below.
+
+The next thing you have to do is to configure the variables in the "DDR_server.py" script based on your local setup. Also, make sure the local firewalls are not blocking the traffic between plugin and server. If you start the DDR_server.py script and it does not find an existing certificate file, it generates a self-signed certificate/key pair, as well as an API key file and writes them into the directory stored in the <CONFDIR> variable in the DDR_server.py script. Either you use this certificate or you place your own certificate/key file in this directory. Then you need to copy the certificate file, ex. "ddr_server.crt," to the analyst machine (IDA/DDR_plugin.py) and point the CA_CERT variable in DDR_plugin.py to it. You should also set the API key and the other variables based on your setup. These are the main variables you should look at: 
+
+DDR_plugin.py 
+
+# IP address of host ddr_server.py is running on
+WEBSERVER = "192.168.100.122"        
+
+# TCP port DDRserver.py is using                        
+WEBSERVER_PORT = "5000" 
+
+# API key, check ddr_server.py start messages  
+# Gets generated by the ddr_server.py script.
+DDR_WEBAPI_KEY = "KT5LUFCHHSO12986OPZTWEFS" 
+
+# Local directory where to find the certificate generated by the DDR_server.py script or the manual created one (used for the SSL connection). Don't forget to copy the certificate file to this location.
+CA_CERT = r"C:\Users\User Name\Documents\idaplugindr_server.crt"  
+
+# Verify certificates or not. It is insecure to set this to False, you should only do this for testing.
+VERIFY_CERT = True
+
+# Directory on the ddr_server.py machine. The local directory on the server where the server script can find the sample to analyse. Make sure it exists and you have copied the sample into it. A future version of the plugin will copy the file automatically.
+SERVER_LOCAL_SAMPLE_DIR = r"C:\Users\User Name\Documents\DDR_samples"
+
+DDR_server.py
+
+#Parameters for generating the self signed certificate at first start
+# and the local network setup
+CERT_FILE   = "ddr_server.crt"
+KEY_FILE        = "ddr_server.key"
+APIKEY_FILE = "ddr_apikey.txt"
+MY_IPADDR   = "192.168.100.122"   # Malware Host IP addr
+MY_PORT         = "5000"
+MY_FQDN         = "malwarehost.local" # Malware host FQDN
+
+# Directory to save/load config files to/from e.g. API key file, Certificate files etc.
+CONFDIR            = r"C:\malwareools\DDR_Talos\IDAplugin"
+
+# where to find the x32/x64 ddrun.exe and the corresponding DynRIO client DDR.dll
+CFG_DYNRIO_DRRUN_X32         = r"C:ools\DynamoRIO-Windows-7.0.0-RC1\bin32rrun.exe
+CFG_DYNRIO_CLIENTDLL_X32 = r"C:\malwareools\DDR_Talos\IDAplugindr32.dll"
+CFG_DYNRIO_DRRUN_X64         = r"C:ools\DynamoRIO-Windows-7.0.0-RC1\bin64rrun.exe"
+CFG_DYNRIO_CLIENTDLL_X64 = r"C:\malwareools\DDR_Talos\IDAplugindr64.dll
+
+Caveats
+Make sure the directories you are configuring exist. If they do not exist, the alpha version will not create the directories. The program will just show an error message.
+
+Also, you have to copy the malware sample you are planning to analyse in IDA first to the directory configured in the SERVER_LOCAL_SAMPLE_DIR variable in the DDR_plugin.py script. This will be automated in the next version.
+
+
+Appendix
+Python Requirements
+
+
+
+Python27-x64
+
+
+ddr_plugin.py/IDA machine (Analyst PC):
+
+
+
+Requests
+  (http://docs.python-requests.org)    
+
+e.g.  
+C:\python27-x64\Scripts>pip install -U requests  
+
+If you are using multiple Python versions, make sure you install these packages for the same version IDA is using.
+
+ddr_server.py machine (Malware host):
+
+
+
+Flask           
+  (http://flask.pocoo.org/)    
+
+PyOpenSSL 
+  (https://pyopenssl.org/en/stable/)   
+
+
+e.g.
+pip install -U Flask  
+pip install -U pyOpenSSL  
+
+
+
+Other Requirements
+
+ddr_server.py machine (Malware host):
+
+- DynamoRIO Framework (https://www.dynamorio.org/) 
+
+Just use the binary installer found on the DynamoRIO homepage.
+
+Tested environment:
+
+ddr_plugin.py/IDA (Analyst PC - Windows 10 64bit):
+
+IDA Version 7.2.181105 Windows x64
+
+C:\Python27-x64\Scripts\pip.exe freeze
+
+certifi==2017.7.27.1
+chardet==3.0.4
+first-plugin-ida==0.1.1
+idna==2.6
+requests==2.18.4
+requests-kerberos==0.11.0
+urllib3==1.22
+winkerberos==0.7.0
+yara==1.7.7
+
+ddr_server.py machine(Malware host - Windows 7 64 bit):
+
+C:\Python27-x64\Scripts\pip.exe freeze
+
+asn1crypto==0.24.0
+certifi==2018.11.29
+cffi==1.11.5
+chardet==3.0.4
+Click==7.0
+cryptography==2.4.2
+enum34==1.1.6
+Flask==1.0.2
+idna==2.7
+ipaddress==1.0.22
+itsdangerous==1.1.0
+Jinja2==2.10
+MarkupSafe==1.1.0
+pycparser==2.19
+pyOpenSSL==18.0.0
+requests==2.20.1
+six==1.11.0
+urllib3==1.24.1
+Werkzeug==0.14.1
+yara-python==3.6.3
+
+DynamoRIO Installation:
+DynamoRIO Version: 7.0.0-RC1
+
+Install directory: C:ools\DynamoRIO-Windows-7.0.0-RC1
+
+
+
+

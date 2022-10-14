@@ -1,0 +1,859 @@
+
+
+
+
+
+Today, Talos is publishing a glimpse into the most
+    prevalent threats we've observed between Dec. 14 and
+    Dec. 21. As with previous roundups, this post isn't meant to
+    be an in-depth analysis. Instead, this post will summarize the threats
+    we've observed by highlighting key behavioral characteristics,
+    indicators of compromise, and discussing how our customers are automatically
+    protected from these threats.
+
+As a reminder, the information provided for the following threats
+    in this post is non-exhaustive and current as of the date of
+    publication. Additionally, please keep in mind that IOC searching
+    is only one part of threat hunting. Spotting a single IOC does not
+    necessarily indicate maliciousness. Detection and coverage for the
+    following threats is subject to updates, pending additional threat
+    or vulnerability analysis. For the most current information, please
+    refer to your Firepower Management Center, Snort.org, or ClamAV.net.
+
+You can find an additional JSON file here that
+    includes the IOCs in this post, as well as all hashes associated with
+    the cluster. That list is limited to 25 hashes in this blog post. As
+    always, please remember that all IOCs contained in this document are
+    indicators, and one single IOC does not indicated maliciousness.
+
+The most prevalent threats highlighted in this roundup are:
+
+
+Win.Trojan.Ircbot-6790011-0
+        Trojan
+        Ircbot, also known as Eldorado, is known for injecting into processes, spreading to removable media, and gaining execution via Autorun.inf files. 
+Doc.Malware.Valyria-6788933-0
+        Malware
+        These variants of Valyria are malicious Microsoft Office files that contain embedded VBA macros used to distribute other malware.  
+Doc.Downloader.Emotet-6787868-0
+        Downloader
+        Emotet is a banking trojan that has remained relevant due to its continual evolution to bypass antivirus products. It is commonly spread via malicious emails. 
+Win.Worm.Vobfus-6789235-0
+        Worm
+        Vobfus is a worm that copies itself to external drives and attempts to gain automatic code execution via autorun.inf files. It also modifies the registry so that it will run when the system is booted. Once installed, it attempts to download follow-on malware from its command and control (C2) servers. 
+Win.Spyware.Ursnif-6788669-0
+        Spyware
+        Ursnif is used to steal sensitive information from an infected host and can also act as a malware downloader. It is commonly spread through malicious emails or exploit kits. 
+Win.Worm.Lolbot-6787741-0
+        Worm
+        Lolbot, also known as Ganelp, is a family of worms that spread through removable drives. It can download or upload other files onto the targeted system. 
+Win.Trojan.Zegost-6787448-0
+        Trojan
+        Zegost, also known as Zusy, uses man-in-the-middle attacks to steal banking information. When executed, it injects itself into legitimate Windows processes such as "explorer.exe" and "winver.exe". When the user accesses a banking website, it displays a form to trick the user into submitting personal information. 
+Win.Ransomware.Gandcrab-6787437-0
+        Ransomware
+        Gandcrab is ransomware that encrypts documents, photos, databases and other important files using the file extension ".GDCB," ".CRAB" or ".KRAB". Gandcrab is spread through both traditional spam campaigns, as well as multiple exploit kits, including Rig and Grandsoft. 
+
+
+
+Threats
+
+Win.Trojan.Ircbot-6790011-0
+
+
+Indicators of Compromise
+
+Registry Keys
+
+<HKCU>\SOFTWARE\MICROSOFT\WINDOWS\CURRENTVERSION\RUN
+                
+                
+Value Name: internat.exe
+
+
+<HKLM>\SOFTWARE\WOW6432NODE\MICROSOFT\WINDOWS\CURRENTVERSION\RUN
+                
+                
+Value Name: Driver Control Manager v8.1
+
+
+<HKCU>\SOFTWARE\MICROSOFT\WINDOWS\CURRENTVERSION\RUN
+                
+                
+Value Name: Driver Control Manager v8.1
+
+
+
+Mutexes
+
+Zebem7iK3vuv4.4
+
+IP Addresses contacted by malware. Does not indicate maliciousness
+
+199[.]2[.]137[.]20
+
+Domain Names contacted by malware. Does not indicate maliciousness
+
+tux[.]shannen[.]cc
+fghfg[.]translate-google-cache[.]com
+urcdw[.]zavoddebila[.]com
+
+Files and or directories created
+
+\Autorun.inf
+%LocalAppData%\Temp\sesdessetri.exe
+%LocalAppData%\Temp\explorer_smece22487.tmp
+\PC\PC\Desktop.ini
+\PC\PC\PCph13.exe
+
+File Hashes
+
+02b19a5969e8835fcc7ddfcd3aab054445f617a27bf30092222703a8b4a3f856
+08a94b76a4b98d8d8e9611e22ca9bac26535175abcafc598311cb7ef0f0bab2e
+098b522b3df96f6b103801ff0f146c197b9bc16fb4a82c2e35077f0ee9d60f40
+14bb0e23ca5ff85bb8c87eb16ffd8c00c4fca779ff6f3f6425aa48727f81e363
+1c43fcd55b4097c060594ef6bd2f3dc9a9ecb695e855c908a293ee0b58c07e9c
+280388ae896f081759a34e72a23be71d561fff411791447a5d1ca3955f512cc8
+6dee684652d14ded24772bc07f146dbd7eee3784dc190cb374b9e78ebbf8a47a
+6fc943a77694773debde1e6ae93ec51692568fff0adc7a2d00b424021b97f405
+74c26ab8808722b5e7ca5c5039b6d0dc46e45d3f12652e280257796a8dc55a13
+74c2bc41e4dcc3da2a92754e21367f27cdab96377ece81acdd4e93a9c7d1cde1
+774507352a7a4e7cf2ecb254e3b4a3e0b91fa9535d7aa823257a24e16a852bc4
+83eedc1cd9b85b497b4753c4b0049486cd727559b5c4512569274dd6f74c78c0
+a7b0b3b373bd6adce3210d3c3118ec0c0049cd6902289f649e7157469fe05352
+b64ce6c5e89b60d7869621e53f9af3081d32b36ae60f38e7e9ea0db0507875b7
+b9120712772e2b97860804115a5dfd4a530d6e75d809afbe453369b9d005f899
+d3766174efa61ecf9344b0bfdaaabd9cf3e0ada543310b4ff724b4ecb8b985f2
+e7445bcc33ad77757817184493e1c72b0a1433f399aad4cb359fb9f944e6dd6a
+ec3f2dfdeb90feea711119880e9e044ad841ec159f7e0dfbc00c166b284a0f7b
+
+
+
+Coverage
+
+
+        
+
+
+Screenshots of Detection
+AMP
+
+
+
+
+
+ThreatGrid
+
+
+
+
+
+Umbrella
+
+
+
+
+
+
+Doc.Malware.Valyria-6788933-0
+
+
+Indicators of Compromise
+
+Registry Keys
+
+N/A
+
+Mutexes
+
+Global\552FFA80-3393-423d-8671-7BA046BB5906
+
+IP Addresses contacted by malware. Does not indicate maliciousness
+
+72[.]167[.]191[.]65
+208[.]91[.]197[.]27
+177[.]185[.]192[.]131
+50[.]62[.]26[.]129
+87[.]233[.]175[.]130
+132[.]148[.]50[.]1
+
+Domain Names contacted by malware. Does not indicate maliciousness
+
+p3nlhclust404[.]shr[.]prod[.]phx3[.]secureserver[.]net
+customersupport[.]networksolutions[.]com
+zoelowney[.]com
+www[.]Thepark14[.]com
+www[.]networksolutions[.]com
+www[.]triptur[.]com[.]br
+thepark14[.]com
+onenightlife[.]com
+testcarion[.]be
+triptur[.]com[.]br
+
+Files and or directories created
+
+%LocalAppData%\Temp\626.exe
+%LocalAppData%\Temp\hvlpgv4j.q4f.ps1
+%LocalAppData%\Temp\otr1qrrw.hyk.psm1
+%LocalAppData%\Temp\CVRF1F5.tmp
+
+File Hashes
+
+004eee7ef5fdca7cc5ccd2b2033e0c8c6c030794bb53b04ca50048659958efb0
+0140aa6cfbbc6676f2a53f5bb1758dca2b9463528b61b22779eef7a9187c9d54
+02e9a850f3968b0228ac2a4179763ca713e74e39db0c1e10f3f988ccb0db77c1
+04c62c82abb85b5a118be75da0170fa609bc25ea6f16a6e130af2a3de9a89223
+056efe751bc98382dadf1266a60ea1b9d61c99ef4314d3785a869fb0cf0e3be8
+107c21b01ad6ea637895ae013bf94b207edab5a24c5890969bc5c7d6f66f73cd
+16edce5014a6e7421d4e27ed2f1a86a1b281d68f3d7b25af3990f1ba2a449a86
+1925b795206b4791b5d89bb8ece497e16807c9d6e5d031778e6462dca775eb2a
+27d52b898c7bb9ea40d794f476fc469d659ffdf978596d223f8ea150245bead0
+28c59ae39330afac94ea9216b0427de90f4d6a23e983b517173070c5ee6ca726
+2c95fb67001b1e52bef79b8ff4a0df234557c76b8ad255f853f4b83ea836322f
+318b72ee23afc45270ed759985852fc0b20be8bf9db5c1461fc19d12ad1f6cc5
+380339373b23041f0397710f1e94c2b967e4c6da9cad87023668fd46fda005d3
+3b15a24d6a83234329d580bc2e76a7a9c378b6e886160242881c2e9d23345d59
+4608adb9fb21c032c61bb5856f69bf02259163d0eb4f2d8c9cf1764ac4b08d7e
+4803a9181557f13c4b8452f9776a2f585175ff9d687b26fc1ac8b8fb5009b68f
+4dc26501fa7098bd5c0a59818c6fe23c2eaf9a15d0f669999fbaba9b88927451
+4e2aa9345a49f8200fd386eec899ad5774713c820e3acf525cb6c2d0e1d4e61e
+57717770805f263dad675df3ceaf050c6cf2e1bd5153a8e915ba1900e2444a9e
+5dc3beeaaac0572bfa565e6dd5db98d177e98c49039c3dbd632e2002a5d87f58
+603734a2269496c89d8afd7713269688716e1c5aa956ba5086d460104235e488
+627d5b3003a99eae3d97d6aec811f9593dd3029692491782e2f0ffcab87fd9e7
+65eedc84c9bcd56c0ad6cf2a1ae526864ccf36ed5d385279f083bfa50dac2ee1
+6a414f8de1c03f53d41e07f1c100cfad3a0b9c6e449ec4490b9955c3c988e8c3
+6f436432d2b2a2fd846be6f1bb3b37b42e0d055a24c94ce214b90455c4ce18ac
+
+
+
+Coverage
+
+
+        
+
+
+Screenshots of Detection
+AMP
+
+
+
+
+
+ThreatGrid
+
+
+
+
+
+Umbrella
+
+
+
+
+
+
+Malware
+
+
+
+
+
+
+
+
+Doc.Downloader.Emotet-6787868-0
+
+
+Indicators of Compromise
+
+Registry Keys
+
+N/A
+
+Mutexes
+
+N/A
+
+IP Addresses contacted by malware. Does not indicate maliciousness
+
+192[.]0[.]1[.]32
+192[.]254[.]158[.]3
+116[.]90[.]163[.]134
+202[.]73[.]26[.]97
+103[.]253[.]72[.]38
+
+Domain Names contacted by malware. Does not indicate maliciousness
+
+www[.]litespeedtech[.]com
+artikeltentangwanita[.]com
+akgemc[.]com
+webartikelbaru[.]web[.]id
+lariotgrill[.]com
+newspectiveaddress[.]com
+
+Files and or directories created
+
+%UserProfile%\Documents\20181218
+%UserProfile%\797.exe
+%LocalAppData%\Temp\2qopiijd.reb.ps1
+%LocalAppData%\Temp\hlz2v4bf.x33.psm1
+%LocalAppData%\Temp\CVR4A8E.tmp
+
+File Hashes
+
+0432b3023902e6923a125718c35108cdd55b58ddf985e3cc7efb5a4b79e1c208
+4c254727bf72c8de54c7a1554e6d6afeaea1ce89f7279e15005b5ff034881c8d
+54d028fa1a679a62c8353bc90b03821e20892e399c11755a8d3243efa92027fb
+5abafc4436cabaf8688ceb4cfc2a2c3f2b1ae06a34ffb9ecfe8ea5e06bc6d065
+5b13e439c9bc2479ec8aaaeabc516377178fdeafff910e94ec586e6b665aa031
+5faf00a77ff090520fbfb4b8404a4eb5631204a078872177dcee0dfe814c7487
+6207c24972e68133a2f34cac9e49035ae0dbece716af77006626d2232c2260f3
+745f36d617fcc238ba47e7046463b4486a48512ef12c1a27b9d6314d7b7bce35
+764122c8c7d3c80f2c4c5c812333b6d804683a90cd5c6ffe28d36e6bbd2ac90e
+79c780828198f042895e303ced50c193d8cfe9f9c6403760051a7b0c1b5e168c
+79e206f16b62c3727b50f8c02c461d794e8be5c0af2eb4be3d9eeca92ae7ded7
+84705ead26ec41c8839f764d5534c666bb58078c55ab7c066cfc95db51023176
+8a228be2084ea4a753e165f5822fe763edd2eae0c8cb69992316352afdd95b73
+8cda701543cbfc2647a6e7d80d4ee7f19a4f95c3b6f9ec6250afe2eb1e26f35c
+8ceb40dbc8754cbf6c5daf65b5fc8bb70fbd7f357906e4957bf0357172ef8ef7
+8ec0d258429998102d6974937b6acbb31005a714c65b96349883e76f7fefe822
+9df9d4884b2500037994a989411328a95a3cf5147b31477c5f01d71933fc3d6d
+9fc740bc37aa0b29f27885daa6ee480a58aee5526710a5f99239b8921a159bc7
+ae14cb3d22626f71614f9c25c082d9165b1d8726943364c72b1ca1ec2641fc6f
+c7874af7335c770faff29f4a78bd24092079ace115e3dc2fd7f498f361c3295c
+ce7524428873a974c4fa9784f493cddcf68e440b8305f2efb8dbc6d8994e60b7
+d28441e57833bfbbe1460f784f48ab2f8d6bc8d7478795f6ff64b5c1dd7ccafb
+d4104c8b0ded4e59f51d21fc38de99fb4aef4da6f6e216b4b631f0da3253363c
+e461292f3bbf040aab42c2ea7d3b660db7bf017c9c95f5b95dff513697289d78
+ea6090949f3c83cfd7091a3c0f96fd2ee79b10ea297f7cb8c67e218afe5ecdc3
+
+
+
+Coverage
+
+
+        
+
+
+Screenshots of Detection
+ThreatGrid
+
+
+
+
+
+Umbrella
+
+
+
+
+
+Malware
+
+
+
+
+
+
+Win.Worm.Vobfus-6789235-0
+
+
+Indicators of Compromise
+
+Registry Keys
+
+<HKCU>\SOFTWARE\MICROSOFT\WINDOWS\CURRENTVERSION\RUN
+                
+                
+Value Name: internat.exe
+
+
+<HKCU>\SOFTWARE\MICROSOFT\WINDOWS\CURRENTVERSION\EXPLORER\ADVANCED
+                
+                
+Value Name: ShowSuperHidden
+
+
+<HKCU>\SOFTWARE\MICROSOFT\WINDOWS\CURRENTVERSION\RUN
+                
+                
+Value Name: fuuhef
+
+
+<HKCU>\SOFTWARE\MICROSOFT\WINDOWS\CURRENTVERSION\RUN
+                
+                
+Value Name: fuuhef
+
+
+
+Mutexes
+
+A
+
+IP Addresses contacted by malware. Does not indicate maliciousness
+
+N/A
+
+Domain Names contacted by malware. Does not indicate maliciousness
+
+ns1[.]dateback1[.]org
+ns1[.]dateback1[.]net
+ns1[.]dateback5[.]net
+ns1[.]dateback4[.]com
+ns1[.]dateback3[.]org
+ns1[.]dateback1[.]su
+ns1[.]dateback1[.]com
+ns1[.]dateback2[.]org
+ns1[.]dateback3[.]net
+ns1[.]dateback2[.]com
+ns1[.]dateback2[.]net
+ns1[.]dateback3[.]com
+ns1[.]dateback5[.]org
+ns1[.]dateback5[.]com
+
+Files and or directories created
+
+\??\E:\autorun.inf
+\autorun.inf
+\??\E:\System Volume Information.exe
+\System Volume Information.exe
+\$RECYCLE.BIN.exe
+\??\E:\$RECYCLE.BIN.exe
+\Secret.exe
+\??\E:\Passwords.exe
+\??\E:\Porn.exe
+\??\E:\Secret.exe
+\??\E:\Sexy.exe
+\??\E:\x.mpeg
+\Passwords.exe
+\Porn.exe
+\Sexy.exe
+%UserProfile%\Passwords.exe
+%UserProfile%\Porn.exe
+%UserProfile%\Secret.exe
+%UserProfile%\Sexy.exe
+%UserProfile%\c
+%UserProfile%\c\Passwords.exe
+%UserProfile%\c\Porn.exe
+%UserProfile%\c\Secret.exe
+%UserProfile%\c\Sexy.exe
+%UserProfile%\c\autorun.inf
+%UserProfile%\Secret.exe
+%UserProfile%\Sexy.exe
+%UserProfile%\fuuhef.exe
+%UserProfile%\RCX469B.tmp
+%UserProfile%\RCX46EA.tmp
+%UserProfile%\RCX4739.tmp
+%UserProfile%\RCX4788.tmp
+%UserProfile%\RCX47D7.tmp
+%UserProfile%\RCX4826.tmp
+%UserProfile%\c\RCX5753.tmp
+%UserProfile%\c\RCX5793.tmp
+%UserProfile%\c\RCX57D2.tmp
+%UserProfile%\c\RCX5821.tmp
+%UserProfile%\c\RCX5870.tmp
+%UserProfile%\c\RCX58B0.tmp
+\??\E:\fuuhef.exe
+\fuuhef.exe
+
+File Hashes
+
+04723f64b7cde305f7cf8c5fea171fe09d6e94f23b87b12cb0b4e89b0b3e298f
+05db72e6249c677335bbed6e8413f4a57c5310245afa3355e94888c57c9debcf
+0c92e3f0b38584e2c7d8e937c9fee8f562747c0c86e74019606b53b0f8a25c26
+16b162c1e201897d1d54bb9523b8c41f508c05c410dae0628d693b4c59fd61ae
+1838959fe9b61d1f16a08aa40a283c56fc01bb8ae9e0f6ea27f0cf114d118bd7
+2090b52fa02d4cd7ebe82e93c67ae6b55e3fef596d58716a90e6d8e05ec0944b
+2442112ae087f44ae747c9c8e15e1c141a7001a832082661e3af2dfe86b91451
+254ab5f9730afb7cd2017cbf5b9c508a44119d037b57d88402f2a742842f0f1e
+29a0452c17164d6ff4fc7ba11190e434a57a3ba8c22f8e6d899100d28546df8a
+3438ee2ddd4449b78948fc9d7e1d1a1e38161a41f553b84e418530f08d87b992
+39bdf24760ec27af4ca5665bea804a6725699869079d9b6d49970eb91ea6caac
+39d142e05b2b0d9134f40914882fca7e0338ee27a20078ccdb85723a7008c9db
+4000775f2fbd716962f02690511177ec24c478f55dd61d18e1fa94ea40fa1edd
+403fbf3398139435fae206a2e88f18d193a99dd922b20b6c85cb80c0dfeef764
+415a60213b4845ba9fdd4a728b1f1844e289255859f87bc3f311b2597e2d598c
+440aa3626b3ffb435f21d3edbf5e99d62d241218b3b815f9720a1802193a9f15
+455eb97f5dcb8f5ca982485eae7aa5d52bb5cf3afb6c414bc1918df5c4c8e4a6
+5028bdd7fe45528aa67e362d9a70428b67abadef59a11c09c8a807c15d6d9055
+525917b1fc5bf9d1270bc55d2187cd96aff2d6fffb9a861ca56c09c855c2d24e
+529762923615c5077fd0509b7541c6af1c9c2520198fe60607cea67cb1ed2858
+5ff4e54e3f25564203ff8238b95fd2ccb0c32c8be3a9b13ee620530c9fc3b7e3
+727256f788aced2ee7d03573231e8a1d7d4e45abc4b29b27e98da3679e2cdc77
+73467deb291c727dce198453fa25c0e20717cdada8cc02a8b6092bed55405315
+786dc8d10957479457598d99e5b97e352f67eb50a6bc35ef30b46fe5ab07aa68
+7c97f4abe4d12e263f4447d225f92312434bf715e6191f3dc84d956390b98d4c
+
+
+
+Coverage
+
+
+        
+
+
+Screenshots of Detection
+AMP
+
+
+
+
+
+
+ThreatGrid
+
+
+
+
+
+Win.Spyware.Ursnif-6788669-0
+
+
+Indicators of Compromise
+
+Registry Keys
+
+N/A
+
+Mutexes
+
+Local\VERMGMTBlockListFileMutex
+Local\URLBLOCK_DOWNLOAD_MUTEX
+Local\URLBLOCK_HASHFILESWITCH_MUTEX
+UpdatingNewTabPageData
+Local\URLBLOCK_FILEMAPSWITCH_MUTEX_1704
+Local\URLBLOCK_FILEMAPSWITCH_MUTEX_1784
+Local\URLBLOCK_FILEMAPSWITCH_MUTEX_1700
+Local\URLBLOCK_FILEMAPSWITCH_MUTEX_252
+Local\URLBLOCK_FILEMAPSWITCH_MUTEX_404
+Local\URLBLOCK_FILEMAPSWITCH_MUTEX_1516
+Local\URLBLOCK_FILEMAPSWITCH_MUTEX_1376
+
+IP Addresses contacted by malware. Does not indicate maliciousness
+
+204[.]79[.]197[.]200
+
+Domain Names contacted by malware. Does not indicate maliciousness
+
+pulneselle[.]com
+vivitempen[.]com
+jewayelome[.]com
+
+Files and or directories created
+
+%LocalAppData%\Temp\~DF999D0908F9AB8DA6.TMP
+%LocalAppData%\Temp\~DFA1DCD5ED0F4B1991.TMP
+%LocalAppData%\Temp\~DF6EAE44F7763B7295.TMP
+%LocalAppData%\Temp\~DF4B1ABF6D6A9DC6E3.TMP
+%LocalAppData%\Temp\~DF88BBAB8557CDD7E3.TMP
+%LocalAppData%\Temp\~DFA1AFEB97E8C0B1FD.TMP
+%LocalAppData%\Temp\~DFEBFBFB87C6F7EC1B.TMP
+%LocalAppData%\Temp\~DFFFF0E8FCA29DD7E1.TMP
+%LocalAppData%\Temp\~DF80997BBE116A8874.TMP
+%LocalAppData%\Temp\~DF8D4E5C8DCC40C732.TMP
+%LocalAppData%\Temp\~DFD177FDDDE87A34E5.TMP
+%LocalAppData%\Temp\~DF8E8A9C1983E71879.TMP
+%LocalAppData%\Temp\~DFA8F13799CC417142.TMP
+%LocalAppData%\Temp\~DF0AB2387849E59D01.TMP
+
+File Hashes
+
+04fc3595ff5622af9a763068407b416089d54411eb16c7413bf1c1a2987db58e
+0c03a3212af16f9822d0163a8d2881497c09c4f60cf025ec88361071a9c30304
+129e906daa08bd12a1e90ab90c3cd6b5193b46eae35d455530d6f51dbd1d0af8
+161684617424a69a01e719c8008899c18fb05e44232857e0152fc35a26833950
+26f4dbef4ba7edb8598d81935277585e0412b3753302df2fbb5f73a866e77579
+2e7ed6ded2c239c8bc817ca9e27768abcde45695c641592853b5a6178b217661
+32ebd30445e90030fc00fa74700e8407f0422a7f496b4b9907e720ae885d1d1f
+3c635891c53685eb6cbbe1faa5fd92a7819f58b8de262b385dfcdbb95929dc6c
+3e7c5f21e7bc0802623d75f67d151db82aec26d45821a70cee3228037393b5d2
+55fd061691926019516b05b41594d5a935fc185003b1a4f5783382c3ca6a9d2f
+5896180c801646ab8f030875f8a14b3a82568f0ca69cb46809d09f8b5f1cd248
+5af51e4987ae779cb269c9eeea419592c64a92b451f2680812f49038fe16db2c
+5f41e961339d508e2374cf2df739cae90185ca50fe55417c405b73a045d30c32
+65f3d0de94ac30d4d47147fb00c1d32f31b0a3d60bc0af9848404cb4a3eb169b
+6628371e0e02e1dcf27af1c571d59121b7f21a5cc7585520cce875c1e60f02eb
+69ed0233422a492f251f243bc4110f6860aa4fb065b44f515ea24ca80850ae6d
+6c85e349cb3b3f17d363312c2da9a94b4336189da41e1576849f39fbd2b0b65e
+6e48c2261151dd4983f497c73acd298538fbcfea37c859dccd1da9906ab4e410
+777e7b0ffaea4f1ce299b0fcc36ddb41fedd3a5f3a986f123d9a0a5ff34e7719
+7a1b75d881709ba0ac2df408a08ad1af5f3acd99b761bce7ad86b37d5950b20c
+7e579e63a579a730d05b2bae1f1fbea0532f8ea9f916f76f59bd1c2475a6f59e
+81fdc042297fadf3a3691e2a1c6218b646887ed5b4962a2e5cf57a2b4c0dc537
+8d9c1c7b55c5f1c47e14084240c4d1385484326741d54036517d1e27acf3ab4e
+96b71c77d4b8470ba1f28abc7f2920afb8ad2887591cf1a487f942a80d5aa053
+9734531e5e4d05f4d88b5791f8e864fa95d860e88abaaafec82b0dfd05197073
+
+
+
+Coverage
+
+
+        
+
+
+Screenshots of Detection
+AMP
+
+
+
+
+
+
+ThreatGrid
+
+
+
+
+
+
+Win.Worm.Lolbot-6787741-0
+
+
+Indicators of Compromise
+
+Registry Keys
+
+N/A
+
+Mutexes
+
+Global\6d39f141-0488-11e9-a007-00501e3ae7b5
+
+IP Addresses contacted by malware. Does not indicate maliciousness
+
+209[.]202[.]252[.]54
+
+Domain Names contacted by malware. Does not indicate maliciousness
+
+griptoloji[.]host-ed[.]net
+ftp[.]tripod[.]com
+elegan_786444[.]el[.]funpic[.]org
+
+Files and or directories created
+
+%ProgramFiles% (x86)\98b68e3c
+%ProgramFiles% (x86)\98b68e3c\98b68e3c
+%ProgramFiles% (x86)\98b68e3c\jusched.exe
+\??\E:\98b68e3c
+\??\E:\98b68e3c .exe
+
+File Hashes
+
+01a3c9adc3aac00d08524a6dbb3032dd334e367f0472f2ea9d3a6589cec37289
+01c38084198b17d9505b71e2047df154e3f429820a8ddfb15efd8f54d0eeed51
+0387259309c3be75131fba4995f29c3411bfdd1215561cba86dd4c32daf6413e
+03cce506492d375c5b3af8bae957f5b03054013e18b52def2f49fcf704fd333c
+06528a8e957eeb930eb2a87d901af51b64a71769c72715c8950e02d8aa1c5460
+0667ccae012ed7d32d43ab24e93d19539a82f69da5a4bfcacd9a279ec9d25350
+0a3420da8bad37f8a52b24ec71c75d28df84ffb22c95e39ddf2aeb2d7a8a4ec0
+0bcde343224d4ae938be1f131b7d48004bcb70f184ff6918f651557d5ccf8788
+0d67c9e039cee7c9c232a02a6f4c7c779445753a047f5361acd5eaa1102604e9
+0e0a1358dd6c7c66d29afbd16571e2357b4b8b85bf38871220b0a5e35dd0722f
+100b943bcfd27a51245fece5b4c769bb90a3251278704381ca9c2d32dc8e5d71
+11d34c7a95a89226c7a51e4a92a185bb4444746f286e354cd29bfd383e567dc2
+13afad9652869bf360698da46a44ade7ef9377df2dfeb53083a5cc04d523a9a2
+14fede536b4486221936726a6872a3c31286c4a6bb0400ded57fbd44d07ae226
+172c7bc9eebc84cd89c818ba5f55c8c38d4441885c52cac5427fa35d7a7be018
+1b3422534d883844fed3e7a0a80c8dac410755ef6094408293a3c911d557c811
+1fc95720a2d0435524e29499eb84c8d1eaf76ac13836345b2e0372a5a71335ea
+2057825a54ddc57c2f9f8fa9deff855a6356afefec27737899c9833c4e584dce
+20cab422a853d13c1f507cfdbbc85bd5c6d9c0ba0a0a2de5d89a006fd02a5d92
+2423ed1c57586490516169d783bb380c7a2031d5339aba4bf297d6330dd2a811
+2537493dfbe4079ca5fdcbadbfa4d99f7d9ad317838e1fae99b9d7ad3d6d8c73
+2578af5d42ec216d598ed0a7cffeffc7d5e70902c8145b2b92649bdbf0c3586e
+267b9e6666e9b09cde6d796b51d79ffaf0f99a3093022abaaa6911f7771a0bcf
+2a6890810aea9e772a61bbffcb3c47c2b8140505ee205e86a1403332805aa41c
+2e17c234a7bf0d01b1617e2fb93599a9079b2738b44f10f99f6fdc9e9866cf16
+
+
+
+Coverage
+
+
+        
+
+
+Screenshots of Detection
+AMP
+
+
+
+
+
+ThreatGrid
+
+
+
+
+
+
+Win.Trojan.Zegost-6787448-0
+
+
+Indicators of Compromise
+
+Registry Keys
+
+<HKLM>\SOFTWARE\WOW6432NODE\MICROSOFT\WINDOWS\CURRENTVERSION\RUN
+                
+                
+Value Name: Kris
+
+
+
+Mutexes
+
+haidishijie[.]3322[.]org
+
+IP Addresses contacted by malware. Does not indicate maliciousness
+
+183[.]236[.]2[.]18
+
+Domain Names contacted by malware. Does not indicate maliciousness
+
+haidishijie[.]3322[.]org
+
+Files and or directories created
+
+%WinDir%\(null)0.exe
+%WinDir%\BJ.exe
+
+File Hashes
+
+0e3285bd2185663e1edbe7f203f325254d0f759c1a413fa363aa53500d097804
+0f9eedb0084fa1734391818b6157e2b75fb58c81d63444e30dc3591930266e7e
+119a103b8fc90e4ecf2ccc9f189709d974e3416045ff99347b39bf462b297c1f
+16c9dd76b69c995ffc554cf9bf45102dceef74a544ce1d69f3b24a1ce9f18c1e
+1a0dfd0200c9abb101547047c1a3d2384748a7bce2cdd296068b093aa383ff66
+1cd1fcf50709a673f9412c4b3b3285b8fad7425f9bd61f195e774a6b9cd7ca96
+23bb5973dcaa26f1ed4688372b06bacafcedbf4fcc1dc468cbe3f16309c4a030
+2527bcf0338afbd438dfd1e8f077fb0ec36d633e25e5471c7647dcc8ae502f75
+2cdaae20046ff09aee47427055f3ed33aa4e5fec4e1290597a94d291719e0e75
+2f985459179152f346124d95458102143bc5a5840f8ac84a86a8af6cfe1faad2
+306c3da827a85c572ebc5c40ee5541e308c842d993daffa1e762c28fd17c117f
+3a9b982afb3f78f071470e423e445972a73507172727556785a22a0b260dff8c
+43e386150567a3439af0dac195538d52a0c81f5a968801046bf3fb1b641fcfad
+4bbd00499960ed33e2d9757cb8bb2ee90e8ca51048230c3ece52551af7bc6d58
+50e3c05c87924d9d27772292c30e4c354a5efa1fdc84fad626418d6cca306de8
+53db05f59a5ad099ad96ef935338d545b1354f484abe61bad70222afb854f3ba
+5457112b465507bf1829265904053e482475ecd56ffb9344e045afff4d2c5a5b
+565d3b34a150850ba1cb7bda6c4da8a44367ffaeae60ce593845b0d49f69e6f6
+576b404322cb8b14cc0947e2448e17c484270e980fa10a2d04a268acdf009cd8
+59825f1890c3055bfcc4a989da45f172fd7ef283afcb84ef8f0d521bb2973c68
+5c91bddb8c5abf829f1ef69b516eea42f224bc29e0785bde4f38fc3b47ec07e3
+5cfd01cdac224dcb162f3404815d95623bfc0f19b67d0a71e13cdec8f72cc99a
+618458db2b3ad35636c0147611ffd1e6af953fa26674a40eaa47a1b1f8391ceb
+64a9c1e8026e23f6a3fe8a3e7bebfe9ad04b5d2e7bca6572f46b5a1a2132586e
+679f472c1c7cb4714454a7ce98f708e388f38a71498d37d722b41b67641cc0d7
+
+
+
+Coverage
+
+
+        
+
+
+Screenshots of Detection
+AMP
+
+
+
+
+
+ThreatGrid
+
+
+
+
+
+
+Win.Ransomware.Gandcrab-6787437-0
+
+
+Indicators of Compromise
+
+Registry Keys
+
+N/A
+
+Mutexes
+
+Global\pc_group=WORKGROUP&ransom_id=4a6a799098b68e3c
+
+IP Addresses contacted by malware. Does not indicate maliciousness
+
+66[.]171[.]248[.]178
+
+Domain Names contacted by malware. Does not indicate maliciousness
+
+ns1[.]wowservers[.]ru
+carder[.]bit
+ransomware[.]bit
+ns2[.]wowservers[.]ru
+
+Files and or directories created
+
+%AppData%\Microsoft\omlrnu.exe
+%AppData%\Microsoft\exddyf.exe
+
+File Hashes
+
+0015f92aa3456a094fe6d9c09cf15f046ba5d7f74904dd006d4af3869b1aea34
+086e3771fad25e73aa321cd96454342640154d260066e571f558a129e949cf32
+08c2cc445f435bdb67c1a9c45ad874f3731c99a9750b405a07c558638242e0f4
+092749d7406d8352055cfed48c7e8ed5cae75fac72c483c91db5e17802198d8d
+0b0f9fd1433a4224fe60e5beb7c45ce128baea6746273cad2bdfa7b954e8768e
+0be345dc9693b4233ea4e27fbe9d4ce062e46369593f3fbedf5231e01e203cea
+0f1b7056412ec5a14a6d74aba89f07704f6a6826deb47ec517890114a0db2d3a
+0ffcba92585e387f954bc98381f6bc37e29c6008e3c7f8976fe8498acf9311f5
+115b5ae85e9354fe041847e089cd8a1f885f60b8d13e467c75f5b4fb34d83534
+13d22f0a7f0ee53fe8888a257529a877eeaa977abcf0093809e4760dda5a67ab
+157307235f3e8e4534b6e7ba65541e7ee45d00faae5da5879fc597b95879bac0
+236c1c35d4a1f391350da68b6fc908d7204f1253e8fca1e7eb35497605b3a5f1
+28570bf801f50d5f25d19c5a13d5e1f9b38426fe9e2128226809ec60b176d9e1
+2fcc75031e55b279035dc76257c44a005e8c736f19f57bfe0ee07701bc32c8d4
+304bb540d964d3254da2c4735d37a2100d3062cdf126c78028821a3e14b67803
+34b8fabb21d7cc71f31b6c8ca63e5547324d7935ed5b6cc2930739fcf2d16de6
+34b9d4093fd6cc00f6c5bc6beee404349456f1121162926eed1f6197d7a7bc05
+3d8a5ba13330cb488b17cc126ae7c52899ccc349261262a9a30b182fb092aa79
+3e5e14efc14afef057c50054a99d6fa66794da9fe18dd8554b63d8d370a7e2bf
+3f29a22d0d2d934292e3f9912e0a06492558e69c6a27b76c0ec44b32df7a1900
+4113f0dff0141dc1a934029e12994b804a78024ca430452b02c3c1eb3d8af3c7
+41416dfc9c44834bc96313df01d72f82fbaf7d439df7b3d2fe81dc71a93490c7
+43bd2036932e256252c8637098cfa52e4dabe9245bbe861e4287afed4a0ca85a
+444c0a8a8b5fb4c06be83a3fc67660386fa374b6664c2dad35b291a840e2f5a2
+549a1f61d85008cd4599e75de76029478c80ff68fff010bc5cd75004c118221e
+
+
+
+Coverage
+
+
+        
+
+
+Screenshots of Detection
+AMP
+
+
+
+
+
+ThreatGrid
+
+
+
+
+
+Umbrella
+
+
+
+
+
+
+

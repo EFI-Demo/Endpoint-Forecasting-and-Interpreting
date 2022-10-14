@@ -1,0 +1,42 @@
+
+		Every day, software developers stare down a long list of features and bugs that need to be addressed. Security professionals try to help by using automated tools to prioritize security bugs, but too often, engineers waste time on false positives or miss a critical security vulnerability that has been misclassified. To tackle this problem data science and security teams came together to explore how machine learning could help. We discovered that by pairing machine learning models with security experts, we can significantly improve the identification and classification of security bugs.
+At Microsoft, 47,000 developers generate nearly 30 thousand bugs a month. These items get stored across over 100 AzureDevOps and GitHub repositories. To better label and prioritize bugs at that scale, we couldn’t just apply more people to the problem. However, large volumes of semi-curated data are perfect for machine learning. Since 2001 Microsoft has collected 13 million work items and bugs. We used that data to develop a process and machine learning model that correctly distinguishes between security and non-security bugs 99 percent of the time and accurately identifies the critical, high priority security bugs, 97 percent of the time. This is an overview of how we did it.
+Qualifying data for supervised learning
+Our goal was to build a machine learning system that classifies bugs as security/non-security and critical/non-critical with a level of accuracy that is as close as possible to that of a security expert. To accomplish this, we needed a high-volume of good data. In supervised learning, machine learning models learn how to classify data from pre-labeled data. We planned to feed our model lots of bugs that are labeled security and others that aren’t labeled security. Once the model was trained, it would be able to use what it learned to label data that was not pre-classified. To confirm that we had the right data to effectively train the model, we answered four questions:
+
+Is there enough data? Not only do we need a high volume of data, we also need data that is general enough and not fitted to a small number of examples.
+How good is the data? If the data is noisy it means that we can’t trust that every pair of data and label is teaching the model the truth. However, data from the wild is likely to be imperfect. We looked for systemic problems rather than trying to get it perfect.
+Are there data usage restrictions? Are there reasons, such as privacy regulations, that we can’t use the data?
+Can data be generated in a lab? If we can generate data in a lab or some other simulated environment, we can overcome other issues with the data.
+
+Our evaluation gave us confidence that we had enough good data to design the process and build the model.
+Data science + security subject matter expertise
+Our classification system needs to perform like a security expert, which means the subject matter expert is as important to the process as the data scientist. To meet our goal, security experts approved training data before we fed it to the machine learning model. We used statistical sampling to provide the security experts a manageable amount of data to review. Once the model was working, we brought the security experts back in to evaluate the model in production.
+With a process defined, we could design the model. To classify bugs accurately, we used a two-step machine learning model operation. First the model learned how to classify security and non-security bugs. In the second step the model applied severity labels—critical, important, low-impact—to the security bugs.
+Our approach in action
+Building an accurate model is an iterative process that requires strong collaboration between subject matter experts and data scientists:
+Data collection: The project starts with data science. We identify all the data types and sources and evaluate its quality.
+Data curation and approval: Once the data scientist has identified viable data, the security expert reviews the data and confirms the labels are correct.
+Modeling and evaluation: Data scientists select a data modeling technique, train the model, and evaluate model performance.
+Evaluation of model in production: Security experts evaluate the model in production by monitoring the average number of bugs and manually reviewing a random sampling of bugs.
+The process didn’t end once we had a model that worked. To make sure our bug modeling system keeps pace with the ever-evolving products at Microsoft, we conduct automated re-training. The data is still approved by a security expert before the model is retrained, and we continuously monitor the number of bugs generated in production.
+More to come
+By applying machine learning to our data, we accurately classify which work items are security bugs 99 percent of the time. The model is also 97 percent accurate at labeling critical and non-critical security bugs. This level of accuracy gives us confidence that we are catching more security vulnerabilities before they are exploited.
+In the coming months, we will open source our methodology to GitHub.
+In the meantime, you can read a published academic paper, Identifying security bug reports based solely on report titles and noisy data, for more details.
+Bookmark the Security blog to keep up with our expert coverage on security matters. Also, follow us at @MSFTSecurity for the latest news and updates on cybersecurity. To learn more about our Security solutions visit our website.
+
+		
+			
+				
+			
+
+			
+				Listen to the Security Unlocked podcast
+				Hear more from the author of this blog on episode #16 of Security Unlocked. Subscribe for new episodes each week covering the latest in security news.
+				Listen now
+			
+		
+
+		
+	

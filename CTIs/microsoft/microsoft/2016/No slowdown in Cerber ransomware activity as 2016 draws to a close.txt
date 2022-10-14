@@ -1,0 +1,832 @@
+
+		
+
+
+
+The trend towards increasingly sophisticated malware behavior, highlighted by the use of exploits and other attack vectors, makes older platforms so much more susceptible to ransomware attacks. From June to November 2017, Windows 7 devices were 3.4 times more likely to encounter ransomware compared to Windows 10 devices.
+Read our latest report: A worthy upgrade: Next-gen security on Windows 10 proves resilient against ransomware outbreaks in 2017
+
+
+
+As everybody else winds down for the holidays, the cybercriminals behind Cerber are busy ramping up their operations.
+Following our discovery of a spam campaign that takes advantage of holiday shopping, we found two new campaigns that continue distributing the latest variants of Cerber ransomware. These campaigns are the latest in a series of persistent cybercriminal efforts that keep Cerber constantly active.
+
+Figure 1. Cerber activity trending in the past three months
+First, we detected a fresh spam campaign that delivers document files in password-protected .zip archives. The emails use simple subject lines like “Howdy” or “Hello”, while the email body seem to keep the holiday shopping theme with messages like “your order should be delivered today” and “Statement is attached”. The password to the archive, which is usually “6666” in this campaign, is in the email body.
+
+Figure 2. Sample spam email from recent Donoff campaign that distributes a new version of Cerber
+When extracted, the document files run malicious macro code detected by Windows Defender as TrojanDownloader:O97M/Donoff. Donoff is a Trojan downloader that installs malware; in this campaign, it downloads and executes Cerber.
+Our tracking of Donoff activity shows a spike corresponding to the email campaign.
+
+Figure 3. Donoff activity for the past 30 days
+The second campaign that we discovered distributing Cerber ransomware uses the RIG exploit kit, which Windows Defender detects as Exploit:HTML/Meadgive. When a user accesses a compromised page or an attacker-controlled website hosting the exploit kit, vulnerabilities like CVE-2015-8651 are exploited, and Cerber is downloaded and executed on the computer.
+Telemetry from Windows Defender shows that this latest exploit kit attack that leads to Cerber largely affects Asia and Europe.
+
+Figure 4. Geographic distribution of victims of recent RIG exploit kit distributing Cerber
+The two campaigns deliver variants of the new version of Cerber ransomware. These new iterations of the malware sport updated configuration and behavior, demonstrating that the cybercriminals behind them are not slowing down in evolving the malware.
+Below are the notable updates seen in the latest version of Cerber:
+
+As with the holiday-themed campaign from a few weeks ago, these new Cerber variants arrive with a wallpaper that is noticeably modified from previous versions’ green palette to red:
+
+Figure 5. New Cerber wallpaper, which changed its color palette 
+Another level of obfuscation is used: UPX on the top of the Nullsoft installer and custom encryption used by older versions.
+The configuration, which contains the most important data that determine the behavior of the ransomware, are encrypted using RC4 just like older versions, but using Crypto APIs instead of custom implementation.
+Threat version information, which has been useful in tracking the evolution of Cerber, is nowhere to be found in the configuration.
+More than 50 new file name extensions are added as targets for encryption; on the other hand, several file name extensions, including .exe., .cmd, and .msi, are exempted from the encryption routine; this latter behavior has been observed in other prominent ransomware families, but we’re seeing it for the first time with Cerber.
+Folders that are prioritized during encryption include new ones, like microsoft\onenote, microsoft\outlook, and \microsoft\excel\, among others; however, folders that are exempted from the encryption routine now include “$windows.~ws”, “intel”, and “windows10upgrade”, among others
+Shadow copies are no longer deleted.
+Payment site provided is now a single Tor proxy site, compared to three proxy sites in older versions.
+The cybercriminals added two new sets of IP ranges where command-and-control (C&C) servers reside.
+
+For cybercriminals, releasing a new version of malware not only increases likelihood of evading antivirus detection; it’s also a way of increasing the complexity of malware. Cerber’s long list of updated behavior indicates that the cybercriminals are highly motivated to continue improving the malware and the campaigns that deliver it.
+It is important to note that one of the most critical updates in this latest version of Cerber is the new folders it prioritizes during encryption. The added folders, which include microsoft\onenote, microsoft\outlook, and \microsoft\excel\ among others, is further indication that the malware is designed to look for critical Microsoft Office files to encrypt in enterprise environments.
+Stopping Cerber infection in Windows 10
+Windows 10 has security technologies that can detect this new batch of updated Cerber ransomwre. Keep your computers up-to-date in order to get the benefits from the latest features and proactive mitigation built into the latest versions of Windows.
+Windows Defender detects the new version of Cerber ransomware as Win32/Cerber. It also detects files related to the two campaigns that deliver the ransomware: the malicious attachments used in the spam campaign as TrojanDownloader:O97M/Donoff, and the RIG exploit kit as Exploit:HTML/Meadgive.
+Microsoft Edge can help prevent exploit kits from running and executing ransomware on computers. SmartScreen Filter uses URL reputation to block access to malicious sites, such as those hosting exploit kits.
+Office 365 Advanced Threat Protection blocks malicious emails that spread malicious documents that could eventually install Cerber.
+Device guard protects systems from malicious applications like ransomware by maintaining a custom catalog of known good applications and stopping kernel-level malware with virtualization-based security.
+IT administrators can use Group Policy in Office 2016 to block known malicious macros, such as the documents in password-protected email attachments used in this campaign, from running. They can also use AppLocker group policy to prevent dubious software from running.
+IT administrators can also use Windows Defender Advanced Threat Protection to get alerts when suspicious activities are observed in the network. Download this playbook to see how you can leverage Windows Defender ATP to detect, investigate, and mitigate ransomware in networks: Windows Defender Advanced Threat Protection – Ransomware response playbook.
+To test how Windows Defender ATP can help your organization detect, investigate, and respond to advanced attacks, sign up for a free trial.
+An in-depth look at the spam campaign
+Beyond providing protection, Microsoft Malware Protection Center (MMPC) monitors and analyzes Cerber and related campaigns in-depth in order to discern trends and gain deeper understanding of cybercriminal activity. This is how we were able to trace the evolution of Cerber and see the signs that it’s not letting up.
+Cerber has historically heavily used email as a primary infection vector. It is no different in this campaign.
+
+Figure 6. Another sample spam email from recent Donoff campaign that distributes a new version of Cerber
+The attachment is usually a password-protected .zip archive that contains a macro malware in the form of a Microsoft Word document. When opened, the archive prompts for a password, which is indicated in the email body. This is a change from past campaigns, which password-protected the document, rather than the .zip file itself.
+
+Figure 7. Attachment is a password-protected .zip archive
+When extracted and executed, the document attempts to run its malicious macro code. Thus, Microsoft Office warns users about manually enabling macro, empowering users to block infection at this point. The document lures users to enable macro by faking a Microsoft Word message.
+
+Figure 8. Malicious document lures users into enabling macro
+The macro code contains obfuscated downloading routines, as seen below.
+
+Figure 9. Malware code showing obfuscated download link
+The macro code executes the following PowerShell command to attempt to download and execute Cerber in the %AppData% folder:
+
+Figure 10. Malware code showing PowerShell command
+An in-depth look at the new Cerber version
+The latest version of Cerber protects the configuration data embedded in the malware binary using RC4. However, while older versions use custom codes to implement RC4, this new version uses Crypto APIs. The RC4 key is still embedded in the malware binary.
+
+Figure 11. Code to pass RC4key and encrypted config data to the decryptor
+
+Figure 12. RC4 decryption using crypto APIs
+Cerber adds more than 50 file name extensions to its file encryption routine, bringing the total number of target file types to 493:
+
+
+
+.123
+.1cd
+.3dm
+.3ds
+.3fr
+.3g2
+.3gp
+.3pr
+.602
+
+
+.7z
+.7zip
+.aac
+.ab4
+.abd
+.acc
+.accdb
+.accde
+.accdr
+
+
+.accdt
+.ach
+.acr
+.act
+.adb
+.adp
+.ads
+.aes
+.agdl
+
+
+.ai
+.aiff
+.ait
+.al
+.aoi
+.apj
+.apk
+.arc
+.arw
+
+
+.ascx
+.asf
+.asm
+.asp
+.aspx
+.asset
+.asx
+.atb
+.avi
+
+
+.awg
+.back
+.backup
+.backupdb
+.bak
+.bank
+.bat
+.bay
+.bdb
+
+
+.bgt
+.bik
+.bin
+.bkp
+.blend
+.bmp
+.bpw
+.brd
+.bsa
+
+
+.bz2
+.c
+.cash
+.cdb
+.cdf
+.cdr
+.cdr3
+.cdr4
+.cdr5
+
+
+.cdr6
+.cdrw
+.cdx
+.ce1
+.ce2
+.cer
+.cfg
+.cfn
+.cgm
+
+
+.cib
+.class
+.cls
+.cmd
+.cmt
+.config
+.contact
+.cpi
+.cpp
+
+
+.cr2
+.craw
+.crt
+.crw
+.cry
+.cs
+.csh
+.csl
+.csr
+
+
+.css
+.csv
+.d3dbsp
+.dac
+.das
+.dat
+.db
+.db3
+.db_journal
+
+
+.dbf
+.dbx
+.dc2
+.dch
+.dcr
+.dcs
+.ddd
+.ddoc
+.ddrw
+
+
+.dds
+.def
+.der
+.des
+.design
+.dgc
+.dgn
+.dif
+.dip
+
+
+.dit
+.djv
+.djvu
+.dng
+.doc
+.docb
+.docm
+.docx
+.dot
+
+
+.dotm
+.dotx
+.drf
+.drw
+.dtd
+.dwg
+.dxb
+.dxf
+.dxg
+
+
+.edb
+.eml
+.eps
+.erbsql
+.erf
+.exf
+.fdb
+.ffd
+.fff
+
+
+.fh
+.fhd
+.fla
+.flac
+.flb
+.flf
+.flv
+.forge
+.fpx
+
+
+.frm
+.fxg
+.gbr
+.gho
+.gif
+.gpg
+.gray
+.grey
+.groups
+
+
+.gry
+.gz
+.h
+.hbk
+.hdd
+.hpp
+.html
+.hwp
+.ibank
+
+
+.ibd
+.ibz
+.idx
+.iif
+.iiq
+.incpas
+.indd
+.info
+.info_
+
+
+.iwi
+.jar
+.java
+.jnt
+.jpe
+.jpeg
+.jpg
+.js
+.json
+
+
+.k2p
+.kc2
+.kdbx
+.kdc
+.key
+.kpdx
+.kwm
+.laccdb
+.lay
+
+
+.lay6
+.lbf
+.lck
+.ldf
+.lit
+.litemod
+.litesql
+.lock
+.ltx
+
+
+.lua
+.m
+.m2ts
+.m3u
+.m4a
+.m4p
+.m4u
+.m4v
+.ma
+
+
+.mab
+.mapimail
+.max
+.mbx
+.md
+.mdb
+.mdc
+.mdf
+.mef
+
+
+.mfw
+.mid
+.mkv
+.mlb
+.mml
+.mmw
+.mny
+.money
+.moneywell
+
+
+.mos
+.mov
+.mp3
+.mp4
+.mpeg
+.mpg
+.mrw
+.ms11
+.msf
+
+
+.msg
+.mts
+.myd
+.myi
+.nd
+.ndd
+.ndf
+.nef
+.nk2
+
+
+.nop
+.nrw
+.ns2
+.ns3
+.ns4
+.nsd
+.nsf
+.nsg
+.nsh
+
+
+.nvram
+.nwb
+.nx2
+.nxl
+.nyf
+.oab
+.obj
+.odb
+.odc
+
+
+.odf
+.odg
+.odm
+.odp
+.ods
+.odt
+.ogg
+.oil
+.omg
+
+
+.one
+.onenotec2
+.orf
+.ost
+.otg
+.oth
+.otp
+.ots
+.ott
+
+
+.p12
+.p7b
+.p7c
+.pab
+.pages
+.paq
+.pas
+.pat
+.pbf
+
+
+.pcd
+.pct
+.pdb
+.pdd
+.pdf
+.pef
+.pem
+.pfx
+.php
+
+
+.pif
+.pl
+.plc
+.plus_muhd
+.pm!
+.pm
+.pmi
+.pmj
+.pml
+
+
+.pmm
+.pmo
+.pmr
+.pnc
+.pnd
+.png
+.pnx
+.pot
+.potm
+
+
+.potx
+.ppam
+.pps
+.ppsm
+.ppsx
+.ppt
+.pptm
+.pptx
+.prf
+
+
+.private
+.ps
+.psafe3
+.psd
+.pspimage
+.pst
+.ptx
+.pub
+.pwm
+
+
+.py
+.qba
+.qbb
+.qbm
+.qbr
+.qbw
+.qbx
+.qby
+.qcow
+
+
+.qcow2
+.qed
+.qtb
+.r3d
+.raf
+.rar
+.rat
+.raw
+.rb
+
+
+.rdb
+.re4
+.rm
+.rtf
+.rvt
+.rw2
+.rwl
+.rwz
+.s3db
+
+
+.safe
+.sas7bdat
+.sav
+.save
+.say
+.sch
+.sd0
+.sda
+.sdb
+
+
+.sdf
+.secret
+.sh
+.sldm
+.sldx
+.slk
+.slm
+.sql
+.sqlite
+
+
+.sqlite-shm
+.sqlite-wal
+.sqlite3
+.sqlitedb
+.sr2
+.srb
+.srf
+.srs
+.srt
+
+
+.srw
+.st4
+.st5
+.st6
+.st7
+.st8
+.stc
+.std
+.sti
+
+
+.stl
+.stm
+.stw
+.stx
+.svg
+.swf
+.sxc
+.sxd
+.sxg
+
+
+.sxi
+.sxm
+.sxw
+.tar
+.tax
+.tbb
+.tbk
+.tbn
+.tex
+
+
+.tga
+.tgz
+.thm
+.tif
+.tiff
+.tlg
+.tlx
+.txt
+.uop
+
+
+.uot
+.upk
+.usr
+.vb
+.vbox
+.vbs
+.vdi
+.vhd
+.vhdx
+
+
+.vmdk
+.vmsd
+.vmx
+.vmxf
+.vob
+.vpd
+.vsd
+.wab
+.wad
+
+
+.wallet
+.war
+.wav
+.wb2
+.wk1
+.wks
+.wma
+.wmf
+.wmv
+
+
+.wpd
+.wps
+.x11
+.x3f
+.xis
+.xla
+.xlam
+.xlc
+.xlk
+
+
+.xlm
+.xlr
+.xls
+.xlsb
+.xlsm
+.xlsx
+.xlt
+.xltm
+.xltx
+
+
+.xlw
+.xml
+.xps
+.xxx
+.ycbcra
+.yuv
+.zip
+
+
+
+
+
+ 
+However, new to this version is a list of file name extensions exempted from encryption:
+
+.bat
+.cmd
+.com
+.cpl
+.dll
+.exe
+.hta
+.msc
+.msi
+.msp
+.pif
+.scf
+.scr
+.sys
+
+It adds new folders to a list that it prioritizes when searching for files to encrypt, indicating this new version is particularly going after Microsoft Office documents:
+
+\bitcoin\ (new)
+\excel\
+\microsoft sql server\
+\microsoft\excel\ (new)
+\microsoft\microsoft sql server\
+\microsoft\office\ (new)
+\microsoft\onenote\ (new)
+\microsoft\outlook\ (new)
+\microsoft\powerpoint\ (new)
+\microsoft\word\ (new)
+\office\ (new)
+\onenote\
+\outlook\
+\powerpoint\
+\steam\
+he bat!\
+hunderbird\
+\word\ (new)
+
+But it adds a few more folders to its list of exemptions:
+
+\$getcurrent\ (new)
+\$recycle.bin\ (new)
+\$windows.~bt\
+\$windows.~ws\ (new)
+\boot\
+ocuments and settings\all users\
+ocuments and settingsefault user\
+ocuments and settings\localservice\
+ocuments and settingsetworkservice\
+\intel\ (new)
+\msocache\ (new)
+\perflogs\ (new)
+\program files (x86)\
+\program files\
+\programdata\
+\recovery\ (new)
+\recycled\ (new)
+\recycler\ (new)
+\system volume information\ (new)
+emp\ (new)
+\users\all users\
+\windows.old\
+\windows10upgrade\ (new)
+\windows\
+\winnt\ (new)
+\appdata\local\
+\appdata\locallow\
+\appdata\roaming\ (made more generic)
+\local settings\
+\public\music\sample music\
+\public\pictures\sample pictures\
+\public\videos\sample videos\
+or browser\
+
+It drops the ransom note, which contains instruction for decryption, as _README_{RAND}_.hta; for example, _README_2Rg927_.hta.
+
+Figure 13. Ransom note
+As of this writing, Cerber uses two new sets of IP ranges where C&C server could reside:
+
+
+
+
+
+17.1.32.0/27 (new)
+78.15.15.0/27 (new)
+194.165.16.0/22
+
+
+
+
+37.15.20.0/27 (new)
+77.1.12.0/27 (new)
+91.239.24.0/23 (new)
+
+
+
+
+
+Indicators of compromise
+The following files were used for this analysis:
+Malicious .zip attachment:
+
+7be5e805c5bcb57fcfc3a9ab37292603d73086c4
+
+Extracted document with macro code:
+
+6a9e8990add357af0621dcd04600e5fcc9ebac23
+
+Cerber variants downloaded by macro malware from hxxps:// hl3gj7zkxjvo6cra.onion.to/svchost.exe:
+
+4f02e747bc68262c2cf24dffaf792d51a57b02bd
+60c4c6e3f6d196278c0fd111aec0faafb003c4a0
+99f49b70685803e019734c457b1c77e9c7de5531
+55f72229d0552daf28744c97c88585b585fa159b
+8994e43317df691ad9796c95700a827ca613bdca
+7b318f8a59dc2a6ecd261ffd9b6ab27287a811d6
+e049242200300dbce7aaf80c2235b94d0cea582a
+ab0e408c2fc40996c8b9c3ab6e3aa1f88d22b656
+9d5ae07111c8c89d4fa92160c00f669f8eb15ddd
+c46a426459c170c886e9f49b0c07cd3f1cc61ff2
+3fc3b16b915a17cb1c2c8e853c3f0a0c11c3715b
+3352c25b4dc695a344d4ca34c3efdc1e95a7b0ce
+5a7116673ab853505e2861240bf3a3d6cfccfc27
+5c09449b2413c41cf8f1ec64698d9bc4571ed744
+350ee3cee88cb1bb11cddc5c7e55eccadd3dc8fe
+67c948556bc2fabfcdc4e4dbcf2bf14cdbe73d51
+f39b72e853ed743b8a9a2946d79f4fa1c91bfd5e
+
+Cerber variants installed by RIG (aka Meadgive) exploit kit:
+
+9952b68f6d7965f9775946ba6d78638efa00d5e4
+75dcf470ef61b63f76865df9c1ed8edcf1c3f6d9
+
+
+Rodel Finones and Francis Tan Seng
+ 
+ 
+ 
+ 
+
+ 
+
+Talk to us
+Questions, concerns, or insights on this story? Join discussions at the Microsoft community and Windows Defender Security Intelligence.
+Follow us on Twitter @WDSecurity and Facebook Windows Defender Security Intelligence.
+ 
+	

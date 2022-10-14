@@ -1,0 +1,75 @@
+
+		The battle against phishing is a silent one: every day, Office 365 Advanced Threat Protection detects millions of distinct malicious URLs and email attachments. Every year, billions of phishing emails don’t ever reach mailboxes—real-world attacks foiled in real-time. Heuristics, detonation, and machine learning, enriched by signals from Microsoft Threat Protection services, provide dynamic, robust protection against email threats.
+Phishers have been quietly retaliating, evolving their techniques to try and evade these protections. In 2019, we saw phishing attacks reach new levels of creativity and sophistication. Notably, these techniques involve the abuse of legitimate cloud services like those offered by Microsoft, Google, Amazon, and others. At Microsoft, we have aggressive processes to identify and take down nefarious uses of our services without affecting legitimate applications.
+In this blog we’ll share three of the most notable attack techniques we spotted this year. We uncovered these attacks while studying Office 365 ATP signals, which we use to track and deeply understand attacker activity and build durable defenses against evolving and increasingly sophisticated email threats.
+Hijacked search results lead to phishing
+Over the years, phishers have become better at evading detection by hiding malicious artifacts behind benign ones. This tactic manifests in, among many others, the use of URLs that point to legitimate but compromised websites or multiple harmless-looking redirectors that eventually lead to phishing.
+One clever phishing campaign we saw in 2019 used links to Google search results that were poisoned so that they pointed to an attacker-controlled page, which eventually redirected to a phishing page. A traffic generator ensured that the redirector page was the top result for certain keywords.
+
+Figure 1. Phishing attack that used poisoned search results
+Using this technique, phishers were able to send phishing emails that contained only legitimate URLs (i.e., link to search results), and a trusted domain at that, for example:
+
+hxxps://www[.]google[.]ru/#btnI&q=%3Ca%3EhOJoXatrCPy%3C/a%3E 
+hxxps://www[.]google[.]ru/#btnI&q=%3Ca%3EyEg5xg1736iIgQVF%3C/a%3E
+
+The campaign was made even stealthier by its use of location-specific search results. When accessed by users in Europe, the phishing URL led to the redirector website c77684gq[.]beget[.]tech, and eventually to the phishing page. Outside Europe, the same URL returned no search results.
+For this to work, attackers had to make sure that their website, c77684gq[.]beget[.]tech, was the top search result for the keyword “hOJoXatrCPy” when queried from certain regions. The website’s HTML code is composed of a redirector script and a series of anchor elements:
+
+Figure 2. Redirector code
+These anchor elements were designed to be crawled by search engines so that the page is indexed and returned as result for the search keywords that attackers wanted to use for their campaign.
+
+Figure 3. Anchor tags containing search keywords
+The attackers then set up a traffic generator to poison search results. Because the phishing URL used the open redirector functionality, it redirected to the top search result, hence the redirector page.
+404 Not Found pages customized to be phishing sites
+The other way that phishers evade detection is to use multiple URLs and sometimes even multiple domains for their campaigns. They use techniques like subdomain generation algorithms to try and always get ahead of solutions, which, without the right dynamic technologies, will be forced continually catch up as phishers generate more and more domains and URLs.
+This year, attackers have found another shrewd way to serve phishing: custom 404 pages. We uncovered a phishing campaign targeting Microsoft that used 404 pages crafted as phishing pages, which gave phishers virtually unlimited phishing URLs.
+
+Figure 4. Phishing attack that uses specially crafted 404 Not Found error page
+The custom 404 page was designed to look like the legitimate Microsoft account sign-in page.
+
+Figure 5. 404 page designed as phishing page
+Because the malformed 404 page is served to any non-existent URL in an attacker-controlled domain, the phishers could use random URLs for their campaigns. For example, we saw these two URLs used in phishing campaigns; the attackers added a single character to the second one to generate a new URL but serve the same phishing page:
+
+hxxps://skype-online8024[.]web[.]app/8cc1083b0ffdf1e5b9594c045c825b02d41d8cd98f00b204e9800998ecf8427e#ZG1jY2FubkBtb3Jicm9zLmNvbQ
+hxxps://skype-online8024[.]web[.]app/8cc1083b0ffdf1e5b9594c045c825b02d41d8cd98f00b204e9800998ecf8427e#ZG1jY2FubkBtb3Jicm9zLmNvbQs
+
+We also found that the attackers randomized domains, exponentially increasing the number of phishing URLs:
+
+outlookloffice365usertcph4l3q[.]web[.]app
+outlookloffice365userdqz75j6h[.]web[.]app
+outlookloffice365usery6ykxo07[.]web[.]app
+
+All of these non-existent URLs returned the 404 error page, i.e., the phishing page:
+
+Figure 6. When phishing URL is accessed, server responds with HTTP 404 error message, which is a phishing page
+Man-in-the-middle component for dynamic phishing attack
+Phishers have also been getting better at impersonation: the more legitimate the phishing emails looked, the better their chances at tricking recipients. Countless brands both big and small have been targets of spoofing by phishers.
+One particular phishing campaign in 2019 took impersonation to the next level. Instead of attackers copying elements from the spoofed legitimate website, a man-in-the-middle component captured company-specific information like logos, banners, text, and background images from Microsoft’s rendering site.
+Phishers sent out emails with URLs pointing to an attacker-controlled server, which served as the man-in-the-middle component and simulated Microsoft sign-in pages. The server identified certain specific information based on the recipient’s email address, including the target company, and then gathered the information specific to that company. The result was the exact same experience as the legitimate sign-page, which could significantly reduce suspicion.
+
+Figure 7. Phishing attack that abuses Microsoft’s rendering site
+Using the same URL, the phishing site was rendered differently for different targeted users. To generate legitimate-looking phishing sites, the server used the following code to retrieve the banner used by the target’s victim company as identified by the domain information in the email address; the response is the URL for the company banner:
+
+Figure 8. Code snippet for requesting the banner
+The server also retrieved the text used in the company’s sign-in page; the response is the actual text specific to the target victim’s company:
+
+Figure 9. Code snippet for requesting the company-specific text
+To complete the legitimate-looking phishing page, the server requested the background image using the code below; the response is the URL to the image:
+
+Figure 10. Codes snippets for requesting background image
+Office 365 ATP: Durable and dynamic defense for evolving email threats
+The phishing techniques that we discussed in this blog are vastly different from each, but they are all clever attempts to achieve something that’s very important for phishers and other cybercrooks: stealth. The longer phishers can quietly hide from security solutions, the more chances they have to invade inboxes and trick people into divulging sensitive information.
+To hunt down phishing and other threats that don’t want to be found, Office 365 ATP uses advanced security technologies that expose sophisticated techniques. Our URL detonation technology can follow the attack chain so it can detect threats even if they hide behind legitimate services and multiple layers of redirectors.
+This rich visibility into email threats allows Office 365 ATP to continuously inform and improve its heuristic and machine learning protections so that new and emerging campaigns are blocked in real-time—silently protecting customers from attacks even when they don’t know it. The insights from Office 365 ATP also allow our security experts to track emerging techniques and other attacker activities like the ones we discussed in this blog, allowing us to ensure that our protections are effective not just for the campaigns that we see today but those that might emerge in the future.
+In addition, with the new campaign views in Office 365 ATP currently in preview, enterprises can get a broad picture of email campaigns observed in their network, with details like when the campaign started, the sending pattern and timeline, the list of IP addresses and senders used in the attack, which messages were blocked or otherwise, and other important information.
+As an important component of Microsoft Threat Protection, Office 365 ATP provides critical security signals about threats that arrive via email—a common entry point for cyberattacks—to the rest of Microsoft’s security technologies, helping provide crucial protection at the early stages of attacks. Through signal-sharing and remediation orchestration across security solutions, Microsoft Threat Protection provides comprehensive and integrated protection for identities, endpoints, user data, apps, and infrastructure.
+ 
+Patrick Estavillo
+Office 365 ATP Research Team
+ 
+ 
+ 
+
+Read all Microsoft security intelligence blog posts.
+Follow us on Twitter @MsftSecIntel.
+	

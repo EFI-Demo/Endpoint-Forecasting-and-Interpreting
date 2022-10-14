@@ -1,0 +1,53 @@
+Formjacking, the use of malicious JavaScript code to steal credit card details and other information from payment forms on the checkout webpages of e-commerce sites, has been making headlines lately. In our previous blog, we discussed how formjacking generally works and cited a few publicly reported attacks that targeted popular online businesses. In this blog, we look at the more technical aspects of formjacking and detail a new campaign affecting a number of top shopping sites.
+
+New campaign, new technique
+
+Recently, we came across a website of a retail store in Paris which was injected with a formjacking script (Figure 1).
+.The code shown in Figure 1 collects the payment information entered by users on the website and posts it to the domain google-analyitics.org. This domain is a typo-squatted version of the legitimate Google Analytics domain, google-analytics.com.
+
+This was no new occurrence for us, considering the number of payment information-stealing script injections we see daily. However, digging into our telemetry, we came across an interesting pattern. We observed popular websites from different countries—such as the U.S., Japan, Australia, and Germany—redirecting to this one Paris website. This created an interesting redirection chain as customers of all these websites were being infected by formjacking at the same time. Figure 2 shows how this infection chain works.
+.In a few cases, even all the regional websites of one brand were affected, redirecting to the same Paris website. We have been able to identify over 30 popular websites affected by this new infection wave, including fashion stores, educational websites, websites selling sports gear, etc.
+.Looking at our telemetry, we can confirm that this campaign has been around since at least November 25, 2018. To make matters worse, another piece of injected code on the same web page looks for the presence of debugging tools, such as Firebug, to thwart security researchers analyzing the malicious script.
+.This attack chain is unique in the sense that it differs from the prevalent supply chain formjacking attack, where attackers compromise popular third-party script library providers. As these scripts are loaded by many websites, with one compromise the attacker manages to load their malicious code on a large number of websites all at the same time. In our scenario, the redirecting website and the compromised website in many cases come from different areas of the online shopping landscape, dealing in entirely different product spaces.
+
+Symantec is currently notifying and working with the affected retailers to help address this issue, so we won’t be naming them here.
+
+This latest formjacking campaign highlights the fact that attackers are continuously altering and improving their malicious code and exploring new delivery mechanisms to infect more users.
+
+Multiple flavors of formjacking
+
+In addition to the code previously mentioned, we have seen many other scripts injected into websites to steal payment information in various ways. For example, the code shown in Figure 4 was injected into one set of affected websites.
+.The script creates a script element and sets its source to https://apitstatus.com/api.js?v=3.0.8. This forces the browser to load malicious obfuscated JavaScript from apitstatus.com, which in turn collects the entered payment information and posts it back to the attackers’ domain.
+
+On yet another set of websites, we discovered the code shown in Figure 5.
+.This obfuscated script applies a hook onto forms on the website and collects all the information entered by visitors. The script also extracts the URL loaded in the browser and determines if the checkout page of the website is loaded. If it has, the script sends the collected form information, which is now the payment information, back to the attacker-controlled domain. This version of a formjacking script was used in various high-profile breaches such as Ticketmaster UK, Shopper Approved, and Feedify.
+
+Prevalence 
+
+In recent months, we have seen a major uptick in formjacking attacks against high-profile websites across the globe. From our telemetry, we have also observed locally popular websites (those with an Alexa Rank of less than 5,000 in a particular country) in the U.S., Japan, Germany, and Australia, among other countries, being injected with formjacking scripts.
+
+Symantec’s Intrusion Prevention System (IPS) technology proactively protects website users from formjacking attacks. In the past three months alone, IPS has blocked more than 1 million formjacking attempts on more than 10,000 unique websites. Taking into account supply chain attacks, which can allow attackers to gain access to large companies by exploiting weaknesses in smaller businesses used by the larger company to provide different services, we can easily say that the actual number of infected websites is bound to be higher.
+.Protection
+
+Victims may not realize they are victims of formjacking, as generally their websites continue to operate as normal, and attackers are sophisticated and stealthy and take steps to avoid detection.
+
+Symantec customers are protected from formjacking attacks.
+
+Network-based protection
+
+
+	Web Attack: Formjacking Website 19
+	Web Attack: Formjacking Website 15
+	Web Attack: Formjacking Website 3
+
+
+Website owners should also be aware of the dangers of software supply chain attacks, as these have been used as the infection vector in some of these formjacking attacks. Software supply chain attacks can be difficult to guard against, but there are some steps that website owners can take:
+
+
+	Test new updates, even seemingly legitimate ones, in small test environments or sandboxes first, to detect any suspicious behavior.
+	Behavior monitoring of all activity on a system can also help identify any unwanted patterns and allow you to block a suspicious application before any damage can be done.
+
+
+Producers of software packages should ensure that they are able to detect unwanted changes in the software update process and on their website.
+
+Website owners can also use content security policies with Subresource Integrity (SRI) tags to lock down any integrated third-party scripts.

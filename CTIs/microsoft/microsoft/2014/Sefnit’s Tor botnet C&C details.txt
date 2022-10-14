@@ -1,0 +1,59 @@
+
+		
+​We have talked about the impact that resulted from the Sefnit botnet Tor hazard as well as the clean-up effort that went into that threat. In this post we’d like to introduce some of the details regarding the Tor component’s configuration and its communication with the Tor service. Specifically, we’ll talk about how Trojan:Win32/Sefnit.AT communicates with the Tor network, what domains it tries to contact, and where it keeps its configuration data.
+After Sefnit installs the Tor-based malware component, which is typically named wins.exe, a copy of a non-malicious Tor client is also installed and added as a Windows service. This service is started every time Windows starts and is configured to accept connections on TCP ports 9051 and 9050. However, since these ports are bound to the loopback interface, which is not remotely accessible, no additional threats are added to the infected PC.
+Tor service interaction
+The TCP port 9051 is the control port for the legitimate local Tor service and is used to control most of the aspects of a Tor client. So far, however, we have only observed this port being used by malware to obtain status information regarding the connection to the Tor network. This is accomplished by periodically requesting status updates using the control protocol.
+ 
+Figure 1: Malware sends an empty authentication request 
+From this example we can see that Win32/Sefnit.AT sends an empty authentication request and receives a successful response (250), which means that all authentication methods for the installed Tor client are disabled. Since the TCP port is not accessible remotely, the lack of authentication poses no threat to the victim’s PC. Additionally, the malware requests the current state of a Tor circuit, which in this case is established, meaning the Tor client is connected to the anonymizing network.
+The TCP port 9050 is used as a communication point for the SOCKS proxy, which allows any application that can be configured to use a proxy server to communicate over Tor. The malware uses this method to contact its command and control (C&C) web servers. This bypasses the traditional network infrastructure since traffic over the Tor network is encrypted, which also prevents network-based IDS from detecting the malware. The C&C endpoints utilize the Tor hidden service which allows using the anonymizing network to host web servers without compromising the location and identity of the server owners.
+In order to contact a web server that uses the Tor hidden service feature the network uses a special domain naming scheme. The server’s name is derived from its public key within the Tor network appended with .onion as the top level domain as opposed to .com or .net. The malware contains a list of .onion domains that are contacted using the standard HTTP protocol (over SOCKS):
+
+ 6tlpoektcb3gudt3.onion 
+ 7fyipi6vxyhpeouy.onion 
+ 7sc6xyn3rrxtknu6.onion
+ ijqqxydixp4qbzce.onion 
+ l77ukkijtdca2tsy.onion 
+ lorpzyxqxscsmscx.onion
+ lqqciuwa5yzxewc3.onion 
+ lqqth7gagyod22sc.onion 
+ mdyxc4g64gi6fk7b.onion 
+ onhiimfoqy4acjv4.onion
+ pomyeasfnmtn544p.onion
+ qxc7mc24mj7m4e2o.onion 
+ wsytsa2omakx655w.onion 
+ ye63peqbnm6vctar.onion 
+
+ 
+Figure 2: Sefnit attempts to create a proxy connection
+From this example we can see the malware attempts to create a proxy connection to the lqqciuwa5yzxewc3.onion domain and succeeds. Next, data is submitted to the /cache directory on that server, which replies with a successful status code (200).
+Malware configuration details
+The list of CnC servers is stored inside a unique file and folder combination that at first glance appears to be randomly generated, although they have not changed much over time. Specifically, the malware creates a directory with the name 049e7fb749be2cdf169e28bb0a27254f and inside places two files using the name 181084e525a65ef540c63d60ce07f836 with two different extensions of .ct and .ph.
+During closer examination we identified that the apparently random directory is actually created by using the MD4 cryptographic hash function to compute a digest of a Unicode string ps. The resulting binary digest is converted into a hex representation and used as the directory name.
+
+Figure 3: Calculation of the binary digest
+To generate the file names the same cryptographic function is used but this time to compute the digest of a Unicode GUID string {b3717590-6447-47db-abca-a304803890cb}, which after hex conversion results in 181084e525a65ef540c63d60ce07f836.
+The PH file (181084e525a65ef540c63d60ce07f836.ph) may potentially serve as a botnet identifier since the data inside remains fairly static. In fact, it is the AES-256 encrypted version of the same GUID string with encryption key #?oUs?ai??+yIIZ?S?dcvDzI XOewA2. This key is hard-coded in the malware binary.
+
+Figure 4: The encryption key is hard coded in the malware binary
+The CT file (181084e525a65ef540c63d60ce07f836.ct) contains the actual configuration data that is also encrypted using the AES-256 algorithm together with the same encryption key. The decrypted data is a serialized object, which appears to have been created using the Boost C++ library, and contains the following information:
+
+The victim’s public IP address
+A string resembling an ID (for example, Verna) which is taken from the XOR obfuscated data inside the malware
+List of C&C domains
+Current working directory of the malware
+
+
+Figure 5: The decrypted data is a serialized object
+Such configuration files are detected as Trojan:Win32/Sefnit!cfg.
+In conclusion we have couple of interesting observations. First, the cryptographic code is compiled into the malware, as opposed to being dynamically loaded from an external DLL. Specifically, the code is based on the OpenSSL library version 1.0.0d released in February 2011. Additionally, the C&C server responses, if we are to trust the response headers, indicate that some web servers use an old version 1.1.19 of Nginx, which is also from 2011. Lastly, you can use Microsoft Security Essentials and Windows Defender to detect and remove both the Sefnit malware and the configuration files.
+Dmitriy Pletnev
+
+ 
+
+Talk to us
+Questions, concerns, or insights on this story? Join discussions at the Microsoft community and Windows Defender Security Intelligence.
+Follow us on Twitter @WDSecurity and Facebook Windows Defender Security Intelligence.
+ 
+	

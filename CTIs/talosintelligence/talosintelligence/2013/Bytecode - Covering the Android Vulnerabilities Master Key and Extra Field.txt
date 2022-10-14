@@ -1,0 +1,88 @@
+
+This post will walk through our coverage for the Master Key and Extra Field vulnerabilities. Both vulnerabilities allow arbitrary files to be added to signed APKs without breaking the digital signature. ClamAV bytecode signatures allow for flexible coverage when a vulnerability or malware family is too complex to detect with any of the other signature formats. The bytecode signature language is a subset of C with an API for interfacing with ClamAV.
+
+The vulnerabilities have been written about exhaustively elsewhere online, the most comprehensive of which are from @saurik: Master Key and Extra Field.
+
+Zip File Format
+Zip files contain a 
+central directory  pointing to all of the files stored in the 
+archive. The central directory is located at the end of the file. Each file stored within the Zip file has a header immediately before its stored bytes, as well, each file has a more verbose header stored in the central directory. You can see the specifics on Wikipedia.
+
+Master Key Vulnerability
+The Master Key vulnerability is exploited by having multiple files with 
+the same name in an APK. Android's verifier and loader handle duplicate entries differently. The
+ verifier will check only the last duplicate entry against the SHA1 digest stored 
+in META-INF/MANIFEST.MF. The loader will load the first entry.
+
+The fact that any file could be replaced is what  led to the decision to use a bytecode signature to cover this vulnerability. The vulnerability creates a complex situation where the APK / Zip needs to be parsed and each file name checked against the others.
+
+The bytecode signature first finds the last end_of_central_directory entry's file magic in the file. The end_of_central_directory section has information about the starting offset and size of the central_directory. This is the equivalent of scanning backward to find the end_of_central_directory entry.
+
+        // find the last end_of_central_directory file magic    while(end_central_dir_off != -1) {
+        // keep track of the previous one        last_end_off = end_central_dir_off;
+        
+        // seek past it        if(seek(last_end_off+1, SEEK_SET) < 0)            return 0;
+     
+        // keep doing this until the magic PK\x05\x06 is not found        end_central_dir_off = file_find("\x50\x4b\x05\x06", 4);    }    
+    // set to the last one found    end_central_dir_off = last_end_off;
+
+After some seeks and reads the bytecode signature reaches the while loop for detecting duplicate file names. For security reasons there is no malloc in the ClamAV bytecode engine, because of this, an O(n2) comparison was used. There are two buffers used since each filename is tested against all those that follow it. Only when the file name lengths are equal are the names read in to their respective buffers. Then, the names are compared to each other looping backward in order to break as soon 
+as possible on differences. This avoids iterating over similar paths. The read in and comparison can be seen below:
+
+    // if the lengths are the same, do the comparison
+    if(file_name_length == compare_name_length) {
+
+        // seek to entry name        if(seek(zip_entry_off + 46, SEEK_SET) < 0)            break;                             // read name        if(read(file_name_buffer, file_name_length) != file_name_length)            break;                            // seek to the compare entry name        if(seek(compare_entry_off + 46, SEEK_SET) < 0)            break;             // read name        if(read(compare_buffer, file_name_length) != file_name_length)             break; 
+              
+        // compare names from end backward to avoid wasting time, ex:
+        // /res/drawable-hdpi/btn_call_1.png
+        // /res/drawable-hdpi/btn_call_2.png
+        for(i=(file_name_length-1); i > -1; i--) {            // if any character does not match, break            if(file_name_buffer[i] != compare_buffer[i])                break;        }            // if reached the end of the loop (didn't break on any comparison)        if(i == -1) {            foundVirus("Master_Key");        }    }
+
+Extra Field Vulnerability 
+The Extra Field vulnerability is exploited by a signed / 
+unsigned handling error in the Android's verifier. A Zip file's 
+central directory points to all of the files stored in the 
+archive. Each file has a header which has extra space available, called the extra_field. The extra_field, when present, is between a file's 
+header and the stored file. When its size is interpreted as a negative 
+value, the verifier will try to skip past it to the file bytes by 
+jumping backward. If you store the original file at the location the 
+verifier jumps backward to, it will be verified. Then you can place some
+ arbitrary file into the original file's position, causing the new file 
+to be loaded.
+
+The most popular way to exploit this is to store the classes.dex file uncompressed. Then the extra_field_length is set to  0xFFFD (65533 unsigned, -3 signed). This causes  the original file's magic (example: dex\x0A035\x00) to overlap with the file name classes.dex. When the verifier jumps over the extra_field, it will jump backward 3 bytes into the file name, these bytes are shared with the start of the dex file. It will verify that the original dex file, which has been stored in the extra_field, is unchanged. When the loader goes to load the file, it will correctly treat the extra_field_length as unsigned short and jump forward to the new dex file.
+
+I also realized that you could jump backward into another entry's extra_field. It would constrain your file sizes even more, but it would still be possible. Instead of only covering 0xFFFD, the bytecode was initially looking for any value that could be interpreted as negative in the dex entry's extra_field_length. 
+
+After reading @saurik's blog post on the Extra Field vulnerability I realized that this coverage needed to be expanded. My logic was, initially, that the file classes.dex (the executable code) was the only serious threat when replaced. In hindsight, this was a strange decision as I thought to cover any file for the Master Key vulnerability but only one file for Extra Field. There are a lot of files that could be dangerous when replaced.
+
+The really mind blowing thing that @saurik demonstrated was an almost complete replacement of the central directory. The entries in the central directory also have an extra_field. When its size is large enough to be interpreted as negative, the verifier will instead interpret it as zero. The usage of this vulnerability in the central directory pivots off the first entry in order to split the paths of the verifier and the loader. Each is then just directed to every other file entry using valid, specially crafted extra_field and comment lengths. This allows a near total replacement of a signed application's contents. This paragraph by no means does this bug technical justice, if you are interested, I highly suggest you visit the post linked above.
+
+What does all this mean for coverage? It means we should look at every file entry in the zip file, as well as every entry in the central directory. The safest way to reach every entry in a Zip file is by reading the central directory and getting the offset from there. For this reason, coverage has been integrated into the loop checking for the Master Key vulnerability.
+
+    // get the offset of the file header for this central dir entry    zip_entry_off = *(uint32_t *)&cd_header[42];    zip_entry_off = le32_to_host(zip_entry_off);        if(seek(zip_entry_off, SEEK_SET) < 0)
+        return 0;            if(read(zip_header, 30) != 30)         return 0;            // check the extra field size
+    extra_field_size = *(uint16_t *)&zip_header[28];    extra_field_size = le16_to_host(extra_field_size);            if(extra_field_size > 0x7FFF)        foundVirus("Extra_Field");            // go back to where we were previously    if(seek(cd_entry_off + 46, SEEK_SET) < 0)        return 0;            // check extra field size for the central directory entry    extra_field_size = *(uint16_t *)&cd_header[30];    extra_field_size = le16_to_host(extra_field_size);                if(extra_field_size > 0x7FFF)        foundVirus("Extra_Field");    
+
+Once the code has read in the central directory header to the variable cd_header, it then retrieves the offset of that file entry in the Zip file. It seeks to that location and reads in the local file header to the variable zip_header. It casts the extra_field_size safely using le16_to_host(). This function converts a 16bit little endian value to the equivalent in the host architecture's endianness. If the value is greater than 0x7FFF, that is, if it can be interpreted as a negative value, then we alert that the Extra Field vulnerability has been found. If not, we seek back to the central directory entry and do the same check for the negative extra_field value in the central directory.
+
+Examples 
+Following are some examples of the two vulnerabilities on VirusTotal.
+
+MD5: 04EEF623255A7CEBD943435ACF237456 - The first central directory entry at offset 0x7A5F4 has a negative extra_field value (0x8000). Alternate central directory entries have been inserted into that space.
+
+MD5: C9F4C62521C04B8ADD796A1D5CEE08B0 - This sample was the first usage of the Extra Field vulnerability spotted in the wild. It was detailed in our blog post here. It is interesting to see the variety in names used by different vendors.
+
+MD5: D816596A70A7117346A2DFB6F8850E39
+ - This example of the Master Key vulnerability triggers because the 
+file /res/drawable-xhdpi/icon.png has been inserted twice. While this is
+ not a malicious exploitation of the Master Key vulnerability, it 
+demonstrates how thorough  coverage needs to be for this vulnerability. 
+
+MD5: DAA9C49A4645CE109B1E36DC6233DB07 - For this Master Key sample, it looks like someone took an already malicious APK and added an extra classes.dex file and a second AndroidManifest.xml file.
+
+
+
+
+

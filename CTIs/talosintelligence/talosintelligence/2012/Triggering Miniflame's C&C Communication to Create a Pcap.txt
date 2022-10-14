@@ -1,0 +1,27 @@
+
+There are times when a malware's payload doesn't trigger because of a condition or an environment that the malware requires in order for it to execute its payload. Such is the behavior of the miniflame malware that we encountered recently.To create a Snort signature, the network behavior of the malware needs to be triggered. The miniflame report from Securelist doesn't exactly specify the best setup to trigger the behavior. If this is an incident response, which is usually the case for a sophisticated malware like miniflame, and you need a signature, you have limited time to analyze the malware deeply.According to the report the C&C communication is triggered by the .ocx files. The only samples that we had available are the 4.XX versions of the miniflame's .ocx components, which were named differently from the files mentioned in the report - so we have to sift out which files are which and then rename the file(s) appropriately before analysis. The files are all dll/ocx files.We tried Regsvr32 /s [filename].ocx to trigger the communication but we didn't see any C&C activity in wireshark. Instead, after inserting the registry key below re-running the malware or rebooting the PC, the network behavior is triggered. This registry key has been also used as a prerequisite for other malware to talk to the network, like Conficker.
+HKLM\SYSTEM\CurrentControlSet\Services\Nla\Parameters\ServiceDllThe CurrentControlSet\Services subkeys under HKLM/SYSTEM contain entries for standard and optional Windows services, such as device drivers, file system drivers, and Win32 service drivers. The Network Location Awareness (NLA) service provider enables Windows Sockets 2 applications to identify the logical network to which a Windows computer is attached.
+
+
+
+
+
+
+
+
+According to the report, “If the file “icsvnt32.ocx” is installed without errors, the module then changes the target registry key’s default value to “%windir%\system32\icsvnt32.ocx” - so instead of reverse engineering the code further, we just need to modify the value of ServiceDll and point it to our ocx file.
+
+The network packets below were captured and as we can see from the POST request (highlighted in orange) the malware communicated with the C&C server:
+
+
+
+
+
+As we can see the malware connected to webupdate.hopto.org, which is one of the C&C servers listed in the report:
+
+
+
+With live traffic now successfully captured, detection was easy - a combination of the URL from the packet above and any of the hosts the malware is known to connect to. It’s been released as Snort SID 24406.
+
+
+

@@ -1,0 +1,77 @@
+At the end of 2018, it appeared that the Emotet group had gone dark when its malware campaigns greatly reduced in size. There was another major decline in the summer months of 2019; however, in September 2019, there was an increase in activity (over 100 percent) with Emotet’s (Trojan.Emotet) command and control (C&C) servers delivering a new wave of malicious binaries.
+.As the months went on, we noticed that the volume of malware sent from the C&C servers was increasing. At times, over 1 million hits per day were being blocked by Symantec’s various protection services. Customers using Symantec Messaging Gateway (SMG) or the Email Security.cloud service have even greater protection as these malicious emails are blocked before reaching the end user. Our telemetry showed a blocking volume increase with these technologies. However, because these technologies were able to stop the attacks successfully at an earlier stage in the attack chain, it caused a reduction in the need to use endpoint protection for blocking. Products like Symantec SMG and Email Security.cloud provide a way to block malware at the cloud level before it reaches your network.
+.What is Emotet?
+
+Emotet started out as a banking Trojan focused on stealing user information by sniffing networks. Over the years, Emotet has evolved by constantly updating its codebase and sophisticated evasion techniques.
+
+The Emotet criminals are known to run their botnet as a Malware-as-a-Service (MaaS), enabling other threat actors to easily distribute various malicious payloads such as AZORult (Infostealer.Rultazo), IcedID (Trojan.IcedID), TrickBot (Trojan.Trickybot) etc.
+.Latest Emotet Malspam
+
+The types of emails being used in these attacks come in various forms. The first is an email with a link to an Office document file that contains a malicious macro, which then downloads the malicious executable payload (Figure 2). The Email .Cloud product contains the Link Following service that follows any links it finds in emails to determine if they are spam or malware, which is just one of the benefits of using Email Security.cloud.
+.The second type of email we observed is one with the Office document attached to the email (Figure 3).
+
+Document SHA256: 4e35e66d898a56184f42674c5bc41d4abe219beabeafb4cbdddf8ae974326839
+.Emotet uses social engineering techniques in its spam campaigns, tricking users into opening the file and running the macro to infect victims’ computers. As seen in Figure 4, the document uses a fake warning message asking users to “Enable Editing” in an attempt to trick the user into executing the malicious macro script.
+.The document summary information shows the document was created just a few hours prior to the attack.
+.When the document is opened a malicious macro downloads Emotet’s main module. The macro, which is highly obfuscated in an attempt to bypass traditional antivirus signatures, uses Windows Management Instrumentation (WMI ) classes, such as winmgmts:Win32_Process, to call powershell.exe.
+.Emotet is known to hide its payloads in a document’s objects and streams and this variant is no different.
+
+Figure 7 shows a Base64-encoded malicious payload hidden in document streams.
+.The macro uses an obfuscated PowerShell command to download the Emotet binaries. By using legitimate living-off-the-land binaries (LoLBins), such as windows PowerShell and WMI, the macro can evade detection by security software.
+.The Emotet module downloads additional payloads to the user’s computer. In Figure 11, we can see that the Emotet module has downloaded the file scanscan.exe to the %AppData% folder. This is the final TrickBot payload, which will conduct further destructive activities. Emotet will create a persistent entry in the registry to make sure that TrickBot runs every time the user logs on.
+.Indicators of compromise (IoCs)
+
+Office document:
+
+SHA256-4e35e66d898a56184f42674c5bc41d4abe219beabeafb4cbdddf8ae974326839
+
+URLs:
+
+url: [hxxp]: [//]www.4celia.com/wp-admin/2z8/
+
+url: [hxxp]: [//]capsaciphone.com/wp-admin/q07360/
+
+url: [hxxp]: [//]travalogo.com/pseovck27kr/est21175/
+
+url: [hxxp]: [//] miracles-of-quran.com/css/ny77597/
+
+url: [hxxp]: [//]essay.essaytutors.net/cgi-bin/mqdm65698/
+
+Registry:
+
+HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Run\scanscan
+
+Processes:
+
+scanscan.exe - %APPDATA%\Local\scanscan\scanscan.exe
+
+These IoCs are for just one of the variants of Emotet we blocked on December 12, 2019. We have seen multiple similar variants successfully blocked by our heuristics engine scanner over the past few months.
+
+We have blocked a high volume of malicious emails with various social engineering subject lines targeting various financial institutions. Some of the subject lines contained the following keywords:
+
+
+	Invoices
+	Shopping cart processing
+	Account balance
+	Accounts payable
+	Port clearance and departure etc.
+
+.Protection
+
+These runs were successfully blocked with heuristics that were created as far back as 2016 for our Email Security.cloud security scanner. The advanced scanner is methodical in detecting obfuscation techniques used to hide malicious payloads. Email Security.cloud customers are protected from malware campaigns such as the one discussed in this blog.
+
+Symantec proactively protects against Emotet spam with its email security suite of products:
+
+
+	Email Security.cloud
+	Symantec Messaging Gateway
+
+
+File-based protection:
+
+
+	Trojan.Emotet
+	Trojan.Trickybot
+	Infostealer.Rultazo
+	Trojan.IcedID
+

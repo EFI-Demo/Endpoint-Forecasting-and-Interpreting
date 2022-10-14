@@ -1,0 +1,51 @@
+
+		Hello, Michael here.
+<updated: 7/31 – changed the compiler ‘warning’ to ‘error’>
+Today, the Microsoft Security Response Center (MSRC) released two out-of-band security bulletins, MS09-034 and MS09-035, and a Security Advisory, to address security bugs in the Active Template Library (ATL) and I think it’s appropriate that I explain why the SDL did not find these bugs and what we learned.
+I’ve said this many times, but I’ll say it again, because I think it bears repeating. A bug of any kind is an opportunity to learn and then adjust your development practices if appropriate. In this post I will only outline the bugs fixed in ATL, not any of the defense-in-depth mechanisms added to Internet Explorer as part of MS09-034. You can find more information about the IE update in Dave Ross’s blog post at Security Research & Defense.
+But before I explain the bugs, I want to spend a couple of minutes to explain ATL. The Active Template Library (ATL) is a set of lightweight C++ classes originally designed to make creating COM objects easier. ATL handles all the object reference counting and handles common COM tasks with ease. But ATL is not restricted to COM; there are classes to handle smart pointers, images, the registry and ACLs and more.
+When a developer creates a C++ project in Visual Studio, they are given the option to create an ATL project and if the developer opts to do so, the most important headers are automatically added to the project.
+One final point before I discuss the bugs, the ATL source code is available for you to review; in the case of Visual Studio 2008, in the %ProgramFiles%Microsoft Visual Studio 9.0vcatlmfc folder.
+Now let’s dig into the bugs.
+Bug #1: A Typo!
+This is the core issue in the MSVidCtl ActiveX control. The bug is in a modified version of an older version of ATL, and is not in the public ATL code, but in a privately updated version of the ATL code.
+
+
+
+
+Sidebar: How do ActiveX and COM differ?
+Skip this section if you want to focus on the core security issues; I added this to answer to a question I get a lot. The Component Object Model (COM) is a binary specification that defines how objects can interact. An ActiveX object is a COM object. The major feature that characterizes ActiveX objects is their ability to be used from scripting languages. Doing so is often called ‘automation’. ActiveX objects use a COM interface named IDispatch which allows the script engine to resolve and call methods in the object at runtime. This is often called ‘late binding.’
+
+
+
+The bug is simply a typo, can you spot it? I have removed extraneous code and error checking to make it easier to spot, and removed references to the psa variable (it’s a SAFEARRAYBOUND if you need to know)
+__int64 cbSize;
+hr = pStream->Read((void*) &cbSize, sizeof(cbSize), NULL);
+BYTE *pbArray;
+HRESULT hr = SafeArrayAccessData(psa, reinterpret_cast<LPVOID *>(&pbArray));
+hr = pStream->Read((void*)&pbArray, (ULONG)cbSize, NULL);
+I’ll give you one more clue – it’s a one character typo.
+Give up? Look at the last line. The first argument is incorrect. It should be:
+hr = pStream->Read((void*)pbArray, (ULONG)cbSize, NULL);
+The extra ‘&’ character in the vulnerable code causes the code to write potentially untrusted data, of size cbSize, to the address of the pointer to the array, pbArray, rather than write the data into the array, and the pointer is on the stack. This is a stack-based buffer overrun vulnerability.
+I contend that this would be very difficult to spot in a code review, and is not picked up by the C/C++ compiler owing to the (void*) cast. If the cast is removed, the compiler issues an error like this:
+C2664: '<function>' : cannot convert parameter 1 from 'BYTE **' to 'BYTE *'
+I despise C-style casting because it’s utterly unsafe; C++ casting is safer, although the reinterpret_cast operator is almost as bad as C-style casting.
+So why did we miss this?
+Our static analysis tools don’t flag this one because the cast tells the compiler and tools, “I know what I’m doing!” I looked over a few dozen instances of casting code like this in various code bases and they were all correct, so adding a rule to flag this kind of code would be prone to false positives and I would not want to subject anyone to a potentially massive amount of noise.
+In the SDL we require that teams fuzz their controls, but our fuzzing tools didn’t find this because the method in question requires a specially formed input stream that includes many sentinel bytes. I explain the weaknesses of fuzzing here. We are in the process of adding more heuristics to our fuzzing engine so it can include these COM-specific bytes if needed.
+Our banned API removal doesn’t find this because there is no banned API in play.
+Some of the defenses such as ASLR and DEP in Windows might come into play, depending on the component in question. That seems like a vague answer, but I say “depending” because ATL is a source code template library that is used to build software, and it is up to the developers to use these defenses. Customers using Internet Explorer 8 on Windows Vista SP1 and later are better protected because ASLR and DEP are enabled by default.
+The code is compiled with /GS, but there is no stack cookie for the vulnerable function because there are no local variables to protect, so /GS protection is ineffective in this instance.
+Bug #2: Using ATL Property Maps to Instantiate a COM object
+ATL allows COM objects to easily persist their properties to a stream of bytes and that byte-stream can then be re-constituted by the object at a later time. ATL does this using a ‘property map.’ The stream can be comprised of a series of tuples. When using tuples, the first portion of the tuple is the data type and, depending on the data type, a size (for example, an n-byte string [VT_BSTR]) and the second portion is the data itself.
+If the data type in the stream is VT_DISPATCH or VT_UNKNOWN, then the control might be vulnerable.
+The vulnerable code is in the shipping ATL source code, it’s in the CComVariant::ReadFromStream() method.
+So how did we miss this? The SDL offers no requirements or recommendations about using ATL property maps; in fact, the SDL offers few practices about hosting COM containers, mainly because there are so few of them, the most well-known COM container is Internet Explorer. We do require that teams use tools to identify their Safe-for-Scripting and Safe-for-Instantiation controls, however.
+In theory fuzzing should have found this, but our fuzzing engine does not build the correct stream and the stream is rejected. See the previous bug.
+What We’re Doing
+I want to point out that this is all very fluid right now owing to our rapid turn-around getting the bulletin out and I want to make sure we do the right thing in the SDL rather than rushing things and getting it wrong.
+First and foremost, we are updating our fuzzing tools to help find COM stream-related issues quickly, and we will update the SDL to tell teams to fuzz any COM object they have using any of the risky interfaces (like IPersistStream*, IPersistStorage, etc.)
+Second, we’re going to tell teams they must use the new ATL libraries. Today we have a “minimum compiler and linker toolset” requirement, but we don’t explicitly tell people which ATL to use. We’re going to change that!
+Finally, I want to drill a little deeper into casting issues. This will be a side project for me over the next few months, as I wade through bug databases and code to see if there are other related issues. I’ll also speak to various static analysis and C/C++ language experts here at Microsoft and across the industry to get their views and insight. If you have a professional opinion on casting issues, please feel free to let me know through this blog.
+	

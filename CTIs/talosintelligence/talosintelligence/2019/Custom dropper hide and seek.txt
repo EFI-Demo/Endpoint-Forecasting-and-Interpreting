@@ -1,0 +1,343 @@
+
+
+
+Executive summary
+Most users assume they are safe when surfing the web on a daily basis. But information-stealing malware can operate in the background of infected systems, looking to steal users' passwords, track their habits online and hijack personal information.
+
+Cisco Talos has monitored adversaries which are behind a wave of ongoing campaigns dropping well-known information-stealer like Agent Tesla, Loki-bot and others since at least January 2019. The adversaries using custom droppers, which inject the final malware into common processes on the victim machine. Once infected, the malware can steal information from many popular pieces of software, including the Google Chrome, Safari and Firefox web browsers. 
+
+The injection techniques we're seeing in the wild are well-known and have been used for many years, but with the adversaries customizing them, traditional anti-virus systems are having a hard time detecting the embedded malware. In this post, we'll walk through one of these campaigns in detail and how the different stages of the dropper hide the malware. Any internet user is a potential target of this malware, and if infected, has the potential to completely take away a user's online privacy.
+
+
+
+Technical overview 
+The campaigns we analyzed started with a malicious email similar to the one below:
+
+
+Figure 1 - Phishing email
+
+
+An ARJ archive is attached to this email. ARJ is an early 1990s archive format often used on the pirated software scene to convert files into archives. ARJ can split the archive into multiple smaller files. This made it easier to share these files over dial-up connections. ARJ archives can be unpacked with various tools like 7-Zip or WinRAR. Users can easily find an unpacker by double-clicking on the file and searching in the Windows Store for the appropriate software.
+
+We often see that adversaries use old archive formats, hoping to bypass weak email security gateways. In this case, this archive wasn't split into multiple files and it contained only a single executable with the name: "IMP_Arrival Noticedoc.exe". This actor often used filenames with the schema "...<MS Office extension>.exe. In other campaigns by this adversary, we also saw completely different names and different file types like malicious office documents acting as first stage droppers. In this blog post, we will focus on the first ones. 
+
+
+Dropper
+Most of the executables are compiled, sometimes UPX packed, AutoIt scripts that can be easily decompiled. Unfortunately, as usual, the content was heavily obfuscated before compilation. Figure 2 shows the decompiled version of the script.
+
+
+Figure 2 - Decompiled version of the AutoIT script
+
+
+The deobfuscated version of the AutoIT script in Figures 3 and 4 shows that it comes with some anti-VM checks in the beginning. These checks are very typical for AgentTesla campaigns for years, you can often find them in one or the other form in the first stage droppers.
+
+
+Figure 3 - Start of the deobfuscated AutoIT script
+
+
+
+Figure 4 - VM checks of the deobfuscated AutoIT script
+
+If these checks do not find anything, it is decoding and extracting resource font type (8) names from the string in the first parameter ($data) handed over to the DecodeDataFromPEResourceOrString function (Figure 7). In the GetResourcesFromPE function (Figure 6), this parameter is converted into a string and split into the different font resource names. The result is a list of strings in the following order:
+
+
+SystemPropertiesDataExecutionPreventionM
+
+Windows.Media.BackgroundPlaybackK
+
+windeployL
+
+LaunchWinAppX
+
+ccaF
+
+CellularAPIQ
+
+MuiUnattendE
+
+RmClientE
+
+ucsvcG
+
+refsutilV
+
+SpeechRuntimeV
+
+DPTopologyAppv2_0N
+
+
+These font type resources are then extracted from the PE resources and concatenated to a large binary.
+
+
+Figure 5 - Resource Section of IMP_Arrival Noticedoc.exe
+
+
+
+Figure 6 - GetResourcesFromPE Function
+
+
+The result is stored again in the $data variable (Line 245 in Figure 7) and the order of the stored bytes is reversed by StringReverse(BinaryToString($data)) in Line 246. This is the final payload malware in an RC4 encrypted form. The variable $sopcode contains the bytes of the RC4 code. After preparing the shellcode and the encrypted payload data, the RC4 function is getting executed in line 262 and decrypts the payload.
+
+
+Figure 7 - DecodeDataFromPEResourceOrString RC4 Function
+
+
+The following pictures show the disassembled RC4 shellcode:
+
+
+Figure 8 - RC4 function ($opcode variable)
+
+
+After the payload is decrypted, the script calls the final InjectPayloadIntoProcess function to inject the payload into another process. It is offering nine different legit process options for this injection. The adversary eventually selects which one will be used by providing the corresponding number to the function.
+
+
+Figure 9 - Injection victim process selection
+
+
+In this case, the adversaries picked option one — RegAsm.exe — to hide the payload. The rest of the function is quite similar to what was already described in other blogs. It is preparing the local injection shellcode ($a5_local_shellcode) and executing it in Line 211 in Figure 10. As mentioned before, this code finally hides the payload inside of the selected legit process. The decoded payload is handed over to this injection shellcode as the last parameter ($a4_payload_code).
+
+
+Figure 10 - Process Injection code of the AutoIT script
+
+
+The AutoIT script contains several additional functions that are not used in this campaign. For example, functions for the following tasks: 
+
+
+Write a file to the TEMP directory and execute it.
+
+Download a file from the internet and execute it.
+
+Execute a script via the command line.
+
+Privilege escalation.
+
+
+The AutoIT scripts in the different campaigns are always very similar to the one described above. It usually just differs by how they built the payload. Some scripts extract the payload from the resource section as described above, others have the encrypted payload stored in a large string inside the AutoIT script (Figure 11). The decoding function shown in Figure 7 is more or less the same, but the $rt parameter is set to -1, which means the GetResourcesFromPE function (Figure 6) doesn't do anything, except returning the unmodified content of the $data variable, or in other words the content of the $payload variable in Figure 11.
+
+
+Figure 11 - Long String based AutoIT script start
+
+
+The Injection part of these scripts always work more or less the same, Figure 12 shows an example of another script.
+
+
+Figure 12 - Long String based AutoIT script injection part
+
+
+Payload 
+The injected payload is in many cases an obfuscated version of AgentTesla. The software is capable of stealing credentials from most browsers, email clients, SSH/SFTP/FTP clients and other software. Please see the IOC section below for additional details. It supports exfiltration via SMTP, FTP and HTTP exfiltration. In this case, it only used SMTP. This version is very similar to the one described by Yoroi in the payload section of their blog post, except it is not obfuscated with any obfuscator detected by the latest de4dot. Some functions are also slightly modified or reordered, but most of them are probably done by the obfuscator. We think it is close to the customized Agent Tesla version that's been circulating online since several months.
+
+
+Figure 13 - AgentTesla
+
+
+It is resolving configuration settings and suspicious strings at runtime when they are used. The function shown in Figure 10 is implemented in the executables static class constructor (.cctor). It is using the Rijndael algorithm to decrypt certain large arrays. The offset is picked based on the integer which was handed over to the function. On the right side of the screenshot, you can see the length of the array section in purple.
+
+
+Figure 14 - Agent Tesla decoding routine
+
+
+The next screenshot shows the usage at runtime. For example, decoding certain parameters for email exfiltration.
+
+
+Figure 15 - Agent Tesla string obfuscation
+
+
+The fully deobfuscated version of the function looks like this:
+
+
+Figure 16 - Agent Tesla email function (deobfuscated)
+
+
+This is the typical AgentTesla function used for years. It is interesting that it seems to be that the obfuscator is customized for this Agent Tesla version or vice versa. It looks like it is filling in variables at the time it is obfuscating the original code. In functions that are in this sample, but never used and even in a few used ones, some of the hardcoded strings are filled with variables e.g. %filename%.
+
+
+Figure 17 - Obfuscator variables 
+
+
+
+Conclusion
+
+This campaign is another example of what modern malware uses to fly under the radar. With the process we've described in this post, the actors can hide the original malware inside the dropper. The malware is only decrypted at runtime and injected into memory — it's never unencrypted on the hard drive. The adversaries use complex droppers that leverage several different obfuscation techniques to make it as hard as possible for antivirus programs to detect the malware. By using these droppers, they can quickly and easily change the final malware for their campaigns. Even known malware is often successfully hidden against anti-virus systems by using these kinds of obfuscation chains. 
+
+
+Coverage
+
+Ways our customers can detect and block this threat are listed below.
+
+
+
+
+Advanced Malware Protection (AMP) is ideally suited to prevent the execution of the malware detailed in this post. Below is a screenshot showing how AMP can protect customers from this threat. Try AMP for free here.
+
+
+Cisco Cloud Web Security (CWS) or Web Security Appliance (WSA) web scanning prevents access to malicious websites and detects malware used in these attacks.
+
+Email Security can block malicious emails sent by threat actors as part of their campaign.
+
+
+Network Security appliances such as Next-Generation Firewall (NGFW), Next-Generation Intrusion Prevention System (NGIPS), and Meraki MX can detect malicious activity associated with this threat.
+
+Threat Grid helps identify malicious binaries and build protection into all Cisco Security products.
+
+Umbrella, our secure internet gateway (SIG), blocks users from connecting to malicious domains, IPs, and URLs, whether users are on or off the corporate network.
+
+Additional protections with context to your specific environment and threat data are available from the Firepower Management Center.
+
+Open Source Snort Subscriber Rule Set customers can stay up to date by downloading the latest rule pack available for purchase on Snort.org.
+
+
+IOC
+
+Agent Tesla Stealer capabilities found based on decoded strings:
+
+7Star Browser
+Amigo Browser
+Apple Keychain
+Becky! Internet Mail
+Brave Browser
+Centi Browser
+Chedot Browser
+Chrome Browser
+Chromium Browser
+Citrio Browser
+Claws Mail
+CocCoc Browser
+Comodo Dragon Browser
+CoolNovo Browser
+Coowon Browser
+CoreFTP
+Cyberfox Browser
+DynDNS client
+Elements Browser
+Epic Privacy Browser
+Eudora Mail
+Firefox Browser
+FlashFXP FTP client
+Flock Browser
+Foxmail
+FTPCommander
+FTPGetter
+FTP Navigator
+i360 Browser
+IceCat Browser
+IceDragon Browser
+IE/Edge Browser
+Incredimail
+Internet Download Manager
+Iridium Browser
+JDownloader
+Keylogger
+K-Meleon Browser
+Kometa Browser
+Liebao Browser
+Mozilla SeaMonkey
+Netgate BlackHawk Browser
+NoIP DNS client
+Open VPN
+Opera Browser
+Opera Mail
+Orbitum Browser
+Outlook
+Pale Moon Browser
+Paltalk Video Chat
+PassWd
+Pidgin
+PocoMail
+QIP Surf
+QQ Browser
+Safari Browser
+Screenshots
+Sleipnir 6 Browser
+SmartFTP
+Sputnik Browser
+SRWare Iron Browser
+TheBat! Email client
+Thunderbird
+Torch Browser
+Trillian
+UC Browser
+uCozMedia Uran
+Vivaldi Browser
+WaterFox Browser
+Wi-Fi Credentials and Profiles
+Windows Credentials
+Windows Domain Certificate Credential
+Windows Domain Password Credential
+Windows Extended Credential
+Windows Generic Credential
+Windows Secure Note
+Windows Web Password Credential
+WinSCP
+WS_FTP Pro FTP client
+Yandex Browser
+
+
+Email:
+Email: torre@casadavilas[.]com
+Mailserver: mail[.]casadavilas[.]com
+
+Malware moved to:
+C:\Users\Dex Dexter\AppData\Local\TempmpG766.tmp
+[%TempPath% + "mpG" + DateTime.Now.Millisecond + ".tmp"]
+
+Hashes executables:
+d076ed9b31172c37a0d6bafae0c18d559f62453f52c17d41dc2e24fd55a91e4a
+1c46332d2a0ab693ed1086f8ee78df47798361b4156619e2488cbb6851063373
+003ee7d88f3a04cfc1b96744b060170d80da75589c67deaf65adb02d45616bb5
+16f9a14d045fa28708710b5a089e1d1a361c8f5702a8574989b1935072c14a1d
+4030b864bcff5bd617e3be273387eec3857b019d20b59c8f2f0710f1b1876ede
+5246d87a5a69e7d50e7475bda5f9a74c3585188f0c937fcebebdf168043decd7
+59880d4c59643d7b268082696931dcbe966780eef072f1150d1ac65dbc95d222
+651c520971bc931dc3760b077a8ecd2fd3a7e4535afe2f0fd208168dc2a501e1
+694dcad0105052b3b74678a9c0e4ad3c17e8a3e87314863751296d58aa263b23
+a758516e200a5afb49ab2082c433fa59a8dbe2cf28973da6691a74759de479e1
+b61a6d30e268a406f52aca04cc2a82853968f3516e38d2b5522e9fa5d4c0d3f5
+e1954e26d6e82da6906441f30d133ad56b0154777128278d355365da475c4db4
+F7303285a2039ab934b696fec43e54fc5c8ab5c6332c62a78891da71f3c2fb82
+
+ARJ files:
+667519d5fea7b6137de2845dc900cf2813c8fd8c8476b107fe9a281e7aa5248d
+198dcc8511236212410e248d66c86236e1f23a79459a4c61aca5c8b913c9539c
+
+Related hashes:
+09dbe016c180e28b748f932805fc35170e348f3201d6939fc2b8368466c69315
+10739410391018cedb2bdf6804c4506ea256695935afc34be786894e5cc80602
+176d4d6ef5adb9655f63931914fe06688418d6ce62a3bbe6d6f09ccad53cca2f
+4059c87e8d39f69e1fb3bc5d094af1dafca73e8b662eb8d6bb850bfb10d1e92e
+421a642d23630ee480094dcb51f6ad6dc2430015d54cddbe0dbf299ee26869d4
+51aa560a3709127d26dfb9289ec7d9b020558a0ad33b638bbddfaab6b180d7c3
+61ee8edf4e9241ac3f5922547577e2c9b6a589b7402845be68c9e4bf377143b4
+754fcf3ef2216f15750393c9ee580d1de9bb8b5834532183a7ef09a109b3990f
+7a611fac9133845b29b73be71d1e08f2a82ee04a470b11bb0a25692da7c8caed
+82ef16248078738591cc548e611a8ce22cb6b30db3ce123bd2900b0ddf644dba
+94c3bbcf5af25417b755d9168cf6146b2de52658d8b909e0cdc38efde98df9fc
+96bad87dae87cb2c73ce0e2f092dc68adc02a09cc2f549d1a4f390e42c41bf08
+a2b174b1679d1a508c70acd2626e297c85aee3da5d50b5a0c7388960b6085c4a
+a5ddd6719e9ced4f18289103a47bf39ad0e221fcac7ce00ed8e7180865b3c63a
+aa295b39e3c9fbae2370bfc3bc03528a13fe5ee30d3497fff053fd4ab2ba790f
+b7d790f4e11364d50c32a0a36fe7c9e159073c905fb4462c8d95e31ea608ede5
+be7edfa65d420d6210b5e488b25ffe8a4fc1c37f9f358de97e0915d535766e74
+d5cd5875253dbabb6548d96a290e73d196f6db250af8c3ec316d855ef7660f5a
+da5d248dc77bd464c25fe5ad21ca62e58c69c4cc10cf27a13985432acfa6fd39
+ddee0696d2062e1706c368c5066392d56e804c707d6923397cf66d56d2016773
+de8fdea527ec9751531f15e727a7221103c5158bf14651faf19e648ec9652a0f
+e480512a207fc9809035b273dd6c35fcd6caf8829ce5b9d81cc82f2d3b2d5394
+e4b55be3eccbac57200e1c5e56d324afa23fdb8b12aba8d5be235b083b5afe0d
+f05329ffcf221c72570e214a62fb8f04633c8d9e405a4278fd9360e738d9d779
+f39c3cea5b1edcc71db1eb140b21f2aa56d9aee87c6d77528b84697aa9b19739
+f6f35c3cbf83450d1fecb7101784e6cc89fa13b994ae16199087c2c5119984d3
+fc2e81038c1cf19c40b9586889197446b426e8e4ed208931a616d838448fdd23
+fc7cf41f41bb94253d946d5db29d65697464772af341e9a2bb20dffb943e716e
+fe56eb80eb5b119b5c4e56811592029c4d8674061d4fbe89f8174cc4b403cfbf
+
+URLs:
+hxxp://premacorceb[.]com/drug/five/fre.php
+hxxp://www[.]ibsensoftware[.]com/
+
+IPs:
+194[.]147[.]32[.]237
+194[.]58[.]111[.]187
+
+
+

@@ -1,0 +1,22 @@
+
+One of the ongoing trends in the phishing attacks the VRT monitors is the use of poorly secured WordPress blogs as staging points for exploit kits. Every time I hover over a link in the latest "UPS Tracking" or "Airline Ticket Confirmation" email, I'm looking for "/wp-content/", "/wp-includes/", or some other indicator of a poor, unsuspecting person who thinks they're telling the world everything they know about growing tulips, when in fact they're unwittingly serving as an accomplice to cybercrime. More and more often, those indicators crop up, with blatantly compromised web sites serving as the first point of entry into someone's Blackhole, Phoenix, or other exploit kit.
+
+How often, you ask, are compromised WordPress installs being abused in this manner? I've been collecting phishes and other malicious emails for the last month or so, and in that time, over 5 percent of these messages have contained links with a WordPress-related URL in them. Given the fractured nature of attacks on the Internet - your average cybercriminal is generally looking to avoid detection, and as such is always looking for the latest obfuscation technique - any time you get a common thread appearing in attacks at that sort of a rate, it's actually significant from a detection perspective.
+
+Of course, you can't just generate an IDS event every time someone requests a WordPress-related URL, even out of an email link - you'd end up melting your sensor, or the network itself if you were dropping these requests. What you can do, however, is look for some common techniques used by attackers against specific WordPress vulnerabilities, and use your knowledge of what should be in a given directory on a WordPress install to hook some really nasty phish on the proverbial line.
+
+SID 21941, which was released on May 2, does exactly this. The rule looks for URLs specific to the Fgallery plugin - a relatively popular module for posting images on one's blog. Since the "/fgallery/" directory used by the plugin should only ever contain image files, the rule was written to look for file names ending in ".php" within that directory - a clear sign that someone has abused a remote file include vulnerability to upload a malicious page. The rule, which has been enabled in the balanced policy the entire time, has yielded no false positive reports to the VRT, and does an excellent job of catching compromised sites being used for nefarious purposes.
+
+When a creative new phish hit inboxes yesterday - claiming to be a Verizon Wireless monthly statement:
+
+
+
+
+I noticed that the URL went to < redacted > /wp-content/uploads/fgallery/vz.html. Running that URL through our sandbox, a clear-cut case of Blackhole emerged immediately; had I clicked the link from an actual workstation, I'd have been owned in no time flat.
+
+Of course, while that URL was close to the pattern from SID 21941, the use of an HTML file instead of a PHP file dictated a new rule; that's being released in today's SEU as SID 23171. 
+
+The thing that terrifies me as someone attempting to secure the Internet, however, is the sheer volume of WordPress plugins vulnerable to remote file upload attacks just like this. Running a Google query for "wordpress file upload vulnerability" yields 459,000 results, and the first several pages of results returned are littered with live exploits that are ready to use on the Internet at large. If you're running a WordPress installation somewhere - seriously, make sure you're patched right now, because if you aren't, the chances that you'll stay safe from ownage are about as high as a snowball's surviving Washington, DC heat on an August day.
+
+The VRT is constantly monitoring networks around the world, looking for live exploits like these, and will be adding rules for other commonly abused WordPress modules as they crop up. If you have suggestions for things you see being exploited regularly, please send them to research < at > sourcefire < dot > com, so we can make sure to add coverage promptly. In the meantime - be careful where you click, especially where WordPress is involved.
+

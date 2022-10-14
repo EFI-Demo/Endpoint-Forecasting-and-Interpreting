@@ -1,0 +1,23 @@
+
+Over the past several days, many IPS rules for detecting the Heartbleed attack have been suggested that attempt to compare the TLS message size to the heartbeat message size.  This method works with most of the Proof-of-Concept attacks out there, which perform the Heartbleed attack before the TLS handshake has occurred.  Performing the attack before the TLS handshake results in both the attack and response data being sent in plaintext.  However, if a TLS handshake is performed first, all heartbeat data is encrypted, meaning that this type of detection comparing ciphertext (encrypted data) with the unencrypted TLS message size will not work.  This will almost always result in a false positive as chances are high that the encrypted data will appear to be a larger value than the TLS message size.  Adding to the challenge is the fact that there is nothing explicit within the heartbeat request nor the heartbeat response that indicates the heartbeat data is encrypted.
+
+Our detection from the beginning has always ignored the heartbeat message data itself to avoid false positives arising from using ciphertext as if it was readable on the wire.  Instead, we only use the unencrypted values within the TLS header.
+
+Monday night, before Heartbleed really hit the news and public exploit code became available, the VRT created a proof-of-concept to demonstrate the Heartbleed bug by analyzing the openssl-1.0.1f code and modifying it to send malicious heartbeats and dump out the response to view the exposed data.  By using this approach, the heartbeat request is sent after the TLS handshake, resulting in encrypted payloads.  It turns out that by using our own exploit as the basis for detection, we were able to avoid the mistakes made by some others that will result in false positives against legitimate traffic since we never made the assumption that we could read the heartbeat message size.
+
+t1_lib.c.diff is a patch to the openssl-1.0.1f source tree that implements the Heartbleed attack, after the TLS handshake has occurred.  Steps to create the PoC are as follows --
+
+$ wget https://labs.snort.org/files/t1_lib.c.diff
+$ wget http://www.openssl.org/source/openssl-1.0.1f.tar.gz
+$ tar -zxf openssl-1.0.1f.tar.gz
+$ cd openssl-1.0.1f
+$ patch -p0 < ../t1_lib.c.diff
+$ ./config no-shared no-idea no-mdc2 no-rc5 zlib enable-tlsext no-ssl2 && make depend && make
+$ apps/openssl s_client -tlsextdebug -connect <victim_server>:443
+
+Once you connect, type 'B' to trigger a heartbeat then 'Q' to quit.  You can send a few heartbeats per session if you want.  At this point, many servers out there have disabled heartbeat support so don't be alarmed if you receive "peer does not accept heartbearts."  This is a good thing!
+
+We detect Heartbleed attacks whether they are encrypted or not by using detection_filter ("threshold") rules to discover too many heartbeat requests in a short amount of time as an attacker tries to gather memory dumps and by inspecting the TLS size in heartbeat responses for a value that is greater than the normal heartbeat response size.
+
+More information about how the exploit works and our detection for it can be read at our original blog post on this subject, http://blog.talosintel.com/2014/04/heartbleed-memory-disclosure-upgrade.html
+

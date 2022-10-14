@@ -1,0 +1,21 @@
+
+A common characteristic of malware distributed as an executable is to use a PE packer, such as UPX or Petite, to compress and obfuscate the malicious content. Once a file has been determined to be malware by our analysts and is using a PE packer that ClamAV does not currently unpack, a common virus writing technique is to write a signature of the packed data section of the PE file.
+
+Instead of having to remember each of the PE packers that crosses my desk, and which sections of data the malicious code lives, I chose to automate this process.
+
+pe-sig, a tool written in Ruby, uses the PE parsing and signature library from within Metasploit 3, automatically generates PE section signatures for known PE packers appropriate for loading into ClamAV.
+
+When I process a file using pe-sig that was packed via pklite, pe-sig gives the following output:
+16384:39ae378e47f13ceecca20d06201d0cc1:SIGNATURE__.pklstb__PKLITE32v1.1 [535]
+
+Note, this is very similar to a signature that was released in mid-2008:
+16384:39ae378e47f13ceecca20d06201d0cc1:Trojan.Downloader
+
+When processing PE files that might not be packed, or are from a packer we currently do not have signatures for, the output shown is all of the sections of the PE file:
+
+157105664:8d85afc534f0b55fde3781a34ee8d995:UNKNOWN__.rsrc
+34304:ae582babaad5a738c32ad1c074e1f3e2:UNKNOWN__.text
+1024:730893b14fc930a187215e7fb53bc0a5:UNKNOWN__.data
+
+Based on my knowledge of the file being processed via pe-sig, I know the packed data exists in .rsrc.  My immediate work would be to find an appropriate signature for the packing portion fo the executable, add it to my signature list, specifying that .rsrc is the location of the packed data.  Then next time I run across this packer, I won't have to remember what it is, or where its data is stored.  The work will have already been done for me.
+

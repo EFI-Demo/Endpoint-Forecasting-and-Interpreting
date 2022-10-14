@@ -1,0 +1,111 @@
+
+This blog post was authored by Benny Ketelslegers of Cisco Talos
+
+The cybersecurity field shifted quite a bit in 2018. With the boom of cryptocurrency, we saw a transition from ransomware to cryptocurrency miners. Talos researchers identified APT campaigns including VPNFilter, predominantly affecting small business and home office networking equipment, as well as Olympic Destroyer,  apparently designed to disrupt the Winter Olympics. 
+
+But these headline-generating attacks were only a small part of the day-to-day protection provided by security systems. In this post, we'll review some of the findings created by investigating the most frequently triggered SNORTⓇ rules as reported by Cisco Meraki systems. These rules protected our customers from some of the most common attacks that, even though they aren't as widely known, could be just as disruptive as something like Olympic Destroyer. Snort is a free, open-source network intrusion prevention system. Cisco Talos provides new rule updates to Snort every week to protect against software vulnerabilities and the latest malware.
+
+
+
+Top 5 Rules
+
+Snort rules trigger on network behavior ranging from attempts to probe networked systems, attempts at exploiting systems, to detecting known malicious command and control traffic. Each rules detects specific network activity, and each rules has a unique identifier. This identifier is comprised of three parts. The Generator ID (GID), the rule ID (SID) and revision number. The GID identifies what part of Snort generates the event. For example, "1" indicates an event has been generated from the text rules subsystem. The SID uniquely identifies the rule itself. You can search for information on SIDs via the search tool on the Snort website. The revision number is the version of the rule. Be sure to use the latest revision of any rule.
+
+Snort rules are classified into different classes based on the type of activity detected with the most commonly reported class type being "policy-violation" followed by "trojan-activity" and "attempted-admin." Some less frequently reported class types such as "attempted user" and "web-application-attack" are particularly interesting in the context of detecting malicious inbound and outbound network traffic.
+
+Cisco Meraki-managed devices protect clients networks and give us an overview of the wider threat environment.  These are the five most triggered rules within policy, in reverse order.
+
+
+No. 5: 1:43687:2 "suspicious .top dns query"
+
+The .top top-level domain extension is a generic top level domain and has been observed in malware campaigns such as the Angler exploit kit and the Necurs botnet. This top-level domain can be bought as cheap as 1 USD and is the reason it is very popular with cybercriminals for their malware and phishing campaigns.
+
+This signature triggers on DNS lookups for .top domains. Such a case doesn’t necessarily mean that such a lookup is malicious in nature, but it can be a useful indicator for suspicious activity on a network. A sharp increase in this rule triggering on a network should be investigated as to the cause, especially if a single device is responsible for a large proportion of these triggers.
+
+
+No. 4: 1:41978:5 "Microsoft Windows SMB remote code execution attempt"
+
+In May 2017, a vulnerability in SMBv1 was published that could allow remote attackers to execute arbitrary code via crafted packets. This led to the outbreak of the network worms Wannacry and Nyetya in 2017. Although it did not make our top five rules in 2017, it seems there was still a lot scanning or attempts to exploit this vulnerability in 2018. This shows the importance of network defenses and patching management programs as often as possible.
+
+Organizations should ensure that devices running Windows are fully patched. Additionally, they should have SMB ports 139 and 445 blocked from all externally accessible hosts.
+
+
+No. 3: 1:39867:4 "Suspicious .tk dns query"
+
+The .tk top-level domain is owned by the South Pacific territory of Tokelau. The domain registry allows for the registration of domains without payment, which leads to the .tk top level domain being one of the most prolific in terms of the number of domain names registered. However, this free registration leads to .tk domains frequently being abused by attackers.
+
+This rule triggers on DNS lookups for .tk domains. Such a case doesn't necessarily mean that such a lookup is malicious in nature, but it can be a useful indicator for suspicious activity on a network. A sharp increase in this rule triggering on a network should be investigated as to the cause, especially if a single device is responsible for a large proportion of these triggers.
+
+Other, similar rules detecting DNS lookups to other rarely used top-level domains such as .bit, .pw and .top also made into our list of top 20 most triggered rules.
+
+
+No. 2: 1:35030:1 & 1:23493:6 "Win.Trojan.Zeus variant outbound connection"
+
+Historically, one of the most high-profile pieces of malware is Zeus/Zbot, a notorious trojan that has been employed by botnet operators around the world to steal banking credentials and other personal data, participate in click-fraud schemes, and likely numerous other criminal enterprises. It is the engine behind notorious botnets such as Kneber, which made headlines worldwide. 
+
+In the beginning of 2018, Talos observed a Zeus variant that was launched using the official website of Ukraine-based accounting software developer Crystal Finance Millennium (CFM). 
+
+This vector is similar to the attack outlined by Talos in the Nyetya and companion MeDoc blog post. Ukrainian authorities and businesses were alerted by local security firm (ISSP) that another accounting software maker had been compromised. CFM's website was being used to distribute malware that was retrieved by malware downloaders attached to messages associated with a concurrent spam campaign. 
+
+Ever since the source code of Zeus leaked in 2011, we have seen various variants appear such as Zeus Panda which poisoned Google Search results in order to spread.  
+
+
+No. 1: 1:46237:1 "PUA-OTHER Cryptocurrency Miner outbound connection attempt" & "1:45549:4 PUA-OTHER XMRig cryptocurrency mining pool connection attempt"
+
+Over the past year, we have seen a seismic shift in the threat landscape with the explosive growth of malicious cryptocurrency mining. Cisco Talos created various rules throughout the year to combat Cryptocurrency mining threats and this rule  deployed in early 2018, proved to be the number 1 showing the magnitude of attacks this rule detected and protected against. This threat has spread across the internet like wildfire and is being delivered through multiple vectors including email, web, and active exploitation. It is no surprise that these two combined rules are the most often observed triggered Snort rule in 2018.
+
+Cryptocurrency mining can use up a considerable amount of computing power and energy that would otherwise be incredibly valuable to any organization.
+
+For an overview of all related snort rules and full details of all the methods and technologies Cisco Talos uses to thwart cryptocurrency mining, download the Talos whitepaper here.
+
+
+
+
+
+
+
+
+INBOUND and OUTBOUND
+
+Network traffic can cross an IDS from external to internal (inbound), from the internal to external (outbound) interfaces or depending on the architecture of your environment the traffic can avoid being filtered by a firewall or inspected by an IPS/IDS device; this will generally be your local/internal traffic on the same layer2 environment. An alert may be triggered and logged for any of these scenarios depending on the rulesets in place and the configuration of your sensors.
+
+
+Outbound rules were triggered during 2018 much more frequently than internal, which in turn, were more frequent than inbound with ratios of approximately 6.9 to 1. The profile of the alerts are different for each direction. Inbound alerts are likely to detect traffic that can be attributed to attacks on various server-side applications such as web applications or databases. Outbound alerts are more likely to contain detection of outgoing traffic caused by malware infected endpoints.
+
+Looking at these data sets in more detail gives us the following:
+
+
+
+
+While trojan activity was rule type we saw the most of in 2018, making up 42.5 percent of all alerts, we can now see "Server-Apache" taking the lead followed by "OS-Windows" as a close second.
+
+The "Server-Apache" class type covers Apache related attacks which in this case consisted mainly of 1:41818 and 1:41819 detecting the Jakarta Multipart parser vulnerability in Apache Struts (CVE-2017-5638). Later in 2017, a second Apache Struts vulnerability was discovered under CVE-2017-9805, making this rule type the most observed one for 2018 IDS alerts.        
+
+"OS-Windows" class alerts were mainly triggered by Snort rule 1:41978, which covers the SMBv1 vulnerability exploited by Wannacry and NotPetya (MS-17-010). 
+
+The "Browser-plugins" class type covers attempts to exploit vulnerabilities in browsers that deal with plugins to the browser. (Example: ActiveX). Most activity for 2018 seems to consist of Sid 1:8068 which is amongst others linked to the "Microsoft Outlook Security Feature Bypass Vulnerability" (CVE-2017-11774).
+
+
+
+
+
+
+For outbound connections, we observed a large shift toward the "PUA-Other" class, which is mainly a cryptocurrency miner outbound connection attempt. Cryptomining can take up a large amount of valuable enterprise resources in terms of electricity and CPU power. To see how to block Cryptomining in an enterprise using Cisco Security Products, have a look at our whitepaper published in July 2018.
+
+The most frequently triggered rules within the "Malware-CNC" rule class are the Zeus trojan activity rules discussed above.
+
+Conclusion
+
+
+Snort rules detect potentially malicious network activity. Understanding why particular rules are triggered and how they can protect systems is a key part of network security. Snort rules can detect and block attempts at exploiting vulnerable systems, indicate when a system is under attack, when a system has been compromised, and help keep users safe from interacting with malicious systems. They can also be used to detect reconnaissance and pre-exploitation activity, indicating that an attacker is attempting to identify weaknesses in an organization's security posture. These can be used to indicate when an organization should be in a heightened state of awareness about the activity occurring within their environment and more suspicious of security alerts being generated.
+
+As the threat environment changes, it is necessary to ensure that the correct rules are in place protecting systems. Usually, this means ensuring that the most recent rule set has been promptly downloaded and installed. As shown in the Apache Struts vulnerability data, the time between a vulnerability being discovered and exploited may be short.
+
+Our most commonly triggered rule in 2018: 1:46237:1 "PUA-OTHER Cryptocurrency Miner outbound connection attempt" highlights the necessity of protecting IoT devices from attack. Malware such as Mirai seeks to compromise these systems to use them as part of a botnet to put to use for further malicious behaviour. Network architectures need to take these attacks into consideration and ensure that all networked devices no matter how small are protected.
+
+Security teams need to understand their network architectures and understand the significance of rules triggering in their environment. For full understanding of the meaning of triggered detections it is important for the rules to be open source. Knowing what network content caused a rule to trigger tells you about your network and allows you to keep abreast of the threat environment as well as the available protection.
+
+At Talos, we are proud to maintain a set of open source Snort rules and support the thriving community of researchers contributing to Snort and helping to keep networks secure against attack. We're also proud to contribute to the training and education of network engineers through the Cisco Networking Academy, as well through the release of additional open-source tools and the detailing of attacks on our blog.
+
+You can subscribe to Talos' newest rule detection functionality for as low as $29 a year with a personal account. Be sure and see our business pricing for Snort as well here.
+

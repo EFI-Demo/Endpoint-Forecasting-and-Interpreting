@@ -1,0 +1,105 @@
+
+
+Pincer
+
+
+I was having a look at the Pincer family of Android malware and came across some code designed to hinder analysis.
+
+From the decompilation of com/security/cert/a/a/c.class:
+
+    String str1 = com.security.cert.b.b.b(paramContext);
+    String str2 = com.security.cert.b.b.c(paramContext);
+    String str3 = com.security.cert.b.b.d(paramContext);
+
+    if(str3.toLowerCase().equals("android") || 
+       str1.equals("000000000000000") || 
+       str1.equals("012345678912345") || 
+       str2.equals("15555215554") || 
+       Build.MODEL.toLowerCase().equals("sdk") || 
+       Build.MODEL.toLowerCase().equals("generic"))
+
+At first glance, the application seems to be checking for generic values. The check against str2 is  recognizable. It is the default phone number for the Android emulator. It is clear that the sample is also checking the model against the values sdk and generic. Having a look at com/security/cert/b/b.class to see what str1 and str3 are:
+
+    public static String b(Context paramContext) {        return ((TelephonyManager)paramContext.getSystemService("phone")).getDeviceId();    } 
+
+    public static String c(Context paramContext) { 
+        return  ((TelephonyManager)paramContext.getSystemService("phone")).getLine1Number(); 
+    } 
+
+    public static String d(Context paramContext) {
+        return ((TelephonyManager)paramContext.getSystemService("phone")).getNetworkOperatorName(); 
+    }
+
+The IMEI, phone number, network provider, and phone model are being checked against default emulator values. Crafty. I was running a generic AVD (Android Virtual Device) at the time and unfortunately got caught on all of these checks. Since compiling other people's large projects is something I avoid at all costs, I set out to patch these values in a hex editor. Here's how to change each one.
+
+Before editing any file, please make a backup!
+
+IMEI
+Doing a quick grep of the android-sdk-linux/ folder reveals that, among a handful of other files, the two emulator binaries each contain only one occurrence of the default IMEI.
+
+    /home/vrt/android-sdk-linux/tools/emulator-arm:1    /home/vrt/android-sdk-linux/tools/emulator-x86:1
+
+These seem like a logical place to store the IMEI and since there is only one occurrence in each, it should be easy enough to edit and check the feedback. In any hex editor (GHex pictured) this value can be found  between the strings  +CGSN and +CUSD:
+
+
+
+
+
+
+
+Editing this value will change the AVD's IMEI on reboot. This process is detailed for Windows on the blogspot blooglog, which helped reassure me I was on the right track.
+
+
+Network Provider
+Since the IMEI is in the emulator-arm binary, I tried blasting some of the other values in there as well. I began by adding the digits 0-9 into the first ten occurrences of the default network provider, Android. Luckily enough, the first occurrence of Android (at the time, Andr0id) is what is pulled as the network provider. You can see it edited to SrcFire in the following screenshot, sitting between 0.10.50 and info:
+
+
+
+
+
+Model
+Since the model can change between AVD images, it is likely somewhere other than the binary.  The Cobra Den's post on making changes to the Android emulator got me on the right track for finding it (as well as some other fields worth changing). The model name follows the label ro.product.model= in android-sdk-linux/platforms/[target platform]/images/system.img, making it very easy to spot:
+
+
+
+
+Note though, if you are loading from a snapshot, you will need to reload the AVD in order for these changes to take place. As well, if you are loading with a different system image (indicated by the -system option on emulator start), you will need to edit that image.
+
+
+Phone Number
+The last four digits of the device's phone number are the port number that the emulator's console is running on. Since Pincer checks for an entire phone number (default prefix 1555521 + default console port number 5554), this was enough to circumvent the anti-analysis techniques encountered. Attempting to start up the emulator with the option -port 4141 provided this helpful tidbit:
+
+    ERROR: option -port must be followed by an even integer number between 5554 and 5584
+
+This gives a range of 16 phone numbers to work with. While allowing evasion of the anti-analysis in Pincer, a more intelligent malware author would write a check for 1555521. After some mass replacements with sed, I realized my normal trial and error approach would yield only error for changing the phone number.
+
+It turns out that the phone number is stored on the SIM card. Since there is no actual SIM card, one is emulated. This emulated SIM is hard coded in the emulator-arm binary. The reason replacements for 1555521 failed is because SIM cards have a specification that does not store the MSISDN (Mobile Subscriber Integrated Services Digital Network-Number, AKA phone number) in plain text. Instead, each set of digits is swapped in some reverse nibbled endianness nightmare.
+
+At this point I feel it's necessary to again give acknowledgment to The Cobra Den, which has a method for making a lot of these fields configurable by patching the Java getter methods, and to the CodePainters blog which has a post on editing the SIM card serial number. I had come across the source file external/qemu/telephony/sim_card.c in the Android source code, but the CodePainters post is really what made it click that the MSISDN  number would be in there, and that all of that  would also be in the binary. As these things go, I found multiple very helpful things at the same time that all led me to the answer. 
+
+A quick way to find the MSISDN is to search for %d%df%d in the binary (highlighted in red below). The corresponding source code is in external/qemu/telephony/sim_card.c on line 436 in the current repo. The following is the format string portion of that sprintf:
+
+    "+CRSM:144,0,ffffffffffffffffffffffffffffffffffff0781515525%d1%d%df%dffffffffffff"
+
+The interesting part is 515525%d1 (highlighted in blue). Swapping each set of two digits produces 1555521%d (thanks again CodePainters). That looks like the prefix to our mobile number. Edited in ghex:
+
+
+
+
+The edit in the previous screenshot will yield a phone number 1-876-543-[port number]. That gives  (mostly) full control over the phone number. The first 7 digits are entirely configurable, and the last four can be any even number in the range 5554 and 5584 inclusive.
+
+A malware author could still block based on the last four digits of the phone number. If that starts happening though, I know what the last four digits of my next phone number will be. :)
+
+
+Conclusion
+
+The biggest drawback to this method is that you must keep the length of each value the same, unless you wish to do some serious binary patching. As well,  I have not tested these for stability. I will update this blog post with any issues that come to my attention. The following is a before and after screenshot of the target values:
+
+
+
+
+
+
+
+GG
+

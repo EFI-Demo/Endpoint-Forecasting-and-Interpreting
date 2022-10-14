@@ -1,0 +1,96 @@
+
+		The application of deep learning and other machine learning methods to threat detection on endpoints, email and docs, apps, and identities drives a significant piece of the coordinated defense delivered by Microsoft Threat Protection. Within each domain as well as across domains, machine learning plays a critical role in analyzing and correlating massive amounts of data to detect increasingly evasive threats and build a complete picture of attacks.
+On endpoints, Microsoft Defender Advanced Threat Protection (Microsoft Defender ATP) detects malware and malicious activities using various types of signals that span endpoint and network behaviors. Signals are aggregated and processed by heuristics and machine learning models in the cloud. In many cases, the detection of a particular type of behavior, such as registry modification or a PowerShell command, by a single heuristic or machine learning model is sufficient to create an alert.
+Detecting more sophisticated threats and malicious behaviors considers a broader view and is significantly enhanced by fusion of signals occurring at different times. For example, an isolated event of file creation is generally not a very good indication of malicious activity, but when augmented with an observation that a scheduled task is created with the same dropped file, and combined with other signals, the file creation event becomes a significant indicator of malicious activity. To build a layer for these kinds of abstractions, Microsoft researchers instrumented new types of signals that aggregate individual signals and create behavior-based detections that can expose more advanced malicious behavior.
+In this blog, we describe an application of deep learning, a category of machine learning algorithms, to the fusion of various behavior detections into a decision-making model. Since its deployment, this deep learning model has contributed to the detection of many sophisticated attacks and malware campaigns. As an example, the model uncovered a new variant of the Bondat worm that attempts to turn affected machines into zombies for a botnet. Bondat is known for using its network of zombie machines to hack websites or even perform cryptocurrency mining. This new version spreads using USB devices and then, once on a machine, achieves a fileless persistence. We share more technical details about this attack in latter sections, but first we describe the detection technology that caught it.
+Powerful, high-precision classification model for wide-ranging data
+Identifying and detecting malicious activities within massive amounts of data processed by Microsoft Defender ATP require smart automation methods and AI. Machine learning classifiers digest large volumes of historical data and apply automatically extracted insights to score each new data point as malicious or benign. Machine learning-based models may look at, for example, registry activity and produce a probability score, which indicates the probability of the registry write being associated with malicious activity. To tie everything together, behaviors are structured into virtual process trees, and all signals associated with each process tree are aggregated and used for detecting malicious activity.
+With virtual process trees and signals of different types associated to these trees, there are still large amounts of data and noisy signals to sift through. Since each signal occurs in the context of a process tree, it’s necessary to fuse these signals in the chronological order of execution within the process tree. Data ordered this way requires a powerful model to classify malicious vs. benign trees.
+Our solution comprises several deep learning building blocks such as Convolutional Neural Networks (CNNs) and Long Short-Term Memory Recurrent Neural Networks (LSTM-RNN). The neural network can take behavior signals that occur chronologically in the process tree and treat each batch of signals as a sequence of events. These sequences can be collected and classified by the neural network with high precision and detection coverage.
+Behavior-based and machine learning-based signals
+Microsoft Defender ATP researchers instrument a wide range of behavior-based signals. For example, a signal can be for creating an entry in the following registry key:
+HKEY_LOCAL_MACHINE\Software\Microsoft\Windows\CurrentVersion\Run
+A folder and executable file name added to this location automatically runs after the machine starts. This generates persistence on the machine and hence can be considered an indicator of compromise (IoC). Nevertheless, this IoC is generally not enough to generate detection because legitimate programs also use this mechanism.
+Another example of behavior-based signal is service start activity. A program that starts a service through the command line using legitimate tools like net.exe is not considered a suspicious activity. However, starting a service created earlier by the same process tree to obtain persistence is an IoC.
+On the other hand, machine learning-based models look at and produce signals on different pivots of a possible attack vector. For example, a machine learning model trained on historical data to discern between benign and malicious command lines will produce a score for each processed command line.
+Consider the following command line:
+ cmd /c taskkill /f /im someprocess.exe
+This line implies that taskill.exe is evoked by cmd.exe to terminate a process with a particular name. While the command itself is not necessarily malicious, the machine learning model may be able to recognize suspicious patterns in the name of the process being terminated, and provide a maliciousness probability, which is aggregated with other signals in the process tree. The result is a sequence of events during a certain period of time for each virtual process tree.
+The next step is to use a machine learning model to classify this sequence of events.
+Data modeling
+The sequences of events described in the previous sections can be represented in several different ways to then be fed into machine learning models.
+The first and simple way is to construct a “dictionary” of all possible events, and to assign a unique identifier (index) to each event in the dictionary. This way, a sequence of events is represented by a vector, where each slot constitutes the number of occurrences (or other related measure) for an event type in the sequence.
+For example, if all possible events in the system are X,Y, and Z, a sequence of events “X,Z,X,X” is represented by the vector [3, 0, 1], implying that it contains three events of type X, no events of type Y, and a single event of type Z. This representation scheme, widely known as “bag-of-words”,  is suitable for traditional machine learning models and has been used for a long time by machine learning practitioners. A limitation of the bag-of-words representation is that any information about the order of events in the sequence is lost.
+The second representation scheme is chronological. Figure 1 shows a typical process tree: Process A raises an event X at time t1, Process B raises an event Z at time t2, D raises X at time t3, and E raises X at time t4. Now the entire sequence “X,Z,X,X”  (or [1,3,1,1] replacing events by their dictionary indices) is given to the machine learning model.
+
+Figure 1. Sample process tree
+In threat detection, the order of occurrence of different events is important information for the accurate detection of malicious activity. Therefore, it’s desirable to employ a representation scheme that preserves the order of events, as well as machine learning models that are capable of consuming such ordered data. This capability can be found in the deep learning models described in the next section.
+Deep CNN-BiLSTM
+Deep learning has shown great promise in sequential tasks in natural language processing like sentiment analysis and speech recognition. Microsoft Defender ATP uses deep learning for detecting various attacker techniques, including malicious PowerShell.
+For the classification of signal sequences, we use a Deep Neural Network that combines two types of building blocks (layers): Convolutional Neural Networks (CNN) and Bidirectional Long Short-Term Memory Recurrent Neural Networks (BiLSTM-RNN).
+CNNs are used in many tasks relating to spatial inputs such as images, audio, and natural language. A key property of CNNs is the ability to compress a wide-field view of the input into high-level features.  When using CNNs in image classification, high-level features mean parts of or entire objects that the network can recognize. In our use case, we want to model long sequences of signals within the process tree to create high-level and localized features for the next layer of the network. These features could represent sequences of signals that appear together within the data, for example, create and run a file, or save a file and create a registry entry to run the file the next time the machine starts. Features created by the CNN layers are easier to digest for the ensuing LSTM layer because of this compression and featurization.
+LSTM deep learning layers are famous for results in sentence classification, translation, speech recognition, sentiment analysis, and other sequence modeling tasks. Bidirectional LSTM combine two layers of LSTMs that process the sequence in opposite directions.
+The combination of the two types of neural networks stacked one on top of the other has shown to be very effective and can classify long sequences of hundreds of items and more. The final model is a combination of several layers: one embedding layer, two CNNs, and a single BiLSTM. The input to this model is a sequence of hundreds of integers representing the signals associated with a single process tree during a unit of time. Figure 2 shows the architecture of our model.
+
+Figure 2. CNN-BiLSTM model
+Since the number of possible signals in the system is very high, input sequences are passed through an embedding layer that compresses high-dimensional inputs into low-dimensional vectors that can be processed by the network. In addition, similar signals get a similar vector in lower-dimensional space, which helps with the final classification.
+Initial layers of the network create increasingly high-level features, and the final layer performs sequence classification. The output of the final layer is a score between 0 and 1 that indicates the probability of the sequence of signals being malicious. This score is used in combination with other models to predict if the process tree is malicious.
+Catching real-world threats
+Microsoft Defender ATP’s endpoint detection and response capabilities use this Deep CNN-BiLSTM model to catch and raise alerts on real-world threats. As mentioned, one notable attack that this model uncovered is a new variant of the Bondat worm, which was seen propagating in several organizations through USB devices.
+
+Figure 3. Bondat malware attack chain
+Even with an arguably inefficient propagation method, the malware could persist in an organization as users continue to use infected USB devices. For example, the malware was observed in hundreds of machines in one organization. Although we detected the attack during the infection period, it continued spreading until all malicious USB drives were collected. Figure 4 shows the infection timeline.
+
+Figure 4. Timeline of encounters within a single organization within a period of 5 months showing reinfection through USB devices
+The attack drops a JavaScript payload, which it runs directly in memory using wscript.exe. The JavaScript payload uses a randomly generated filename as a way to evade detections. However, Antimalware Scan Interface (AMSI) exposes malicious script behaviors.
+To spread via USB devices, the malware leverages WMI to query the machine’s disks by calling “SELECT * FROM Win32_DiskDrive”. When it finds a match for “/usb” (see Figure 5), it copies the JavaScript payload to the USB device and creates a batch file on the USB device’s root folder. The said batch file contains the execution command for the payload. As part of its social engineering technique to trick users into running the malware in the removable device, it creates a LNK file on the USB pointing to the batch file.
+
+Figure 5. Infection technique
+The malware terminates processes related to antivirus software or debugging tools. For Microsoft Defender ATP customers, tamper protection prevents the malware from doing this. Notably, after terminating a process, the malware pops up a window that imitates a Windows error message to make it appear like the process crashed (See figure 6).
+
+
+Figure 6. Evasion technique
+The malware communicates with a remote command-and-control (C2) server by implementing a web client (MSXML). Each request is encrypted with RC4 using a randomly generated key, which is sent within the “PHPSESSID” cookie value to allow attackers to decrypt the payload within the POST body.
+Every request sends information about the machine and its state following the output of the previously executed command. The response is saved to disk and then parsed to extract commands within an HTML comment tag. The first five characters from the payload are used as key to decrypt the data, and the commands are executed using the eval() method. Figures 7 and 8 show the C2 communication and HTML comment eval technique.
+Once the command is parsed and evaluated by the JavaScript engine, any code can be executed on an affected machine, for example, download other payloads, steal sensitive info, and exfiltrate stolen data. For this Bondat campaign, the malware runs coin mining or coordinated distributed denial of service (DDoS) attacks.
+
+Figure 7. C2 communication
+
+Figure 8. Eval technique (parsing commands from html comment)
+The malware’s activities triggered several signals throughout the attack chain. The deep learning model inspected these signals and the sequence with which they occurred, and determined that the process tree was malicious, raising an alert:
+
+Persistence—The malware copies itself into the Startup folder and drops a .lnk file pointing to the malware copy that opens when the computer starts
+Renaming a known operating system tool—The malware renames wscript.exe into a random filename
+Dropping a file with the same filename as legitimate tools—The malware impersonates legitimate system tools by dropping a file with a similar name to a known tool
+Suspicious command line—The malware tries to delete itself from the previous location using a command-line executed by a process spawned by wscript.exe
+Suspicious script content—Obfuscated JavaScript payload used to hide the attacker’s intentions
+Suspicious network communication—The malware connects to the domain legitville[.]com
+
+Conclusion
+Modeling a process tree, given different signals that happen at different times, is a complex task. It requires powerful models that can remember long sequences and still be able to generalize well enough to churn out high-quality detections. The Deep CNN-BiLSTM model we discussed in this blog is a powerful technology that helps Microsoft Defender ATP achieve this task. Today, this deep learning-based solution contributes to Microsoft Defender ATP’s capability to detect evolving threats like Bondat.
+Microsoft Defender ATP raises alerts for these deep learning-driven detections, enabling security operations teams to respond to attacks using Microsoft Defender ATP’s other capabilities, like threat and vulnerability management, attack surface reduction, next-generation protection, automated investigation and response, and Microsoft Threat Experts. Notably, these alerts inform behavioral blocking and containment capabilities, which add another layer of protection by blocking threats if they somehow manage to start running on machines.
+The impact of deep learning-based protections on endpoints accrues to the broader Microsoft Threat Protection (MTP), which combines endpoint signals with threat data from email and docs, identities, and apps to provide cross-domain visibility. MTP harnesses the power of Microsoft 365 security products to deliver unparalleled coordinated defense that detects, blocks, remediates, and prevents attacks across an organization’s Microsoft 365 environment. Through machine learning and AI technologies like the deep-learning model we discussed in this blog, MTP automatically analyzes cross-domain data to build a complete picture of each attack, eliminating the need for security operations centers (SOC) to manually build and track the end-to-end attack chain and relevant details. MTP correlates and consolidates attack evidence into incidents, so SOCs can save time and focus on critical tasks like expanding investigations and proacting threat hunting.
+ 
+Arie Agranonik, Shay Kels, Guy Arazi
+Microsoft Defender ATP Research Team
+ 
+
+Talk to us
+Questions, concerns, or insights on this story? Join discussions at the Microsoft Threat Protection and Microsoft Defender ATP tech communities.
+Read all Microsoft security intelligence blog posts.
+Follow us on Twitter @MsftSecIntel.
+
+		
+			
+				
+			
+
+			
+				Listen to the Security Unlocked podcast
+				Hear more from the author of this blog on episode #1 of Security Unlocked. Subscribe for new episodes each week covering the latest in security news.
+				Listen now
+			
+		
+
+		
+	

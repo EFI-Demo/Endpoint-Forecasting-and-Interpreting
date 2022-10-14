@@ -1,0 +1,16 @@
+New TDL clones are making the rounds these days, according to Bitdefender Labs antimalware researcher Marius Tivadar. The samples in question (which are just now completely analyzed) date from the beginning of April.
+
+The basics are the same as for any other TDL variant – the master boot record gets infected, there is a 16-bit component and 32/64 bit DLLs.
+Taking a look at the code, we can see that to decrypt the sectors where the components are stored, the RC4 key used is also XORed with 0x42965246:
+
+The encrypted filesystem looks like this:
+
+and we can see that, unlike other TDL clones, all the files have names made up exclusively of digits (perhaps chosen at random)
+Previous clones used intuitive names for files: ldr16/ldr32/ldr64/mbr.
+The configuration file is almost unchanged, except there aren’t almost any readable strings:
+
+ 
+while the mbr loader binary looks like this:
+
+Unfortunately, the TDL bootkit family remains relatively unknown in the wider IT security community, as the low detection rates from other major antivirus companies prove.
+Bitdefender antimalware researchers have updated the free rootkit remover to deal with the latest TDL clones.

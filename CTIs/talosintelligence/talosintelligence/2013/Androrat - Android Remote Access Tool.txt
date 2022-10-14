@@ -1,0 +1,74 @@
+
+
+Androrat
+Androrat is an appropriately named remote access tool (or RAT) for Android. In case you're unfamiliar, RATs provide backdoor functionality to an operator, giving access to your system and private data. Androrat recently fell into the spotlight thanks to  this Webroot blog post that highlights a user-friendly Android trojan maker. According to the post, Androrat is the default malicious package provided with this software.
+
+Androrat was the project of four university students from France. According to their README, it was completed in one month. It has since been removed from the Github account on which it was hosted, and for privacy reasons these students will not be named here.
+
+A law enforcement agency provided us with a zip file that appears to be a dump of the Github repository. It contained two compiled debug versions of the Androrat APK, the source code for these, and some class files. Additionally, it contained all of the source code for the server as well as its dependencies.
+
+Building
+To get the server running, I was able to simply drop all of the source files into an Eclipse project, add the dependencies, and fix up one import that didn't agree with my system. I was pleasantly surprised at how easy this was to get working.
+
+Running
+To test that everything was working I ran the server from Eclipse and simply loaded up the debug APK. The debug APK conveniently allows the user to set the server's IP and port. Here we can see the debug apk and the server program:
+
+
+
+
+
+
+
+
+
+Functionality
+Androrat covers the breadth of Android malware features. From the README:
+
+    ### All the available functionalities are
+    * Get contacts (and all theirs informations) 
+    * Get call logs 
+    * Get all messages 
+    * Location by GPS/Network 
+    * Monitoring received messages in live 
+    * Monitoring phone state in live (call received, call sent, call missed..) 
+    * Take a picture from the camera 
+    * Stream sound from microphone (or other sources..) 
+    * Streaming video (for activity based client only) 
+    * Do a toast 
+    * Send a text message 
+    * Give call 
+    * Open an URL in the default browser 
+    * Do vibrate the phone
+
+
+
+
+
+After setting up a contact list, a few fake conversations, and a call log I went to test these out. A few of the functions gave errors, but most worked. As well, a few were not compatible with the Android emulator (for example, vibrate).
+
+Communication
+In the file inout/Protocol.java the request and response codes are listed. For requests the base number is 100, then a value ranging from 0 to 23 is added to it for the code. This is wrapped with the target channel (multiplexed) and arguments in CommandPacket. Then it is wrapped with other meta info in TransportPacket. The resulting packet data size for requests hovers around 21 bytes.
+
+The APK gives an acknowledgment to requests received. The response message is packed into a custom packet via the following function call sequence (format: ClassName.function):
+  
+   ProcessCommand.process
+-> Client.sendInformation 
+-> Connection.sendData 
+-> Mux.send 
+-> TransportPacket.build
+
+This packet includes the acknowledgement data, total length, data length, the channel (multiplexed), as well as a short and bool for following the packet sequence. 
+
+The response codes have a base of 200 and add a value ranging from 0 to 15 to that base. Data being sent is generally built into an array or hash table, then the response is written  using ObjectOutputStream.writeObject() and  placed  into a custom packet. The packet includes the type that was packed. For example, when dumping an SMS to the server, the object type java.util.ArrayList  will be included in the packet to indicate what has been  written. The fields used in these structures prior to packing are very verbose. As an example, PhoneNumber, SimOperator, and IMEI are used when dumping device information to the server.
+
+The information is sent over TCP with this custom protocol. The default server port is 9999, however, this is configurable.
+
+Conclusion
+Since the source code was public, this project provides a significant starting point for new Android malware authors. However, it does not contain any root exploits, it does not attempt to obfuscate the code or communication, and it has not been refined to a point that I would call reliable.
+
+
+
+
+
+
+

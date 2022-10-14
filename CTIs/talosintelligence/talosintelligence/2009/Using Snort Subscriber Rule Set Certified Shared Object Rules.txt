@@ -1,0 +1,57 @@
+
+In order to instantiate shared object rules, a rule stub file is required. These stub files are not distributed in the VRT Certified rule packs, however they can be generated using snort.
+
+Here is an example showing the pertinent configuration options in snort.conf along with the command line option required to generate the stub files. In some installations, the files may well reside in /etc/, this example uses /usr/local/etc as the location for the configuration files. (I like man hier you should read it sometime)
+
+In snort.conf
+
+First set up some global variables:
+var CONF_PATH /usr/local/etc/snort
+var LIB_PATH /usr/local/lib
+var SORULE_PATH $CONF_PATH/so_rules
+
+
+Dynamic preprocessor and dynamic engine information:
+dynamicpreprocessor directory $LIB_PATH/snort_dynamicpreprocessor
+dynamicengine $LIB_PATH/snort_dynamicengine/libsf_engine.so
+
+
+Here is the configuration option that lists the location of the shared object files that snort is to use:
+dynamicdetection directory $LIB_PATH/snort_dynamicrules
+
+
+Dumping the rules
+
+To dump the rule stub files into the required location the --dump-dynamic-rules option is used like so:
+snort -c /usr/local/etc/snort/snort.conf --dump-dynamic-rules=/usr/local/etc/snort/so_rules
+
+
+This command tells snort to use the snort.conf file where it will find the dynamic rule files (thanks to the configuration options above) and then use those files to generate the stub files and put them into /usr/local/etc/snort/so_rules/
+
+After this is complete, the rule files appear in the directory.
+# ls /usr/local/etc/snort/so_rules/
+bad-traffic.rules  imap.rules        nntp.rules  web-client.rules
+chat.rules         misc.rules        p2p.rules   web-misc.rules
+dos.rules          multimedia.rules  smtp.rules
+exploit.rules      netbios.rules     sql.rules
+
+
+Using the rules
+
+At the end of the snort.conf file are the locations of the stub files that can now be used:
+include $SORULE_PATH/bad-traffic.rules
+include $SORULE_PATH/chat.rules
+include $SORULE_PATH/dos.rules
+include $SORULE_PATH/exploit.rules
+include $SORULE_PATH/imap.rules
+include $SORULE_PATH/misc.rules
+include $SORULE_PATH/multimedia.rules
+include $SORULE_PATH/netbios.rules
+include $SORULE_PATH/nntp.rules
+include $SORULE_PATH/p2p.rules
+include $SORULE_PATH/smtp.rules
+include $SORULE_PATH/sql.rules
+include $SORULE_PATH/web-client.rules
+include $SORULE_PATH/web-misc.rules
+
+

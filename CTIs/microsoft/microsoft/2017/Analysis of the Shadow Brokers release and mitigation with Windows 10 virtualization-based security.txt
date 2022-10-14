@@ -1,0 +1,86 @@
+
+		
+On April 14, a group calling themselves the Shadow Brokers caught the attention of the security community by releasing a set of weaponized exploits. Shortly thereafter, one of these exploits was used to create wormable malware that we now know as WannaCrypt, which targeted a large number of out-of-date systems and held encrypted files for ransom.
+Although the exploits are ineffective on newer platforms or attempt to take advantage of already patched vulnerabilities, they nevertheless provide an opportunity to analyze and evaluate whether the exploitation techniques used are still viable on Windows 10 systems with Creators Update.
+In Windows 10, key security enhancements such as kernel Address Space Layout Randomization (kASLR), kernel Data Execution Prevention (DEP), and virtualization-based security (VBS) capabilities delivered with Device Guard all contribute to breaking the exploit techniques observed in the wild. Through VBS’s usage of CPU hypervisor functionality, Device Guard-enabled systems can verify and enforce integrity of code that’s mapped in the kernel address space. Alongside Device Guard is the new kernel Control Flow Guard (kCFG) introduced with Windows 10 Creators Update. kCFG prevents many exploitation techniques that rely on corrupting function pointers to achieve code execution.
+In this blog, we provide an in-depth analysis of two of the exploits released by the Shadow Brokers. Both exploits allow arbitrary code execution through vulnerabilities in the Server Message Block (SMBv1) file-sharing server implementation.
+We follow with a discussion about how Device Guard and kCFG prevent these exploits—and many other exploits—from installing backdoor implants in kernel memory.
+The exploit kit
+The kit’s directory structure shows a modular exploitation framework, where payloads are kept separate from exploits.
+
+Figure 1. Exploit kit directory structure
+All the binaries in the kit contain multiple strings that describe their purpose. Furthermore, the kit exports common functionality to DLL files, revealing additional information through referenced function names. While the strings and the function calls were not necessary for us to examine the kit, both helped speed up our initial analysis.
+For more information about the individual exploits in the kit that targeted Microsoft products, refer to the blog post from Microsoft Security Response Center.
+ETERNALROMANCE SMB exploit
+Let’s dig into the guts of one of the exploits in the kit.
+ETERNALROMANCE is a remote code execution (RCE) exploit against the legacy SMBv1 file sharing protocol. It takes advantage of CVE-2017-0145, which has been patched with the MS17-010 security bulletin. One might note that file sharing over SMB is normally used only within local networks and that the SMB ports are typically blocked from the internet at the firewall. However, if an attacker has access to a vulnerable endpoint running SMB, the ability to run arbitrary code in kernel context from a remote location is a serious compromise.
+This exploit was written to remotely install and launch an SMB backdoor. At the core of this exploit is a type confusion vulnerability leading to an attacker offset controlled arbitrary heap write. As with almost any heap corruption exploit, the attacker must know or control the layout of the heap to consistently succeed. With SMB, most objects are allocated in the non-paged pool.
+Getting a reliable heap layout
+The exploit begins to spray the heap by starting several concurrent instances of SMB_ COM_TRANSACTION. The exploit binary supports three different heap spray methods, allowing it to deal with varying pool behaviors between Windows versions. Apart from the first few allocations (the exact number depends on the pool state), transaction objects are allocated with a fixed, predictable displacement from each other. After the spray has finished, the exploit uses an info leak in a TRANS_PEEK_NMPIPE transaction. It uses the info leak to determine whether the target is running a 32- or 64-bit version of Windows and to get kernel pointers for various SMB objects.
+A network trace can quickly visualize what’s going on:
+
+Figure 2. Network packet containing leaked pool memory
+Building primitives from heap corruption
+The spray has placed many TRANSACTION objects on the heap at a known distance from each other. And because the exploit has leaked the size of a pointer, it knows the offsets to all fields in the TRANSACTION object. The exploit can now—using carefully crafted offsets—use the type confusion out-of-bounds write from one object to corrupt an adjacent one.
+By overwriting the ID associated with the victim object with a hardcoded number (zero), the exploit can now refer to the object without knowing what the original ID was.
+
+Figure 3. Heap layout after the spray
+The exploit proceeds to corrupt the transaction structure in a variety of ways, constructing arbitrary read-write (RW) primitives. It writes additional fields to prevent the transaction from being freed when consumed, allowing the exploit to continue reusing the same transaction for multiple requests without having to pick a new target object to corrupt.
+
+Figure 4. InData pointer observed in WinDbg being overwritten by heap out-of-bounds write
+Installing in-memory backdoor
+At this point, the exploit code attempts to plant backdoor code inside the SMB driver. This step consists of copying shellcode into the non-paged pool, corrupting a function pointer to point to the shellcode and having that function pointer executed. Note that starting with Windows 8, SMB has moved to using non-executable pools, rendering this method ineffective on newer platforms.
+To find a good spot for the function pointer, the exploit follows a pointer on the heap to reach the data segment. Scanning the data segment, it proceeds to look for a table of function pointers that is used to dispatch different SMB_COM_TRANSACTION2 subcommands to different functions.
+When it finds the table of function pointers, the exploit overwrites the 14th entry on this table, which corresponds to the TRANS2_SESSION_SETUP subcommand. MSDN documentation describes this subcommand as reserved, making it an ideal candidate for triggering the backdoor as it is almost never present in SMB traffic.
+Whenever an SMB packet is sent with this subcommand ID to the target device, the function pointer gets executed, triggering the shellcode. This mechanism and the backdoor code are not persistent—they require a persistent second-stage component to survive a reboot.
+
+Figure 5. Decompiled code for planting the backdoor
+ETERNALBLUE SMB exploit
+The WannaCrypt malware spreads by using an adapted version of the ETERNALBLUE exploit. This bug, which targets a different SMBv1 vulnerability, is a linear buffer overrun on the pool.
+The bug occurs in a special case when converting a list of extended attributes (EA) from one format to another. If the list contains an EA entry that goes outside the packet buffer, the list is truncated as if it only included up to the last valid entry.
+When updating the length of the list, the size is written to as if it were a 16-bit ushort, when it is actually a 32-bit ulong. This means that the upper 16-bits are not updated when the list gets truncated:
+
+Figure 6. Size of list of extended attributes (EA)
+The code allocates a buffer with a size calculated to fit all EA entries up to the truncation. But as the list size was increased, this leads to a linear heap overflow with attacker controlled data.
+In a similar way as before, heap is sprayed but this time with srvnet!SRVBUFFER objects using the SMBv2 protocol. This object contains two key pointers that they target: an MDL pointer that receives network packet payload and a pointer to a srvnet!SRVNET_CONNECTION object. Both pointers are overwritten so that they point to fixed addresses in the HAL region (used by the hardware abstraction layer).
+Because of the corrupted MDL pointer, the next packet payload will get written to the HAL region. This payload contains shellcode and initializes the memory structure for a fake srvnet!SRVNET_CONNECTION object. The connection object has a pointer to a srvnet!SRVNET_CLIENT_CONNECTION_DISPATCH structure that contains function pointers.
+After the packet payload has been received, the SRVNET_RECEIVE_HANDLER function pointer is executed from the attacker-controlled srvnet!SRVNET_CLIENT_CONNECTION_DISPATCH structure, jumping to the shellcode.
+On Windows 7, which is the system that the exploit targets, the HAL region is mapped as readable, writable, and executable. On newer systems the HAL region is no longer executable, meaning that the CPU would fault when trying to execute the shellcode. Furthermore, the HAL region and other kernel regions (such as page tables) have been randomized on the latest 64-bit versions of Windows 10, breaking assumptions of the 64-bit version in the ETERNALBLUE exploit.
+
+Figure 7. Annotated contents of the HAL region with the fake srvnet!SRVNET_CONNECTION object
+Mitigation with virtualization-based security
+Virtualization-based security (VBS) provided with Device Guard on Windows 10 and kCFG enhancements with Creators Update stop common exploitation techniques, including those utilized by ETERNALROMANCE and ETERNALBLUE.
+Stopping shellcode execution with W^X enforcement
+On systems that have Device Guard VBS enabled, writing and then executing shellcode—such as the ETERNALROMANCE backdoor—in the kernel is not possible due to W^X enforcement policies in the hypervisor. These policies ensure that a kernel memory page is never both writable and executable at any given time.
+Even if an attacker tries to attack page tables, the hypervisor is still able to force the execute-disable bit through extended page tables (EPT). This in turn forces attackers to rely on code-reuse methods, such as return-orientation programming (ROP). As a consequence, the shellcode implant library in the Shadow Brokers release is fundamentally incompatible with VBS-protected systems.
+Preventing use of corrupt function pointers with kCFG
+In Windows 10 Creators Update, we introduced a new security mitigation in the kernel space for VBS-enabled systems. The kernel is now compiled with Control Flow Guard (CFG)—a control flow integrity solution designed to prevent common stack-pivoting techniques that rely on corrupt function pointers or C++ virtual method tables.
+Control Flow Guard in the compiled kernel (also known as kCFG) aims to verify all indirect call targets before invoking them. This makes it harder for an attacker to execute code by abusing function pointers or other indirect calls.
+In the case of the ETERNALROMANCE exploit, the subverted function pointer would lead to a security fault when invoked, making the exploit non-functional in its current form. The same applies for ETERNALBLUE, which also relies on a corrupted function pointer to achieve code execution.
+
+Figure 8. With kCFG enabled, the function pointer is now verified by __guard_dispatch_icall_ptr
+On early Windows 10 systems before Creators Update and without Device Guard, it is possible to attack the page tables of the HAL region to turn it executable and gain code execution using the ETERNALBLUE exploit technique.
+Secure computing with Windows 10 Creators Update
+While we actively provide patches for vulnerabilities in services like SMBv1, we strive to deliver more and more system-wide mitigations that proactively protect our users from current, as well as future, exploitation and attack methods.
+Customers who run Windows 10 Creators Update benefit from Device Guard and security enhancements like kCFG and W^X. They also benefit from a host of other security features that have been strengthened with Windows 10 Creators Update, including:
+
+Windows Defender Antivirus for endpoint antimalware protection powered by the Microsoft Intelligent Security Graph, which learns from billions of devices worldwide
+Windows Defender Advanced Threat Protection (Windows Defender ATP) enables enterprises to detect breach activity early and respond fast; try it for free with Windows 10 Enterprise
+Microsoft Edge is a proven fast browser secured by virtualization and by Windows Defender SmartScreen
+
+To test how Windows Defender ATP can help your organization detect, investigate, and respond to advanced attacks, sign up for a free trial.
+Reducing exposure to SMBv1 exploits on older platforms
+Microsoft strongly advises customers to apply all available security updates in a timely manner. To reduce the attack surface on your network, block inbound SMB traffic at the firewall and, if possible, disable the SMBv1 compatibility driver.
+ 
+Viktor Brange
+ Windows Offensive Security Research Team
+ 
+ 
+
+ 
+
+Talk to us
+Questions, concerns, or insights on this story? Join discussions at the Microsoft community and Windows Defender Security Intelligence.
+Follow us on Twitter @WDSecurity and Facebook Windows Defender Security Intelligence.
+ 
+	

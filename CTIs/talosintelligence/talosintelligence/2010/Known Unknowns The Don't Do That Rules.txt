@@ -1,0 +1,67 @@
+
+I recently had a chance to speak with several Sourcefire customers on a trip to the Tennessee/Kentucky area. While it's always nice to talk to customers and get a better idea of how people use Snort in the wild, this trip was particularly interesting, since the customers I spoke with were high-end analytical types - people who not only use Sourcefire gear to its full potential, but who also had interesting insight into today's threat landscape.
+
+With this background, I made a surprising discovery about the way people appear to be using the VRT rules: none of them were employing, or were even really aware of, what I call our "Don't Do That" rules - anomaly detection signatures that find attempts to obfuscate bad behavior, interesting new 0-day, and other generically bad stuff. Since we've found these rules useful, and have had positive feedback from users who are running them, I've decided to highlight some of the more interesting rules in this group, both to make time-starved analysts aware of them, and to solicit further feedback on their use in the wild.
+
+So, without further ado, here are the rules, and the logic behind them:
+"POLICY Adobe PDF start-of-file alternate header obfuscation attempt" / SID 16354 - This looks for a technically valid, but non-standard PDF header. Will it fire on legacy documents and other odd, but perfectly valid, files? Sure. Will it also find documents where attackers are deliberately trying to evade detection by IDS, antivirus, etc.? Definitely. Given the flood of PDF exploits we've seen in the wild over the past year or so, we figure that the more tools your analysts have for finding non-standard PDFs, the better.
+
+
+"POLICY Adobe PDF alternate file magic obfuscation" / SID 16390 - Same concept as SID 16354, slightly different part of the file specification.
+
+
+"SQL oversized cast statement - possible sql injection obfuscation" / SID 13791 - The SQL cast() function on its own is part of any database programmer's repertoire. However, it generally doesn't appear directly in a URI - and more importantly, when it does, the data inside of the parentheses is generally under 250 characters (if the data is actually that long, it's inside of a variable somewhere - nobody wants to manually type out a string that size). Since we've seen tons of SQL-injector malware that employs calls to cast() with huge chunks of data, however, this was introduced as an easy way to catch lots of different types of malware in one fell swoop.
+
+
+"SQL oversized convert statement - possible sql injection obfuscation" / SID 13987 - Same logic as SID 13791, only with an alternate SQL function.
+
+
+"SQL large number of calls to ascii function - possible sql injection obfuscation" / SID 13988 - As with SID 13791, most malware being injected into a database is going to be obfuscated. The ascii() function simply converts a hexadecimal character into its ASCII equivalent, a common obfuscation technique. This rule looks for five calls to this function within a single request, which we feel strikes a balance between detecting malware that uses the call and skipping over legitimate programming uses for ascii().
+
+
+"SQL large number of calls to char function - possible sql injection obfuscation" / SID 13989 - Same concept as SID 13988, different function.
+
+
+"SQL large number of calls to concat function - possible sql injection obfuscation" / SID 14008 - Same concept as SID 13988, different function.
+
+
+"WEB-CLIENT obfuscated javascript excessive fromCharCode - potential attack" / SID 15362 - This rule looks for delivery of client-side malware, which is typically included in a web page (either after a successful SQL injection attack or on a just plain malicious site). Much like the SQL ascii() function, this rule looks for the JavaScript String.fromCharCode() call, which returns ASCII string data from a hexadecimal equivalent. This rule was created after seeing this technique employed within a wide range of malware samples, and requires five consecutive calls to this function, with at most 100 bytes between each call, to help weed out legitimate uses of this core piece of JavaScript.
+
+
+"WEB-CLIENT Potential obfuscated javascript eval unescape attack attempt" / SID 15363 - One of the classic malware obfuscation techniques, which is still heavily employed today, is to use a JavaScript call similar to eval(unescape()). This rule looks for such calls with a minimum of 250 bytes of data inside the unescape() call - something which happens very rarely in legitimate traffic, but all the time in attacks of this type.
+
+
+"WEB-CLIENT Generic javascript obfuscation attempt" / SID 15697 - It is possible, in JavaScript, to "re-declare" the names of built-in functions - i.e., var foobar = unescape; var cleartext = foobar("");. Metasploit has a built-in function that does just this for the unescape() function, which, as just noted, is often used to obfuscate client-side attacks. Since a legitimate web page has little to no reason to redeclare the name of the unescape() function, this rule looks for such behavior as an indicator of malicious intent.
+
+
+"WEB-CLIENT Possible generic javascript heap spray attempt" / SID 15698 - Many JavaScript-based exploits use a technique called heap spraying - in a nutshell, filling memory with data that will be used as part of the exploitation process, to make it more likely that attacker-supplied data will be accessed by the vulnerable program. This rule looks for a sequence of bytes typically associated with heap sprays in JavaScript, which have very few, if any, legitimate use cases in the wild.
+
+
+"EXPLOIT Possible Adobe Flash ActionScript byte_array heap spray attempt" / SID 15729 - ActionScript, the Flash answer to JavaScript, has a function called ByteArray(), which allows developers to work with binary data. This function is not particularly widely used - the official Adobe documentation actually calls it out as being only for advanced developers - and this rule looks for a specific set of bytes used in conjunction with the call that we've found in ActionScript-based exploits.
+
+
+"EXPLOIT Possible Adobe PDF ActionScript byte_array heap spray attempt" / SID 15728 - Same detection as SID 15729, only used in conjunction with a flowbit that looks for files declared as PDFs (SID 15729 looks for files declared as SWF). You can thank Adobe for allowing people to embed Flash in PDFs on this one.
+
+
+"WEB-CLIENT obfuscated header in PDF" / SID 16343 - This shared-object rule (whose C code is open source) examines object tags within PDF files. Per the specification, an object tag can be declared either as ASCII data (i.e. "JavaScript"), hex data (i.e. "#4a#61#76#61#53#63#72#69#70#74"), or a mixture of the two. Normal, legitimate PDFs typically declare objects as one or the other; malicious PDFs, including those generated by Metasploit, often mix the two in an attempt to evade detection. This rule looks for mixed encoding in an object tag (i.e. "J#61va#53#63rip#74").
+
+
+"WEB-MISC text/html content-type without HTML - possible malware C&C" / SID 16460 - This rule came out of an analysis of the Zeus trojan, as well as other nasty pieces of malware. Since Zeus encrypts all of its command and control data, yet declares in the HTTP headers that the traffic will be of type "text/html", this rule looks for HTTP packets which declare that content type, but which do not actually contain plaintext HTML. In our testing, this found Zeus reliably, and picked up on other pieces of malware as well. Given the fact that HTTP servers do lots of strange things in the wild, we're very interested in seeing any false positives you might have on this rule, so we can account for whatever odd thing the servers you're interacting with are doing.
+
+
+"POLICY Suspicious .cn dns query" / SID 15167 - Most security analysts have seen malware hosted on insane domain names like qxpvfsztr.cn - and all it takes it one look at a name like that to know that something really fishy is going on. This rule helps your IDS find such names, by searching for DNS queries for .cn (i.e. Chinese) domains that contain 5 or more consonants in a row.
+
+
+"POLICY Suspicious .ru dns query" / SID 15168 - Same concept as SID 15168, except with .ru (i.e. Russian) domains.
+
+
+"WEB-ACTIVEX obfuscated ActiveX object instantiation via unescape" / SID 16573 - Metasploit sometimes hides the name of the ActiveX controls it is attempting to exploit by hex-encoding it. There is no legitimate reason to have the name of an ActiveX object that you're instantiating encoded, so we detect this behavior as likely malicious.
+
+
+"WEB-ACTIVEX obfuscated ActiveX object instantiation via fromCharCode" / SID 16574 - Same concept as SID 16574, but looking for a different function to decode the name of the control.
+
+
+
+
+We're always constantly thinking about new anomaly detection rules that we could add - for example, we're currently considering a rule that looks for, in essence, "var shellcode = ". Since we know that there are lots of good analysts out there who have written their own anomaly rules, if you have anything you'd like to share with us, drop us a line at research@sourcefire.com or start up a thread on the Snort-Sigs mailing list. Also, if you find that any of these rules are flagging a high percentage of normal traffic, send us samples at fp@sourcefire.com, so that we can fix things, both for you and the community at large.
+

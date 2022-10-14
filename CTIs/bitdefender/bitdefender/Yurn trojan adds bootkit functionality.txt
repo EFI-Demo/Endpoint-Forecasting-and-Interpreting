@@ -1,0 +1,22 @@
+ With the recent explosion of bootkit variants, “old” trojans are getting a new lease of life by including bootkit functionality.  As part of our ongoing series on emerging e-threats, we present Rootkit.MBR.Yurn.A, which has managed to avoid (so far) detection by most AV software, as analyzed by Bitdefender researcher Cristian Istrate. 
+The new Yurn bootkit keeps its data after the partitioned space: the loader with a small compressed driver, the clean MBR and an encrypted executable.
+Schema of Yurn trojan mbr infection
+The infected MBR just executes the loader which decompresses and loads the small driver in memory.
+The loader decreases the amount of available base memory (from address 413h) and hooks interrupt 15h/AX=0E820h (Query System Address Map) to return a smaller amount of available memory to applications. This is done to protect its loaded driver from being overwritten.
+Another hook on interrupt 13h checks every buffer read from disk for a particular byte sequence located in the Windows kernel. When it finds the sequence, the bootkit patches the kernel code to execute the driver. With these two hooks in place, it executes the original MBR to start the system and the driver to be executed during the process.
+It is important to note that the driver will only act if a particular registry key is not found (we’ll see about this later), otherwise it exits.
+Yurn code sample
+The purpose of the driver is to find the winlogon.exe process. To do this, it creates a thread which waits for winlogon.exe to be loaded by Windows. When finally winlogon.exe is found, the driver injects in it a small executable which reads, from the unpartioned space, the encrypted file stored by the bootkit.
+This file, which installs the payload, is then decrypted and executed from winlogon process also. It, in turn, drops several encrypted files in %windir%\Installer\%guidrecord%\:
+02.dat 02C.dat 12.dat 12C.dat 7F.dat 7FC.dat 80C.dat mssounddx.sys
+Then, it creates a registry key for the driver and starts it:
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\mssounddx]
+"DisplayName" = "Microsoft DirectSound Provider"
+"Type" = 1
+"Start" = 1
+"ErrorControl" = 1
+"ImagePath" = "\??\%windir%\Installer\%guidrecord%\mssounddx.sys"
+ 
+The mssounddx.sys driver decrypts an executable from resources and injects it in winlogon process. Now the injected thread will read and decrypt the files that were dropped in Windows Installer Cache folder. These files contain other executable parts and information about programs from which the trojan will steal data.
+The trojan is started in Windows because of its registry key. If the registry key and the trojan files are removed, on the next boot the small driver loaded by the bootkit checks if the registry key is present. As the key is not present, the driver starts the injection process, thus installing the trojan again.
+Bitdefender software has been updated and reliably cleans Yurn-infected systems.

@@ -1,0 +1,37 @@
+
+
+The VRT looks at a massive amount of exploit kits a day, but this one caught our eye so we thought we'd share.  While this technique isn't new, it is very interesting and further illustrates what we all believe to be true in the security world, you can't trust anything.
+
+With any exploit kit, the end goal is to drop malware on the victim host but unlike the majority of exploit kits we see, this one does it in a unique manner.  Instead of exploiting the victim through Java, Adobe Reader, or the browser, and using that foothold to fetch and run and executable; this attacker uses VBScript to write the executable to disk.  The end result is an executable on the victim machine without using an exploit to download the executable.
+
+The link is still active at this time and is still serving malware.
+VirusTotal results
+
+hXXp://sarmayebux[.]ir/includes/imaslider/widgets[.]htm
+
+Let's take a look at the VBScript.  First it declares the variable "DropFileName" with the string "svchost.exe". That's a nice descriptive variable name and it's not obfuscated. The next variable is "WriteData" and is a relatively large string.
+
+
+
+
+Take a look at those first four characters: "4D5A" (in hex) or "MZ" (in ascii), the first two characters of an everyday Portable Executable or PE file.  Finally, another string is assembled called "DropPath". It uses the GetSpecialFolder method with a folderspec argument of 2, this holds the value of the "TMP" environment variable.  The file is created with CreateTextFile with the overwrite argument set to true.  The "WriteData" is then written out in hex and executed without an actual executable being downloaded or an exploit being used.
+
+I tested this on Windows XP with IE 8 and Windows 7 IE 9. The user is presented with a warning on both systems. The name and publisher information presented in the warning shows that the add-on that was blocked is from Microsoft.  Any unsuspecting user may just click "Allow" on these.
+
+The XP IE 8 and Win7 IE 9 warnings:
+
+
+
+
+
+
+
+
+
+
+
+
+The malware itself is detected as Win.Trojan.Ircnite-27 with ClamAV and additional rules will be released to cover this method of executable delivery in the form of SIDs 28053 and 28054. 
+
+We are always interested in hearing about new and interesting methods used by attackers, so feel free to drop us a line if you'd like to share what you are seeing at:  research@sourcefire.com.
+

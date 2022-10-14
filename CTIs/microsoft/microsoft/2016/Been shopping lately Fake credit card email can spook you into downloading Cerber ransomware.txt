@@ -1,0 +1,94 @@
+
+		As the shopping sprees become increasingly frenetic during holiday season, it’s hard not to worry about how much credit card debt we’re piling. Some of us rely on email notifications from our banks to track the damage to our finances. So what happens when we suddenly get notified about charges for things we never bought?
+
+
+
+
+The trend towards increasingly sophisticated malware behavior, highlighted by the use of exploits and other attack vectors, makes older platforms so much more susceptible to ransomware attacks. From June to November 2017, Windows 7 devices were 3.4 times more likely to encounter ransomware compared to Windows 10 devices.
+Read our latest report: A worthy upgrade: Next-gen security on Windows 10 proves resilient against ransomware outbreaks in 2017
+
+
+
+Microsoft security researchers have received samples of personalized emails that appear to be MasterCard notifications. Although not without flaws, these emails can be very effective malware vectors—they can trigger an urgent need to act and open the attached payload.
+The payload is a macro downloader embedded in a Word document. Starting with Office 2010, documents from untrusted sources are displayed in Protected View and macros are disabled by default. To overcome this security measure, the malware authors crafted the contents of the attached Word document so that unsuspecting users are convinced about enabling macros to see supposedly important content.
+As seen in the screenshot below, the Word document provides step-by-step instructions telling users to leave Protected View and enable macros. One should note that legitimate notifications from MasterCard and other credit card companies do not ask recipients to enable macros.
+
+Figure 1. Instructions in the attached document about enabling macros; these instructions are not from Microsoft
+Once the macro is allowed to run, it downloads and launches Cerber, a known ransomware. Cerber victims, recipients who don’t have robust antimalware, are bound to learn a potentially pricey lesson in computing safety.
+Engineering an urgent response
+Although some aspects of the socially engineered emails are weak, they do have some strong points:
+
+Urgency—by stating that the recipient is being billed, the attack emails can trick unsuspecting users into opening the malicious attachment without consideration for their safety.
+Convincing workaround instructions—when the attached Word document is opened, it displays well-formatted and well-written instructions on how to enable macros, tricking recipients into facilitating payload detonation. The instructions are made to appear like help content from Microsoft and even have feedback buttons that appear functional.
+
+Below is a recreation of one of the sample messages received by Microsoft security researchers. It has been modified to protect the original recipient.
+
+Figure 2. Recreated attack email  (original recipient information has been anonymized)
+Social engineering flaws
+There are some social engineering flaws in the attack emails. In our sample, the sender address does not spoof MasterCard or a bank, making it much less convincing. Also, the apparent use of automated code to copy the recipient local-name to the salutation section of the message and the file name of the attached document is a giveaway. We do concede, however, that this simple attempt at personalization can work and is in fact employed in attacks associated with the highly prevalent Ransom:Win32/Locky.
+The email itself is crude and shows almost no attempt to feign legitimacy. It contains some typographical errors, such as the missing number between the dollar sign and the comma in our sample. Also, users who are careful enough will likely notice that the sender address does not match the signatory.
+
+Figure 3. Social engineering flaws in the attack email
+Scanner evasion and anonymization
+On the technical side, the use of a password-protected Word document allows the embedded macro code to avoid detection by many email scanners. Without password-protection, the macro code is easily detected by antimalware engines . (Microsoft detects the macro code in our samples as TrojanDownloader:O97M/Donoff.CU .) To an extent, password-protection also makes the attachment appear legitimate—many bank documents are typically transmitted as password-protected files.
+When our researchers detonated the payload by opening the attached document and enabling macros, the embedded macro code began downloading a variant of a known ransomware from the following URL:
+hxxps://2cbhkcjhn5suq6t6.onion.to/explore.exe
+This URL is a hidden Tor web location made available to all web browsers by Tor2web. Hidden Tor web locations allow publishers to stay anonymous and protected from political persecution. However, this anonymity can also be abused by criminals.
+Once the download completes, the macro runs PowerShell commands to launch the downloaded ransomware.
+Classic case of ransomware
+The ransomware component is a variant of Ransom:Win32/Cerber. Like most ransomware, Cerber encrypts files to render them inaccessible. Unfortunate users who detonate the macro end up with a lot of encrypted files as shown below. Note that the extension name of the encrypted files is not static—Cerber uses a pseudorandom extension.
+
+Figure 4. Inaccessible user files encrypted by Cerber 
+Cerber behavior has not changed much compared to earlier versions. After encrypting the files, Cerber attempts to collect ransom by opening a window that displays its ransom note.
+
+Figure 5. Cerber ransom note
+As an additional reminder to its victims, Cerber modifies the desktop wallpaper:
+
+Figure 6. Cerber wallpaper serves a painful reminder to victims
+In the ransom note, users are reassured that their files are intact and are told to purchase the Cerber Decryptor from a list of URLs. Victims who do not purchase the decryption tool are left unable to access the contents of their files.
+Victims who do go to the URLs find the same features that the scammers have had on their website since the early versions of Cerber:
+
+Support for multiple languages, including several European languages, Chinese, and Japanese
+An image CAPTCHA mechanism to prevent robots from using the site
+Special rates for those who purchase the decryption tool in the next few days
+
+Below are screenshots of the ransomware website.
+
+Figure 7. Language options on the ransomware website
+
+Figure 8. Anti-robot CAPTCHA on the ransomware website
+
+Figure 9. Special rate countdown on the ransomware website
+Be safe and save
+An effective way to avoid this ransomware attack is to be extremely wary of unsolicited emails and emails coming from unknown sources. Check the sender name and consider contacting the company or institution represented by the unsolicited email to verify the email’s authenticity.
+Ransomware may also come from other sources, including pirated software and along with legitimate applications that have been repackaged inside a software bundler. Obtain software from trustworthy sources, such as the Windows Store, or directly from the software vendor’s website.
+Microsoft recommends running robust antimalware, like Windows Defender, to help stop ransomware and other malicious code from causing irreversible or costly damage. Windows Defender uses behavioral heuristics—it actively checks for suspicious behavior and references advanced algorithms in the cloud. By using behavioral heuristics, Windows Defender can detect ransomware even before specific signatures become available.
+The screenshot below shows Windows Defender detecting Cerber ransomware using only behavioral heuristics.
+
+Figure 10. Windows Defender behavior-based proactive detection of Cerber ransomware
+Here are some more tips:
+For end users
+
+Use an up-to-date, real-time antimalware product, such as Windows Defender for Windows 10.
+Think before you click. Do not open emails from senders you don’t recognize. Upload any suspicious files here: https://www.microsoft.com/en-us/security/portal/submission/submit.aspx. This campaign spoofs MasterCard, and can easily be modified to spoof banks and other credit card providers. The attachment is a Word document, which is a commonly distributed file. However, be mindful of documents that instruct you to enable macros—it’s very possible that they contain malicious macros.
+
+For IT administrators
+
+Use Office 365 Advanced Threat Protection. It has a machine learning capability to help your network administrators block dangerous email threats. See the Overview of Advanced Threat Protection in Exchange: new tools to stop unknown attacks, for details.
+Use Windows Defender Advanced Threat Protection to help detect, investigate, and respond to advanced and targeted attacks on your enterprise networks. To test how Windows Defender ATP can help your organization detect, investigate, and respond to advanced attacks, sign up for a free trial.
+Use the AppLocker group policy to prevent dubious software from running.
+Use Device Guard to maintain a custom catalog of known good applications and to stop kernel-level malware with virtualization-based security.
+
+ 
+Patrick Estavillo
+ 
+ 
+ 
+
+ 
+
+Talk to us
+Questions, concerns, or insights on this story? Join discussions at the Microsoft community and Windows Defender Security Intelligence.
+Follow us on Twitter @WDSecurity and Facebook Windows Defender Security Intelligence.
+ 
+	

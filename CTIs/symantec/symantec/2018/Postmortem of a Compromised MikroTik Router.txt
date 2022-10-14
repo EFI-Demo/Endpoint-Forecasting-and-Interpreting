@@ -1,0 +1,53 @@
+Cryptocurrency coinminers are the new ransomware and malicious actors have already pounced on the opportunity to make their fortune. Symantec has been tracking a large-scale coin-mining campaign which, as per Shodan, has currently infected about 157,000 MikroTik routers.
+
+Researchers discovered this coin-mining campaign in early August 2018. The campaign was initially concentrated in Brazil; however, it soon began infecting routers around the world. I decided to take a closer look at one of these infected routers to get a better understanding at what’s going on.
+
+Router postmortem
+
+At the outset, the compromised router has multiple services running on it. Interestingly, the infected router had the default web service disabled.
+.Pointing a browser to the infected router’s port 80, causes it to serve the Coinhive script responsible for coin mining (Figure 2). But when the infected router is found in between a client sending a request and a server receiving it, this HTML page is only served when there’s an error.
+.This is because internally the router is configured with a firewall rule that helps serve this malicious HTML page. Using network address translation (NAT), the firewall rule takes traffic bound to port 80 and redirects it to port 8080 (Figure 3).
+.The router is also configured to run a default proxy server on port 8080 that’s responsible for serving the Coinhive script.
+.Looking at the webproxy path, we can find the actual file (error.html) that holds the coin-mining script that’s served every time there’s an error. The error.html file is available from the following path: /webproxy/error.html
+
+When the router is compromised, the hackers schedule multiple scripts to run at various times. These scheduled scripts are created to download the error.html page onto the router, which allows the hackers to drop various versions of the error.html page if they wish.
+.These scheduled jobs are set up by another script which is executed on the compromised router during the initial stages of infection. This script is hosted on the min01.com/01/a113.rsc server, as seen in Figure 6.
+.This script is responsible for performing multiple malicious actions on the router including, but not limited to:
+
+
+	Enabling the proxy service
+	Adding the firewall NAT entry
+	Enabling Winbox, FTP, SSH services
+	Disabling the WWW service
+	Scheduling various tasks to remain persistent on the router
+	Adding a backdoor user with the name “ftu” to the FTP group
+
+
+It’s likely that this script was downloaded using the inbuilt /tool fetch command and run using the /import command.
+
+The bottom line
+
+All of the infected MikroTik routers (v6.29 to v6.42) that I encountered were running the Winbox service, which is known to be vulnerable to CVE-2018-14847. When exploited successfully, this flaw can allow an attacker to bypass authentication and compromise the router. After the router is compromised, the hackers can load their malicious error page, which is displayed any time a user accessing the internet via the router encounters an HTTP error. Every time the error page is displayed, the victim is unknowingly mining Monero (XMR) for the hackers.
+
+These routers are used by many organizations and businesses, including internet service providers. While MikroTik was prompt in patching CVE-2018-14847, unfortunately poor patching practices by vendors and users mean that there are plenty of vulnerable routers still out there.
+
+Protection
+
+The following Symantec intrusion prevention system (IPS) detections blocked this coin-mining campaign from day one:
+
+
+	Web Attack: JSCoinminer Download 6 (30356)
+	Web Attack: JSCoinminer Download 8 (30358)
+
+
+Figure 7 shows Symantec IPS detections protecting users from this coin-mining campaign.
+.Mitigation
+
+MikroTik has already published a patch to address CVE-2018-14847. Symantec recommends users to install the patch on their routers, if they have not done so already. Users can also consider disabling the following services on their routers, if not required:
+
+
+	TELNET
+	SSH
+	FTP
+	WINBOX
+

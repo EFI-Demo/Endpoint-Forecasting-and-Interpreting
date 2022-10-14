@@ -1,0 +1,73 @@
+
+VirusTotal multisandbox project welcomes VenusEye. The VenusEye sandbox is currently contributing reports on PE Executables, documents and javascript. 
+
+In their own words:
+
+
+VenusEye Sandbox, as a core component product of VenusEye Threat Intelligence Center, is a cloud-based sandbox service focused on analyzing malwares and discovering potential vulnerabilities. The sandbox service takes multiple(~100) types of files as input, performs both static analysis and behavior analysis after then, and eventually generates a detailed human-readable report in several supported formats like PDF or HTML. Being weaponized with MITRE ATT&CK knowledge base, VenusEye Sandbox combines the product and the service as a whole. With the help of our sandbox service, users can track threat actors or gather threat intelligence for their hunting in a much easier way.
+
+You can find VenusEye reports under the “Behavior” tab:
+
+
+
+
+Take a look at a few example reports within VirusTotal: 
+https://www.virustotal.com/gui/file/e728fbb5099d17dbe43b48e2fb5295fdd8a25f3790aac3e353c609b1745bd432/behavior/VenusEye%20Sandbox 
+https://www.virustotal.com/gui/file/6d395a6e0c6899b7bf827099f30cb5abf2da0e6bb766d730cf9cbe014b5e6a9f/behavior/VenusEye%20Sandbox 
+https://www.virustotal.com/gui/file/8c64086f3a31ebd87963b832e1327587499e0866dce9ad865363d2d2cb8b40c9/behavior/VenusEye%20Sandbox 
+https://www.virustotal.com/gui/file/0883847c6958cac651ebc2764ec5a5e223d29d5a0a80cb9e08b8ec83bfde6f00/behavior/VenusEye%20Sandbox 
+https://www.virustotal.com/gui/file/8143a2c2666575152896609c1d8d918717a358d4611a57a0cce2559e3c5cabbf/behavior/VenusEye%20Sandbox 
+
+
+ Document with macros
+Taking a look at the embedded content preview for the sample 8143a2c2666575152896609c1d8d918717a358d4611a57a0cce2559e3c5cabbf we see that the malware is attempting to trick users to enable macros. 
+
+
+
+The VenusEye sandbox automatically enables macros and allows us to see the execution details, including the HTTP requests, DNS resolutions and process tree. 
+
+
+
+
+Javascript files
+Wide use of online email services that automatically block executable attachments has led to attackers using alternative file formats for their spam campaigns. As depicted above, documents with macros are one example, Javascript files have also become quite popular. VenusEye represents a very interesting addition to the multi-sandbox project in that, unlike some of the other integrated sandboxes, it also analyses javascript files. 
+
+  
+
+In this particular example, the simple fact that a javascript file that can execute in Windows (as opposed to being a website resource) performs DNS resolutions should be enough to consider the file highly suspicious. More so if we take into account the registry keys with which it interacts:
+
+
+
+
+Rich relationships
+The two examples above illustrate VenusEye acting as a microscope to understand what an individual threat does. However, thanks to the network traffic recordings, VenusEye also contributes macroscopic patterns that can be easily understood using VT Graph. 
+
+For example, when looking at the javascript file above we can make use of the file action menu in order to open it in VT Graph:
+
+ 
+
+By default a one level depth inspection is performed, but we can always dig deeper. By expanding the files communicating with poly1374.mooo.com we get to discover a Windows executable that seems to be using such domain as its command-and-control:
+
+  
+
+In other words, VenusEye also helps in tracking entire campaigns thanks to the contributed file/domain/IP/URL relationships.
+
+
+Advanced pivoting
+As usual, all of this information is indexed in the elasticsearch database powering VT Enterprise, this makes it trivial to pivot to other variants of a given malware family or other tools built by a same attacker. 
+
+Let us now return to the document with macros above, VT Enterprise users can click on any of the behavior report contents in order to launch a VT Intelligence search for files exhibiting the same pattern when executed. Let us click on the first HTTP request entry:
+
+
+
+This launches the search behaviour_network:"http://mediaprecies.online/cgi-bin/58lt9/", finding other samples that communicate with that very same URL. Now that we have identified other variants belonging to the same campaign or threat actor, it is trivial to automatically generate commonalities that we can use as IoCs to power-up our security defenses:
+
+
+
+Thank you VenusEye for joining the multi-sandbox family that aggregates more than 10 dynamic analysis partners and counting. If your organization has some kind of dynamic analysis setup, don’t hesitate to contact us to get it integrated in VirusTotal, we will be more than happy to grant you free VT Enterprise quota in exchange. 
+
+
+Email ThisBlogThis!Share to TwitterShare to Facebook
+
+
+

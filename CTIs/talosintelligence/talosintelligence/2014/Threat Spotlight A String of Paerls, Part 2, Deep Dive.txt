@@ -1,0 +1,321 @@
+
+This post has been coauthored by Joel Esler, Craig Williams, Richard Harman, Jaeson Schultz, and Douglas Goddard
+
+
+In part one of our two part blog series on the “String
+of Paerls” threat, we showed an attack involving a spearphish message containing an attached malicious Word doc. We
+also described our methodology in grouping similar samples based on Indicators
+of Compromise: static and dynamic analysis indicators.  In this second part of the blog series we will cover the malicious documents and malicious executables.
+
+
+The Attachment (that your IT department would tell you not to open)
+
+Here’s a screenshot of the malicious Microsoft Word document attached to the phishing e-mail referenced in Part 1. Opening the Word doc triggers a macro that downloads additional malware from Dropbox, eventually phoning home to the command and control domains selombiznet[.]in, and londonpaerl.co[.]uk. However, the threat actor is aware (along with most users, we’d hope!) that Microsoft Word refuses to launch macros by default, so they guide the recipient of the phish to enable macros, with the promise that it
+will somehow enable the recipient to view the contents of the document.
+
+
+
+
+
+
+In reality, it enables the Visual Basic for Applications macro that downloads and launches a malicious executable.  While performing analysis on the Word documents, we noticed that the several instances of the VBA macro code were quite similar -- exactly the same functionality, but with variables renamed.  This is a common occurrence in exploit kits, when malicious code is auto-generated.  We see this all the time in exploit kits we track and defend against with our products, but seeing this same “behavior” in a Word document is interesting as well.
+
+
+Generated Visual Basic Macro code
+The following animation shows two examples of VBA code from two different documents downloading a different executable, the code is functionally the same, but you can see how the variables and URLs change:
+
+
+
+
+
+
+Confirmed ‘String of Paerls’ threat actor samples so far that we have observed:
+8dd00867daa965908826a801a08124ff269fcc2614055891ea7cff35e752d0c8
+2bed9b4f1ca797982585ce4a24c452f9fd3fc29fab3657bd826faa108770d5ce
+383a09fccae8b1394c372c98c727061fa8abe351416f5a595d6bc26d0343d349
+2568a39e5c48513d23cc4f0b37601362696e8cf69cc3f0ad9beed22f3df623b2
+4b7e4f4d088a0489a90214a2151021546c824bd227ff0420f9d0c9ffc5bdd113
+1a4467339ddcd952dbfd896624d07ea67c236fa71a372fb073652eb0f9768e7d
+65aef52741602b9a8cea97d9bd70027d6a303ac6f689d0c02a03fa649b5270ee
+16de397d64d7de2305eef4f0977b6e9f3cf60a168ee7db2ae8f160ff004f1765
+85bfde332657dc588fbe25d350cfbc1bf89ca831e6b9c335c534ad66d6efc2dc
+9f620738782b5ba75df8548568be21c74b84705d86051c874685e38c5f5a0e10
+5be3ef36567271299d658529b889bdb8c83f07b6bc6ff4bd2a92ccfbce15c781
+5aaec7072f097c86800d35288ea8ee296b50ff55976cdf080efcf424ed5b293f
+
+
+Phishing e-mail subjects we’ve observed:
+
+PNS new order (urgent order)
+RE: Shipment and Stuffing Details  
+RE: Container number CMAU5861946 and CMAU5735393
+RE: Freight Invoice Payment
+
+Phishing e-mail attachment names observed:
+
+
+
+3x 2014-05.doc
+2x Shipment & Stuffing details.doc
+2x shipment details.doc
+1x 576877.doc
+1x 7856578.doc
+1x Booking confirmation and original document.doc
+1x Invoice76453773.doc
+1x PO 28670315.doc
+
+Analysis of the downloaded executable:
+The first stage downloaded by the VB macro, (SHA256:
+58b49802b53b4ab8556d5dac487d4b95296dd4ee268a7eb37d467d904129299b), that was downloaded from:
+hxxp://dl.dropboxusercontent[.]com/s/3n5v79wyd9ha85q/b.exe, is an obfuscated .NET executable.
+Some of the analysis utilities used to assist in defeating the obfuscation were De4dot to clean things up, and JetBrains
+dotPeek for decompilation. To begin, in Main(), there are two calls. The first loops through cases in a switch statement
+and simply results in a Thread.Sleep(20000) ­­ an attempt to defeat automated sandbox analysis by introducing a delay
+before performing any malicious activity.
+
+The second is a pretty big mess of indirection, but the critical function is D66cJkg(int). Its only argument is an offset
+into a resource file {873abddb­bad0­4a16­8785­ff568fe91088} (SHA256:7e54c5ab02465d8ca3ff9e6c2ae2d29085923da54adfe65024590811cbe991f2
+
+
+Assembly.GetExecutingAssembly().GetManifestResourceStream("{873abddb­bad0­4a16­8785­ff568fe91088}")
+The format was incredibly simple to infer. One byte is read at the provided offset­57 (the beginning 57 just being obfuscation noise). If the high bit is set, then an additional 3 bytes are read. That 7­bit byte or 31­bit integer is the size of the following string, which is base64 encoded. Below are those that are short enough to be included here:
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Piecing things back together, if we pull out the obvious stuff:
+
+
+
+
+
+
+
+
+
+
+
+
+Using the above, we can guess that there will be some base64, and that will likely turn into more .NET code, and that
+.NET code will be loaded via reflection.
+
+That leaves us with:
+
+
+
+
+
+
+
+
+
+
+
+Observing the first column above, the offset field, you can see the large gap in the offsets. The base64 string in that
+space decoded to yet another base64 string. That ended up decoding to yet another .NET binary (SHA256:
+31b24948510e058c81c3d1d015dd6779c2a9adccc4bd4df51f061060a58d4d52). 
+
+
+Inside of it:
+
+
+
+
+
+
+
+
+
+That takes care of the rest of our decoded strings. The hhplwewj class has some interesting methods:
+
+
+
+
+
+
+
+
+
+
+
+
+
+Additionally, in the binary, we see CreateProcess and WriteProcessMemory for injecting code. This behavior was
+observed during analysis, as it launched multiple copies of itself, and injected code into those processes. Since the
+above .NET code is loaded via reflection, keep in mind that we are still in the initial binary.
+
+
+There is an interesting method of extracting and deserializing assets from the executable; In the method nvjsope(), the binary's timestamp is retrieved (1399871638), converted to a string, and a resource by that name is loaded. The functions Decrypt and Deserialize are then called on the extracted resource. The Decrypt function takes the resource data and a password, in the case of this sample the password provided is the same timestamp (1399871638).
+
+
+
+
+
+
+
+
+
+
+Decrypt extracts the first 8 bytes of the md5sum of the password.
+
+
+
+
+
+
+
+
+
+
+
+
+It then uses DES with the Key and IV set to these 8 bytes, and Mode set to CBC. Before deserialization, the file
+produced is 8c543c3584dfc71ccea8d81acf42243a06b84237c445ec132829ba09adabe425. It is a serialized config file
+containing a binary, a bunch of (unused) configuration flags, and this (unused) tidbit at the end:
+
+
+
+
+The configuration flags in this sample are not set to use this download link and encryption key.
+
+
+The binary extracted is a native PE file (not .NET) (sha256:
+2e7dc2963155a01fe59d1c8ca97093eded226dfc12ea35fa831c05f170c6d9e7). A new copy of the current
+process is spawned and this binary is injected into it. If configuration flags were set, this could also have been injected into AppLaunch.exe or vbc.exe. Additionally, since many of the other configuration flags are not set, much of the anti­analysis and anti­vm functionality is left unused.
+The sample locates and loads functions with a common search­by­hash method observed in a lot of malware ­­ this is to defeat simplistic analysis such as running ‘strings’ against a binary looking for imported functions. The hash is stored in the executable, rather than the name of the function to import. The hashing algorithm is weak and simple, here’s some Python code to replicate it:
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+The values and imports that resolve to them:
+
+
+
+
+
+In the start function of this binary we see it checking for the mutex "lol", this is an indication that this is sample belongs to the Andromeda family of trojans. If the “lol” mutex is present, it skips a long chunk of anti­vm and anti­debugging checks.
+
+
+These checks have been detailed in depth elsewhere online, so for the sake of brevity we will only give the high level summary. First, all processes are iterated through and some blacklisted process names are checked for (eg. vmwareuser.exe, vboxtray.exe, sandboxierpcss.exe)
+
+
+The sample uses the registry key HKLM\System\CurrentControlSet\Servicesisk\enum to retrieve the
+hard disk name. It checks if the hard disk name contains “vmwa”, “qemu”, or “vbox” at offset 8 as a means of VM
+detection.
+
+
+As an additional anti­debugging check, the sample then does a time query with two invocations of the rdtsc (read timestamp counter) instruction, comparing the difference in the results with 200h. So if there are greater than 512 processor cycles between the two rdtsc instructions, the comparison fails. In this variant, the failure condition jump is "nopped" out, ignoring the results of this check. This may indicate that the operator made some customization to the base Andromeda samples.
+
+
+
+
+
+
+The malware then goes through and selectively copies bytes to memory. Another function resolves function addresses for a jump table in that copied code. After that, is a check for 'e' (0x65) at a specific offset in this copied code. This 'e' corresponds to the end of the process names that will be injected into, wuauclt.exe and svchost.exe. If these names are present in memory then the code is not encrypted, the xor loop is skipped, and execution is redirected to the
+injector.
+
+
+
+
+
+
+The injected code is a partially unpacked version of itself. When the process (wuauclt or svchost) is started, it goes through the same selective copying routine to pull more code into memory. Now we have reached the main Andromeda payload where we see some recognizable strings.
+
+The first is the default RC4 key for Andromeda:
+
+d40e75961383124949436f37f45a8cb6
+This is a default domain in the builder:
+
+
+thisshitismoresafethanpentagonfuckyoufedsbecausethisisaf.com/image.php
+As well, there is the default post format string:
+
+
+id:%lu|bid:%lu|bv:%lu|sv:%lu|pa:%lu|la:%lu|ar:%lu 
+If we grab a copy of Andromeda’s builder, we can see what some of these fields mean.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Taking the network traffic from the first post in this series:
+
+
+
+
+One will notice the POST body appears to be filled with 64 encoded data. If we apply RC4 with the default key to the
+posted base64:
+
+
+
+
+
+In conclusion, this campaign is a perfect example of a threat actor being very effective while using a widely known vector to compromise victims. Using Microsoft Word macros to load binaries was so effective Microsoft even disabled the auto­open macros by default, years ago! Still this threat actor is able to make use of this vector by compromising what is still the weakest link, the user. If the recipient followed best practices and did not open documents from unknown sources, and did not enable macros when prompted to by the document this attack would not be successful. Despite this low tech attack ­­ one that requires direct user interaction to work, we continue to see malicious Word documents such as these attempting to download the binaries from sites we’ve associated with this threat actor in our web security telemetry. It’s always advisable that users follow best practices to avoid these threats. That said if your user base is prone to such errors defense in depth may be the best approach.
+
+Complete list of ‘paerls’ samples found on Dropbox:
+6c902c62b14a29d5d42a6a342dc4befb537075efe3dcb03045740c217f947fb9
+5840731e7d03c39287ae3046b0ae68cacf99cb942f8b37a7cbb769e4e8edd0fa
+af4e4b3592a65519741a5628fb9b09a772c28e9cb27227153a4f5e0b071d1398
+8f573a74b71d6db58e129c9ec08c93c151a10c289e22af76886cec412d937e07
+18a604c2721611e9982f8c3edd0975076b1fe51969497880b9045372e80959fa
+f9b4579d428ca0a6be7aff8fa356f4590ce377d7a48a3a56ae6d9eb0d7a42934
+97be1b30dccc33a73980ad166d04e563d8a57df2ea184c411eb91d166593b699
+ad80e4d0e9b8bae2cd653f68d43750f61113c0d1ef9b09373ed70abb3626c9c5
+58b49802b53b4ab8556d5dac487d4b95296dd4ee268a7eb37d467d904129299b
+bc3549cf8a66269601838bc928f65c82ae7fd1916668715fcf77d039378d492e
+9e7875c84afa98acb6d240a327dd0a8dd20a37480d0bd90752c14e6b11c58395
+
+
+Dropbox URLs:
+hxxp://londonpearl­uk[.]co/2/R.exe
+hxxp://dl.dropboxusercontent[.]com/s/z2upqc1an4wqvwr/r22.exe
+hxxp://dl.dropboxusercontent[.]com/s/xpb2d7xzuolseri/g.exe
+hxxp://dl.dropboxusercontent[.]com/s/xd2d0f1o1ybufep/c0.exe
+hxxp://dl.dropboxusercontent[.]com/s/wipk304bgpvkvx3/m1.exe
+hxxp://dl.dropboxusercontent[.]com/s/mktuyqoj07i8jsn/wht.exe
+hxxp://dl.dropboxusercontent[.]com/s/9rhja0yvfede0b3/y123.exe
+hxxp://dl.dropboxusercontent[.]com/s/6pow0o9g1kw2pyv/b2.exe
+hxxp://dl.dropboxusercontent[.]com/s/3n5v79wyd9ha85q/b.exe
+hxxp://dl.dropboxusercontent[.]com/s/3fceuz06gdldnxz/345.exe
+

@@ -1,0 +1,99 @@
+
+		At Microsoft, we want users to be in control of their devices, including knowing the security health of these devices. If important security features should fail, users should be aware. Windows Defender System Guard runtime attestation, a new Windows platform security technology, fills this need.
+In Windows 10 Fall Creators Update, we reorganized all system integrity features into Windows Defender System Guard. This move allowed us to continually make significant innovations in platform security. Windows Defender System Guard runtime attestation, which is built into the core Windows operating system, will soon be delivered in all editions of Windows. Windows Defender System Guard runtime attestation, like Credential Guard, takes advantage of the same hardware-rooted security technologies in virtualization-based security (VBS) to mitigate attacks in software.
+Security technologies are targeted by exploits that attempt to run in the same domain of trust. For example, privileged processes are designed to provide a certain degree of isolation (at least in respect to code and data) from regular user-mode processes. The NT kernel determines whether a process is protected based on certain values held in the executive process object. Tampering with these values via a kernel exploit or with a driver (e.g., Mimikatz) can effectively disable process protection. Moving the security decision related to tampering to a separate domain of trust increases complexity for attackers.
+Runtime attestation can help in many scenarios, including:
+
+Providing supplementary signals for endpoint detection and response (EDR) and antivirus vendors (including full integration with the Windows Defender Advanced Threat Protection stack)
+Detecting artifacts of kernel tampering, rootkits, and exploits
+Protected game anti-cheat scenarios (for example, detection of process-protection bypasses that can lead to game-state modification)
+Sensitive transactions (banking apps, trading platforms)
+Conditional access (enabling and enhancing device security-based access policies)
+
+With the next update to Windows 10, we are implementing the first phase of Windows Defender System Guard runtime attestation, laying the groundwork for future innovation in this area. This includes developing new OS features to support efforts to move towards a future where violations of security promises are observable and effectively communicated in the event of a full system compromise, such as through a kernel-level exploit.
+Attestation and establishing trust
+To introduce Windows Defender System Guard runtime attestation on a technical level, it’s best to begin at the most visible layer: a client API that will eventually be exposed to a relying party. (Note: We share details of the general design as it’s currently architected; final implementation may differ.)
+We are working towards providing an API that relying parties can use to attest to the state of the device at a point in time. The API returns a runtime report that details the claims that Windows Defender System Guard runtime attestation makes about the security posture of the system. These claims include assertions, which are runtime measurements of sensitive system properties.
+For the runtime report to have any significant meaning, it must be generated in a fashion that provides reasonable resistance against tampering. This gives rise to the following basic component requirements:
+
+Runtime report generation must be isolated from an attacker
+This isolation must be attestable
+The runtime report must be cryptographically signed in a manner that is irreproducible outside the isolated environment
+
+Enter VBS enclaves. We’re not going to describe these enclaves in-depth here, but it’s prudent to give some context. On a device with virtual secure mode (VSM) enabled, virtualization extensions of the underlying Instruction Set Architecture (ISA) are employed to logically divide the system into two (theoretically, more) separate ‘worlds’: the ‘normal’ world running the NT kernel that we’re all familiar with and a separate ‘secure’ world running a Secure Kernel (SK). We call these two logical levels of separation ‘Virtual Trust Levels’ (VTLs), in this case NT being VTL-0 and SK being VTL-1.
+VBS enclaves enable what can be thought of as a siloed part of a ‘normal world’ VTL-0 user-mode process. All code and data in this silo live in VTL-1. Transactions in and out of an enclave are done via a well-defined API backed by VSL calls (the mechanism that NT and SK use to communicate). The result of this intricacy is that, as of Windows Fall Creators Update (1709), it is possible to execute code and hold data within an enclave such that the entire VTL-0 ‘normal’ world – both user-mode and kernel-mode – cannot directly act upon the siloed code and data while executing and held within the enclave (in VTL-1).
+From the VBS enclave, the runtime attestation component can observe and attest to a set of security properties contained in a report. For example, an app could ask Windows Defender System Guard to measure the security of the system from the hardware-backed enclave and return a report. The details in this report can be used by the app to decide whether it performs a sensitive financial transaction or display personal information.
+VBS enclaves can also expose an enclave attestation report signed by a VBS-specific signing key. If Windows Defender System Guard can obtain proof that the host system is running with VSM active, it can use this proof together with a signed session report to ensure that the particular enclave is running.
+As for the signature of the runtime report itself, an asymmetrical public-private key pair is generated within the enclave. The public key is signed by the Windows Defender System Guard attestation service backend to create a session certificate. In addition, the Windows Defender System Guard attestation service backend produces a signed session report containing details about the machine. These details include boot security properties, including whether the machine booted with Secure boot enabled, to ensure that the core operating system has not been jailbroken or tampered with. Finally, runtime reports are signed locally by the paired private key, which never leaves the enclave. The runtime and session reports can be verified by relying parties with little effort by verifying the report signatures against the session certificate and then ensuring that the certificate is validly signed, rooted in the relevant Microsoft CA.
+Establishing the trust necessary to guarantee that the runtime report is authentic, therefore, requires the following:
+
+Attesting to the boot state of the machine: the OS, hypervisor, and Secure Kernel (SK) binaries must be signed by Microsoft and configured according to a secure policy
+Binding trust between the TPM and the health of the hypervisor to allow trust in the Measured Boot Log
+Extracting the VSM IDKs from the Measured Boot Log and using these to verify the VBS enclave signature
+Backend verification of the above and signing of the public component of an ephemeral key-pair generated within the enclave with a trusted CA to issue a session certificate
+Signing of the runtime report with the ephemeral private key
+
+Networking calls between the enclave and the Windows Defender System Guard attestation service are made from VTL-0. However, the design of the attestation protocol ensures that it is resilient against tampering even over untrusted transport mechanisms.
+Numerous underlying technologies are required before the chain of trust described above can be sufficiently established. To inform a relying party to the level of trust in the runtime report that they can expect on any particular configuration, a security level is assigned to each Windows Defender System Guard attestation service-signed session report. The security level reflects the underlying technologies enabled on the platform and attributes a level of trust based on the capabilities of the platform. We are mapping the enablement of various security technologies to security levels, and we will share this when the API is published for third-party use. The highest level of trust is likely to require the following features, at the very least:
+
+VBS-capable hardware + OEM configuration 
+Dynamic root-of-trust measurements at boot
+Secure boot to verify hypervisor, NT, SK images
+Secure policy ensuring:
+
+Hypervisor-protected code integrity (HVCI)-enforced kernel mode code integrity (KMCI)
+Test-signing is disabled
+Kernel debugging is disabled
+
+
+
+Measurement
+Now that we have explained the trusted report component, let us discuss the contents of the runtime report.
+The security level exposed in the session report is an important and interesting metric in and of itself. However, Windows Defender System Guard can provide so much more – specifically in respect to runtime measurement of system security posture.
+We call this runtime measurement component the ‘assertion engine’. The idea is to continually measure – ‘assert’ – system integrity at runtime, with the security level attesting to security posture at boot.
+Some caveats:
+
+The assertion engine was designed with the ideal system configuration in mind (i.e., a system configuration with the highest security level)
+
+Business needs require Windows Defender System Guard runtime attestation to function on systems even with the lowest security level; Windows Defender System Guard runtime attestation makes no guarantees in this scenario and can act as a signal for other security products on non-locked down editions of Windows
+
+
+When running the ideal configuration, non-ROP kernel-mode code execution is difficult due to hypervisor-protected code integrity (HVCI)-enforced kernel mode code integrity (KMCI); in this scenario:
+
+Data corruption attacks are more likely
+It can be assumed that it’s difficult to tamper with any required kernel-mode agents in non-racing scenarios
+The runtime assertions are therefore targeted at attacks that can reasonably be performed under the most restrictive attack conditions
+
+
+We are working to limitations of (current) operating system design
+
+We have a deep partnership with other teams in Microsoft and we are work in tandem to improve System Guard runtime attestation and core kernel security features. In the current version of the OS, we rely on NT kernel thread management and the Secure Kernel primitives provided to us.
+
+
+
+
+High-level overview of Windows Defender System Guard runtime attestation architecture
+Architecturally, the solution is collectively referred to as the Windows Defender System Guard runtime monitor and consists of the following client-side components:
+
+The VTL-1 assertion engine itself
+A VTL-0 kernel-mode agent
+A VTL-0 process we call the ‘broker’ to host the assertion engine
+
+To rapidly respond to threats, we opted for a dynamic scripting approach that will allow us to frequently release updates going forward. We chose an open-source library that met our requirements for maturity, footprint, and performance. This scripting component forms the core of the assertion engine that executes in VTL-1 (if available).
+Running arbitrary logic in this engine wouldn’t be very useful if it couldn’t interact with the system in any way. For the engine to perform useful work, we provide native helpers in the form of ‘assists’. These assists are executed in VTL-0 either by the broker service or by a Kernel-mode agent.
+In the next update to Windows, assertion logic is delivered in-band (within the signed engine DLL itself). At some point in the future, these scripts will be delivered out-of-band. This is a core part of the design. It enables us to immediately respond to security events (for example, the discovery of new attack invariants) without the need for delivering a component update via servicing. Apps and services can take advantage of this attestation technology to ensure that the system is free from tampering and that critical processes are running as expected. This hardware-rooted “proof-of-health” can then be used to identify compromised machines or gate access to critical cloud services. Runtime attestation serves as a platform for a wide variety of advanced security applications.
+We believe that we can significantly raise the bar for security on locked-down platforms with modern hardware and appropriate security policies. In a world where direct privileged code-execution is difficult, we think that attacks will increasingly leverage data corruption. Transient changes are also a challenge in the current model. However, future innovations will make achieving persistence harder, making transient malicious changes more difficult. The idea is to continually elevate defense across the entire Windows 10 security stack, thereby pushing attackers into a corner where system changes affecting security posture are detectable. One can think of runtime attestation as being more about detecting minute symptoms that can indicate an attack rather than looking for flashing signals.
+We are very excited about this technology because of its potential for making significant leaps in platform security. There’s a lot more about Windows Defender System Guard runtime attestation that we did not cover in this blog, for example, the detailed design itself and where we see this technology going. Stay tuned.
+ 
+ 
+David Kaplan (@depletionmode), Windows Defender ATP Research Team
+Adam Zabrocki (@Adam_pi3), Windows Offensive Security Research Team
+Rafael Goncalves, Enterprise & Security
+ 
+ 
+
+
+Talk to us
+Questions, concerns, or insights on this story? Join discussions at the Microsoft community and Windows Defender Security Intelligence.
+Follow us on Twitter @WDSecurity and Facebook Windows Defender Security Intelligence.
+	

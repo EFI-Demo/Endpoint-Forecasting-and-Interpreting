@@ -1,0 +1,68 @@
+
+		One of the things that our Detection and Response Team (DART) and Customer Service and Support (CSS) security teams see frequently during investigation of customer incidents are attacks on virtual machines from the internet.
+This is one area in the cloud security shared responsibility model where customer tenants are responsible for security. Security is a shared responsibility between Microsoft and the customer and as soon as you put just one virtual machine on Azure or any cloud you need to ensure you apply the right security controls.
+The diagram below illustrates the layers of security responsibilities:
+
+Fortunately, with Azure, we have a set of best practices that are designed to help protect your workloads including virtual machines to keep them safe from constantly evolving threats. This blog will share the most important security best practices to help protect your virtual machines.
+The areas of the shared responsibility model we will touch on in this blog are as follows:
+
+Tools
+Identity and directory infrastructure
+Applications
+Network Controls
+Operating System
+
+We will refer to the Azure Security Top 10 best practices as applicable for each:
+Best practices
+1. Use Azure Secure Score in Azure Security Center as your guide
+Secure Score within Azure Security Center is a numeric view of your security posture. If it is at 100 percent, you are following best practices. Otherwise, work on the highest priority items to improve the current security posture. Many of the recommendations below are included in Azure Secure Score.
+2. Isolate management ports on virtual machines from the Internet and open them only when required
+The Remote Desktop Protocol (RDP) is a remote access solution that is very popular with Windows administrators. Because of its popularity, it’s a very attractive target for threat actors. Do not be fooled into thinking that changing the default port for RDP serves any real purpose. Attackers are always scanning the entire range of ports, and it is trivial to figure out that you changed from 3389 to 4389, for example.
+If you are already allowing RDP access to your Azure VMs from the internet, you should check the configuration of your Network Security Groups. Find any rule that is publishing RDP and look to see if the Source IP Address is a wildcard (*). If that is the case, you should be concerned, and it’s quite possible that the VM could be under brute force attack right now.
+It is relatively easy to determine if your VMs are under a brute force attack, and there are at least two methods we will discuss below:
+
+Azure Defender (formerly Azure Security Center Standard) will alert you if your VM is under a brute force attack.
+If you are not using Security Center Standard tier open the Windows Event Viewer and find the Windows Security Event Log. Filter for Event ID 4625 (an account failed to log on). If you see many such events occurring in quick succession (seconds or minutes apart), then it means you are under brute force attack.
+
+Other commonly attacked ports would include: SSH (22), FTP (21), Telnet (23), HTTP (80), HTTPS (443), SQL (1433), LDAP 389. This is just a partial list of commonly published ports. You should always be cautious about allowing inbound network traffic from unlimited source IP address ranges unless it is necessary for the business needs of that machine.
+A couple of methods for managing inbound access to Azure VMs:
+
+Use just-in-time (JIT) VM access
+
+Just-in-time will allow you to reduce your attack service while also allowing legitimate users to access virtual machines when necessary.
+
+Network security groups (NSG)
+Azure Firewall
+
+Network security groups contain rules that allow or deny traffic inbound to, or outbound traffic from several types of Azure resources including VMs. There are limits to the number of rules and they can become difficult to manage if many users from various network locations need to access your VMs.
+For more information, see this top Azure Security Best Practice:
+
+Native network security and firewall
+
+3. Use complexity for passwords and user account names
+If you are required to allow inbound traffic to your VMs for business reasons, this next area is of critical importance. Do you have complete confidence that any user account that would be allowed to access this machine is using a complex username/password combination? What if this VM is also domain joined? It’s one thing to worry about local accounts, but now you must worry about any account in the domain that would have the right to log on to that Virtual Machine.
+For more information, see this top Azure Security Best Practice:
+
+Passwordless or Multi-Factor Authentication (MFA)
+
+4. Keep the operating system patched
+Vulnerabilities of the operating system are particularly worrisome when they are also combined with a port and service that is more likely to be published. A good example is the recent vulnerabilities affecting the Remote Desktop Protocol called “BlueKeep.” A consistent patch management strategy will go a long way towards improving your overall security posture.
+5. Keep third-party applications current and patched
+Applications are another often overlooked area, especially third-party applications installed on your Azure VMs. Whenever possible use the most current version available and patch for any known vulnerabilities. An example is an IIS Server using a third-party Content Management Systems (CMS) application with known vulnerabilities. A quick search of the Internet for CMS vulnerabilities will reveal many that are exploitable.
+For more information, see this top Azure Security Best Practice:
+
+Posture management
+
+6. Actively monitor for threats
+Utilize the Azure Security Center Standard tier to ensure you are actively monitoring for threats. Security Center uses machine learning to analyze signals across Microsoft systems and services to alert you to threats to your environment. One such example is remote desktop protocol (RDP) brute-force attacks.
+For more information, see this top Azure Security Best Practice:
+
+Native threat detection
+
+7. Azure Backup Service
+In addition to turning on security, it’s always a good idea to have a backup. Mistakes happen and unless you tell Azure to backup your virtual machine there isn’t an automatic backup. Fortunately, it’s just a few clicks to turn on.
+Next steps
+Equipped with the knowledge contained in this article, we believe you will be less likely to experience a compromised VM in Azure. Security is most effective when you use a layered (defense in depth) approach and do not rely on one method to completely protect your environment. Azure has many different solutions available that can help you apply this layered approach.
+If you found this information helpful, please drop us a note at csssecblog@microsoft.com.
+To learn more about Microsoft Security solutions visit our website. Bookmark the Security blog to keep up with our expert coverage on security matters. Also, follow us at @MSFTSecurity for the latest news and updates on cybersecurity.
+	

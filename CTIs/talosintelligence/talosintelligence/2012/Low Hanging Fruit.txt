@@ -1,0 +1,24 @@
+
+We spend a lot of time watching what is going on in the world.  One of the advantages of having a customer-based intelligence sharing program as well as a distribution of our own sensors in the wild is that we are able to watch as threats change.  When new threats come into play, or when existing threats change, rules have to be created or modified.  Over the next few weeks, we're going to share some of the rules we've written in response to these threats and go over why we chose to write them in the way we did.  Hopefully this will help you in your custom rule-writing.
+
+Every now and then the bad guys pitch you a softball and you shouldn't be so wrapped up in fancy rule writing to let that one go by.  But even simple rules can trip you up.  Case in point: I've seen the following string in PDF files in several different exploit kit chains:
+
+
+C:\Users\Andrew\Desktop\NEW PDF EXPLOIT\blank.txt
+
+So here was my initial rule:
+
+alert tcp $EXTERNAL_NET $FILE_DATA_PORTS -> $HOME_NET any (msg:"SPECIFIC-THREATS Possible malicious pdf -- new pdf exploit"; flow:to_client,established; flowbits:isset,file.pdf; file_data; content:"NEW PDF EXPLOIT"; fast_pattern:only; metadata:policy balanced-ips drop, policy security-ips drop, service http; classtype:attempted-user; sid:21431; rev:2;)
+
+So, this rule has a couple of things worth mentioning.  First, the rule is written with $FILE_DATA_PORTS.  This means that we look at it over HTTP, POP and IMAP.  So a PDF matching this over any of those vectors will trigger the rule.  Next we have flowbits:isset,file.pdf;. This rule option checks to make sure that Snort has seen enough to know that this is a PDF file.  That way, this web page won't trigger the rule.
+
+Another thing to notice is that the content match for "NEW PDF EXPLOIT" is followed by fast_pattern:only;.  Normally, Snort uses the first, longest content match as the content for the fast pattern matcher.  This content becomes the triggering condition to enter full rule evaluation.  The fast_pattern; option overrides that, telling Snort to use the associated content match in the pattern matcher, not the first, longest content.  This rule has only one content match, so that functionality isn't important here.  Instead, I used the functionality of the "only" modifier to fast_pattern to eek out a little speed increase in rule performance.
+
+Using fast_pattern:only; instructs Snort not to look for the content during rule evaluation, as that content has already been seen during fast pattern matching.  It is important to know that because the fast pattern matcher is case agnostic, any match that is marked as fast_pattern:only; acts as if it had the nocase; modifier.  Also, this modifier can only be used when the content match is not associated with a relative match, because when Snort doesn't look for the content during rule evaluation it doesn't know where the content is in the packet, so relative content matches won't work.  Using the fast_pattern:only; construct means that when the rule enters evaluation, the only checks are for flow direction (making sure the packet is moving from a server to a client) and ensuring that the flowbit for pdf files has been set.  This makes for very fast rule evaluation.
+
+But there is a problem with this rule.  Notice the file_data; keyword.  This keyword ensures that the content match occurs in the part of the stream that is the actual file (for example, after the HTTP header) and ensures that the content is matched against the decoded file data buffer.  Fast pattern matches occur over all buffers, so we would still use the decoded file buffer, but we would like to ensure that the content match is in the right place.  To do this, remove the fast_pattern:only; keyword, allowing the file_data; keyword to properlly enforce location.  The final rule is this:
+
+alert tcp $EXTERNAL_NET $FILE_DATA_PORTS -> $HOME_NET any (msg:"SPECIFIC-THREATS Possible malicious pdf -- new pdf exploit"; flow:to_client,established; flowbits:isset,file.pdf; file_data; content:"NEW PDF EXPLOIT"; metadata:policy balanced-ips drop, policy security-ips drop, service http; classtype:attempted-user; sid:21431; rev:3;)
+
+The wild, wild west of the Internet is moving very quickly right now.  In particular, exploit kits morph almost day-to-day.  Having a firm understanding of how the various rule keywords work together is important to build the detection you need.  Hopefully this blog post gave you a little insight into the rule-writing process.  We'll be putting together more posts going forward that give slightly more complicated examples. Stay tuned!
+

@@ -1,0 +1,78 @@
+
+One of the fun parts about malware analysis is the name you give it.  I try to name my coverage in ClamAV similar to what other vendors are naming the same samples so there is some correlation and consistency.  Sometimes it works...this is one of the cases where it doesn't.  Various vendors call this family of malware different things, but they all seem to exhibit similar characteristics. 
+
+I've been looking into this family of malware recently, and since it has a very distinct method of operation, I thought I'd talk about it a bit, along with providing you some Snort rules to help find the malware on your network.  I'm not going to go into the in depth binary analysis here, I'll keep it simple - since most people in the Snort world will read this blog wondering about the malware from a traffic perspective, that's what I'll focus on.  Looking at what information you can glean just from watching the malware work is most of the battle.
+
+Let's start by looking at the packet dump, as that's what we are most interested in - how it behaves on the network.
+
+
+
+A connectivity check
+
+
+It starts off with a simple connectivity check.  There is nothing of value in the check, it's simply to see if the malware can reach the internet.  Immediately following this check, it starts doing DNS lookups.  This is a really noisy piece of malware, these requests are done very quickly, and there's a large amount of them.
+
+
+
+DNS lookups galore
+
+These lookups are very simple to write a sig against using the detection_filter keyword, as we only wanted to be alerted when there is a huge flood of similar requests.  Since this is generally a bad thing to do, we'll write this up.
+
+
+
+alert udp $HOME_NET any -> $EXTERNAL_NET 53 (msg:"BOTNET-CNC Possible host infection - excessive DNS queries for .eu"; flow:to_server; byte_test:1,!&,0xF8,2; content:"|02|eu|00|"; fast_pattern:only; detection_filter:track by_src, count 100, seconds 10; classtype:trojan-activity; sid:21544; rev:1;)
+
+After searching around in DNS for a bit, outbound SYN packets start flying around with a destination port of 22292.  (As I said, I'm keeping this simple.)  Also easily sig-able using a similar methodology as the detection_filter above.  But I'm not going to write this rule as it's very easy to evade just by changing the port.  When writing Snort rules you want to focus on things that will be consistent, so you'll catch more than one variant.
+
+
+
+
+I've pulled several samples of this and they all seem to exhibit the same activity.
+
+Eventually after what seems like some switching back and forth between these types of outbound traffic, an HTTP request is made.  I've blacked out portions of this just in case these numbers identify a system in some way:
+
+
+
+
+
+
+Looking at this dump there are some excellent distinguishing characteristics that we may want to use in a rule.
+
+
+
+1. HTTP/1.0
+
+2. The URI is rather unique.
+
+3. Host is in China.
+
+4. No Referer.
+
+
+
+Here's our rule:
+
+
+
+alert tcp $HOME_NET any -> $EXTERNAL_NET $HTTP_PORTS (msg:"BOTNET-CNC Win32.Trojan.Murofet variant outbound connection"; flow:established,to_server; content:".php?w="; nocase; http_uri; content:"&n="; distance:0; http_uri; pcre:"/\.php\x3fw\x3d+\x26n\x3d+/U"; content:"HTTP/1.0"; metadata:policy balanced-ips drop, policy security-ips drop, service http; reference:url,www.virustotal.com/file/aeab4913c8bb1f7f9e40258c323878969b439cf411bb2acab991bba975ada54e/analysis/; classtype:trojan-activity; sid:21440; rev:2;)
+
+The above "Murofet" rule has been in the hands of customers since the 27th of February.
+
+Content match number 1:
+".php?w="
+
+Content match number 2:
+"&n="
+
+Both could seem rather common, so let's use our PCRE to get rid of false positives.
+
+.php\x3fw\x3d+
+
+verifies that content match #1 has at least one digit after it until it hits:
+
+\x26n\x3d+
+
+Our second content match, also, verifying there is at least one digit in it.  We restrict all of those to http_uri so we don't wind up looking at the URI in the Referer field, cookie, body, or whatever.
+
+Our last content match is for "HTTP/1.0".  While still common in today's "web 2.0" world, HTTP/1.1 is much more common.
+

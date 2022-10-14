@@ -1,0 +1,378 @@
+
+This blog post is authored by Vitor Ventura.
+
+Executive summary
+
+
+
+
+Messaging applications have been around since the inception of the internet. But recently, due to the increased awareness around mass surveillance in some countries, more users are installing end-to-end encrypted apps dubbed "secure instant messaging applications." These apps claim to encrypt users' messages and keep their content secure from any third parties.
+
+
+
+
+
+
+
+However, after a deep dive into three of these secure messaging apps — Telegram, WhatsApp and Signal — we discovered that these services may not fulfill the promises they are meant to keep by putting users' confidential information at risk.
+
+
+
+
+
+
+
+This is a serious problem, considering users download these apps in the hopes that their photos and messages will stay completely protected from third parties. These apps, which have countless users, cannot assume that their users are security educated and understand the risk of enabling certain settings on their device. As such, they have an obligation to explain the risks to users, and when possible, adopt safer defaults in their settings. In this post, we will show how an attacker could compromise these applications by performing side-channel attacks that target the operating system these apps delegated their security to. This post will dive into the methods in which these apps handle users' data. It will not include deep technical analysis of these companies' security.
+
+
+Secure messaging applications
+
+
+
+
+The concept behind secure messaging apps is that the content of all communication is encrypted between users without third parties involved. This means the service provider should not be able to read the content at any point. 
+
+
+
+
+
+
+
+To achieve end-to-end encryption, these applications either developed their own cryptographic protocol or adopted a third-party one. There are two main protocols these apps usually use: MT Protocol developed by the secure messaging app Telegram, and Signal Protocol, developed by the software firm Open Whisper Systems. Since MT Protocol implementation is not         open-source, most of the remaining applications either use Signal Protocol or implemented a variation of it. Other applications, which are beyond the scope of this post, use this protocol upon request from the user, but not by default. That is the case of both Facebook Messenger, which utilizes a feature known as "Secret Conversations" and Google Allo, which has a feature called "Incognito" chats. In both protocols, the cryptographic implementation has been highly scrutinised by the security community. Researchers in the past have analyzed publicly available source code and performed black-box analysis in real-time communication data.
+
+
+
+
+However, a secure messaging application is much more than the cryptographic protocol. There are other components, such as the UI framework, file storage model, group enrollment and mechanisms that could all be used as an attack vector. The vulnerability CVE 2018-1000136 found in the Electron framework, which is used by both WhatsApp and Signal to build their user interface, is a good example of this. This vulnerability, in a worst case scenario, could allow an attacker to execute code remotely or could be used to copy messages.
+
+
+
+
+
+
+
+These protocols are focused on keeping communications private while in transit. However, they usually provide no assurances about security while the data is processing or when the message reaches the user's device. These protocols also don't manage group enrollment on these applications, as evidenced by the recent vulnerability found in WhatsApp. If an attacker compromises a WhatsApp server, they could add new members to a group without the group administrator's approval, allowing them to read new messages. This means there's the potential for a motivated actor to pick and choose specific WhatsApp groups to eavesdrop on, breaking the common understanding that this application provides bulletproof end-to-end encryption on all communications. 
+
+
+
+
+
+
+
+
+A presentation from Signal pledges to keep users' messages secure.
+
+
+
+Source: http://www.signal.org
+
+
+
+
+Behind the technical aspects of these applications is also an essential human aspect. 
+
+
+
+
+
+
+
+All of these applications advertise themselves as secure and privacy-minded. Some of them even go as far as to state that they are "safe from hacker attacks."  All these statements are meant to create trust between the users and the application. Users trust that the applications will keep their private data safe.
+
+
+
+
+
+
+
+Given that all of these applications claim to have millions of active users, it is clear that not all of these users will be cyber security-educated. As such, most of them won't have a full understanding of the risks and limitations posed by certain configurations on these applications. Keeping a person's privacy safe is more than just technology, it's also about providing the users with the correct information in a manner that they are able to understand the risks of their decisions, even without being security experts.
+
+
+
+
+
+
+
+
+A Telegram advertisement states that it will keep users' messages "safe from hacker attacks."
+
+
+
+Source: http://www.telegram.com
+
+
+
+
+Another significant feature that is advertised on these apps is their multi-platform capability. All apps support the major mobile device platforms and a desktop version. The typical user will rightfully believe that the security level is the same on all platforms. All the applications' websites present the idea that the security, privacy and platforms are kept at the same level.
+
+
+
+
+
+
+
+
+This signal advertisement shows users that they can use the app on various platforms
+
+
+
+Source http://www.signal.org
+
+
+
+
+Implementing security features tends to vary between these various platforms. Some platforms have more risks than others and these risks need to be communicated to the users since they will usually assume that each platform provides the same level of security protection.
+
+
+The problem
+
+
+
+
+The majority of these applications' users are not cybersecurity educated, which means they blindly trust these applications to keep their information safe and secure. It is clear that the source of such trust is the way the applications advertise their services.
+
+
+
+
+
+
+
+On May 16, 2018, Talos published an article on Telegrab, a malware that can hijack sessions from Telegram. The concept is simple: If an attacker can copy the session tokens from a desktop user, then it will be able to hijack the session. The attacker won't need anything else other than the information that is stored locally. It doesn't matter if the information is encrypted or not — by copying this information, the attacker will be able to use it to create a shadow session.
+
+
+
+
+
+
+
+Following up on that research, we decided to check if the same technique was also applicable to other messaging applications, which was proven to be correct on all tested applications (Telegram, Signal, WhatsApp). Not all of these applications handled sessions in the same way, which leads to different consequences upon this attack. 
+
+
+
+
+
+
+
+In the next section, we will describe some of these attack scenarios where the sessions of these applications can be replicated or hijacked.
+
+
+
+
+
+
+Applications
+
+Telegram — Desktop session hijacking
+
+
+Telegram seems to be the application where session hijacking is most likely to happen without users having any kind of indication that the attack occurred. Messages and images that are sent or received by the victim are replicated into the attacker's session. 
+
+
+
+
+
+
+
+Dual sessions on Telegram desktop environments.
+
+
+
+
+Once the attacker starts the Telegram desktop application using the stolen session information, a new session is established without giving any warning to the user. The user has to check if there is an additional session in use. This is carried out by navigating through the settings, which isn't obvious to the average user. When the message does show up on Telegram, it isn't obvious to the average user, either.
+
+
+Signal — Desktop session hijacking
+
+
+
+
+Signal handles the session hijacking as a race condition. When the attacker starts the application using the stolen session information, they both compete for the session. As a result, the user will see error messages on the desktop application, but not the mobile device. 
+
+
+
+
+
+
+
+
+Sessions created on Mac will work on Windows and vice-versa.
+
+
+
+
+However, by the time the victim receives these messages, the attacker already has access to all contacts and previous chats which were not deleted.
+
+
+
+
+
+
+
+In order to prevent the race condition, the attacker can simply delete the session information. When the user starts the application, it will receive a request to re-link the application.
+
+
+
+
+
+
+
+For a security expert, this would be a red flag. But for the average user, they may think it's just an error in the application.
+
+
+
+
+
+
+
+Two sessions for the same device.
+
+
+
+
+When the user creates the second session, it will only be visible from the mobile device, and by default, the two sessions will have the same name. 
+
+
+
+
+
+
+
+Therefore, the attacker will have the ability to view all messages and even impersonate the victims. The messages sent by the attacker will reach the victim's legitimate devices, but the attacker can delete them while sending them, avoiding detection. If the impersonation is done using the "Disappearing messages" feature, it will be even harder for the victim to identify the imitation.
+
+
+WhatsApp — Desktop session hijacking
+
+
+
+
+WhatsApp is the only application that has implemented a notification mechanism if there's a second session opened on a desktop. Under normal operations, if an attacker uses the stolen session information, the victim should receive a warning like the image below.
+
+
+
+
+
+
+
+
+WhatsApp multiple login notice.
+
+
+
+
+This notice pops up in the application that is online when the second session is created. The second session will be live and usable until the user makes a decision. So, by the time this notice appears, the attacker already has access to all of the victim's contacts and previous messages. The attacker will also be able to impersonate the victims until there is an answer to the message box. In an attack scenario where the victim is away from the terminal, the attacker will have access until the victim is back at the terminal. The victim will have no obvious warning on the mobile device alerting them of what happened. The current notice exists every time the victim uses the desktop client. A second session won't change the warning.
+
+
+
+
+This warning mechanism has a flaw, as it is possible for an attacker to bypass it following the procedure below.
+
+
+
+
+
+
+
+
+
+The attacker can simplify the procedure by skipping step 4 and waiting before executing step 5. The result will be the same since they will have access to the same messages. The attacker will only lose access if the victim manually terminates the session on the mobile device.
+
+
+
+
+
+This vulnerability was disclosed to Facebook according to our coordinated disclosure policy. All the advisory details can be found here. 
+
+
+Telegram — Mobile session shadowing
+
+
+Session abuse isn't a problem just in the desktop environment. Cloned mobile applications abuse these sessions in the wild.
+
+
+
+
+
+
+
+Shadow sessions on a mobile device.
+
+
+
+
+In the mobile environment, users should not be as concerned about their session being compromised, which under normal circumstances, should be much harder to obtain. The fundamental problem lies in the fact that Telegram allows shadow sessions to coexist on the same device based on the same phone number while handling it in different applications.
+
+
+
+
+
+
+
+This enables an attack scenario where an attacker can read all messages and contacts on Telegram until the session is terminated. With mobile devices, sessions are never terminated unless the user specifically requests termination through the options menu.
+
+
+
+
+
+
+
+There is another scenario on the Android platform, in which a malicious application could create a shadow session without any user intervention. The malicious application only needs the "read SMS" and the "kill background process" permissions, which are not usually considered as dangerous and could easily pass Google Play store verifications.
+
+
+
+
+
+
+
+The Telegram registration process starts by requesting a phone number, which is confirmed through an SMS that contains a unique code. If a user tries to register the same phone number again, Telegram will send a code over the Telegram channel and not an SMS. 
+
+
+
+
+
+
+
+The change in the delivery channel, from SMS to Telegram message, should prevent malicious applications from creating a shadow session without user interaction since they wouldn't be able to read the code. However, if the registration is not completed within a specific time frame, Telegram assumes the user doesn't have access to the Telegram application and will send a new code over SMS. 
+
+
+
+
+
+
+
+This backup mechanism creates a race condition that can be exploited by a malicious application, leading to a shadow session being created without user interaction. This entire process is outlined below.
+
+
+
+
+
+
+
+
+From this point on, the malicious application will have access to all contacts, past and future messages which are not under the "Secret chats."
+
+
+Conclusion
+
+
+
+
+Secure instant messaging applications have a solid track record of protecting the information while in transit, even going as far as protecting the information from their own servers. However, they fall short when it comes to protecting application state and user information, delegating this protection to the operating system.
+
+
+
+
+
+
+
+Signal protocol developers predicted this session hijacking. The session management protocol (Sesame protocol) security considerations contains a sub-chapter dedicated to the device compromise, which states, "Security is catastrophically compromised if an attacker learns a device's secret values, such as the identity private key and session state."
+
+
+
+
+
+
+
+This attack vector was even predicted by the protocol developers, as such individual users and corporations should be aware that these applications are not risk free. As such, it becomes more important that companies that use these apps to transmit private and sensitive information employ endpoint technology that better protects these assets. 
+
+
+

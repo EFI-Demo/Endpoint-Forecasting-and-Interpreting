@@ -1,0 +1,499 @@
+
+In my last post, you may remember how the latest
+  
+    Uroburos rootkit was able to disarm Patchguard on Windows 7
+  
+  . I was recently looking into how Patchguard is implemented in Windows 8.1 and decided to dig into Exception Handling
+  on x64. As a matter of fact, all the new 64-bit Windows operating systems have entirely changed the way they manage
+  error conditions from their state in older 32-bit
+  versions of Windows (C++ exceptions and OS Structured Exception handling). There are a lot of papers available on
+  64-bit Windows exception handling on the web, but I decided to increase my knowledge on this topic with the goal to
+  understand how it is implemented and to correctly characterize some strange behavior associated with the
+  implementation of Patchguard on Windows 8.1.
+
+
+  Here are some interesting articles that can be found online:
+
+
+
+  
+    
+      Exceptional Behavior - x64 Structured Exception Handling
+    - OSR Online. The NT Insider, Vol 13, Issue 3, 23 June 2006.
+  
+  
+    Skape, 
+    Improving Automated Analysis of Windows x64 Binaries
+    - Uninformed, June 2006. A great article from Matt Miller
+  
+  
+    Johnson, Ken. "
+    Programming against the x64 exception handling support
+    ." - Nynaeve. N.p., 5 Feb. 2007. A very good serie of articles that deals with Windows Vista x64 SEH implementation
+    written by Ken Johnson (Skywing)
+  
+
+
+
+  I strongly recommend that all the readers check out these 3 papers. I won't be rehashing any of the work there.
+
+
+  I will also assume that the reader already knows how Windows Structured Exception Handling and C++ exceptions handling
+  can be exploited to manage errors conditions. If not, I personally recommend the following book that explains very
+  well how this is done:
+
+
+  
+    Richter, Jeffrey, and Christophe Nasarre.
+    
+      Windows via C/C++
+    . Redmond, WA: Microsoft, 2007
+  
+
+
+Quick introduction
+
+  As the 3 articles mentioned above explain, x64 exception handling is not stack-based. Therefore, a lot of Structured
+  Exception Handling (SEH) attacks have became ineffective against 64 bit binaries. 64-bit Windows Portable Executables
+  (PE) have what is called the "Exception Directory data directory". This directory implements the 64-bit version of
+  exception handling. It’s the compiler’s duty to add the relative RUNTIME_FUNCTION structure in the exception directory
+  for each chunk of code directly or indirectly involved with exception handling. Here's what this structure looks like:
+
+
+
+  typedef struct _RUNTIME_FUNCTION {
+    DWORD BeginAddress;    // Start RVA of SEH code chunk
+    DWORD EndAddress;      // End RVA of SEH code chunk
+    DWORD UnwindData;      // Rva of an UNWIND_INFO structure that describes this code frame
+  } RUNTIME_FUNCTION, *PRUNTIME_FUNCTION;
+
+
+
+  Each runtime function points to an UNWIND_INFO structure that describes one of the most important feature of Windows
+  error handling: the
+  Frame Unwind. Before I describe what frame unwinding is, let’s take a look at the key structures related to the stack
+  unwind (the “UnwindData” member of the
+  RUNTIME_FUNCTION structure points to a UNWIND_INFO ):
+
+
+
+// Unwind info flags
+#define UNW_FLAG_EHANDLER 0x01
+#define UNW_FLAG_UHANDLER 0x02
+#define UNW_FLAG_CHAININFO 0x04
+
+// UNWIND_CODE 3 bytes structure
+typedef union _UNWIND_CODE {
+  struct {
+    UBYTE CodeOffset;
+    UBYTE UnwindOp : 4;
+    UBYTE OpInfo : 4;
+  };
+  USHORT FrameOffset;
+} UNWIND_CODE, *PUNWIND_CODE;
+
+typedef struct _UNWIND_INFO {
+  UBYTE Version : 3;          // + 0x00 - Unwind info structure version
+  UBYTE Flags : 5;            // + 0x00 - Flags (see above)
+  UBYTE SizeOfProlog;         // + 0x01
+  UBYTE CountOfCodes;         // + 0x02 - Count of unwind codes
+  UBYTE FrameRegister : 4;    // + 0x03
+  UBYTE FrameOffset : 4;      // + 0x03
+  UNWIND_CODE UnwindCode[1];  // + 0x04 - Unwind code array
+  UNWIND_CODE MoreUnwindCode[((CountOfCodes + 1) & ~1) - 1];
+  union {
+    OPTIONAL ULONG ExceptionHandler;    // Exception handler routine
+    OPTIONAL ULONG FunctionEntry;
+  };
+  OPTIONAL ULONG ExceptionData[];       // C++ Scope table structure
+} UNWIND_INFO, *PUNWIND_INFO;
+
+
+
+  The compiler produces a RUNTIME_FUNCTION structure (and the related unwind info data) for almost all procedures
+  directly or indirectly related with SEH (or C++ exceptions). The only exception, as outlined in "
+   Programming against the x64 exception handling support.",
+  is for the leaf functions: these functions are not enclosed in any SEH blocks, don’t call other subfunctions and
+  make no direct modifications to the stack pointer (this is very important).
+
+
+
+  Let’s assume that a parent function surrounded by a __try__except block calls another function from its __try
+  code block. When an exception occurs in the unprotected sub function, a stack unwinding occurs. The Windows kernel
+  MUST indeed be able to restore the original context and find the value of the RIP register (instruction pointer) from
+  before the call to the sub function had occurred (or a call to a function that subsequently jumps to the leaf
+  function). This procedure of unwinding the stack is called
+  Frame Unwind. The result of Frame Unwind is that the state of the key registers, including the stack, are restored to
+  the same state as before the call to the exception-causing function. This way, Windows can securely detect if an
+  exception handler (or terminator handle) is present, and subsequently call it if needed. The
+  frame unwind process is the key feature of the entire error management. The unwind process is managed in the Windows
+  kernel and can be used even in other ways (take a look at
+  RtlVirtualUnwind kernel function, which is highlighted in 
+  Programming against the x64 exception handling support).
+
+
+Exception Handling implementation - Some internals
+
+
+  The Skywing articles (mentioned at the beginning of the paper - 
+  Programming against the x64 exception handling support) cover the nitty gritty details of the internals of stack
+  unwind in the 64-bit version of Windows Vista. The current implementation of unwind in Windows 8.1 is a bit different
+  but the key concepts remain the same. Let's take a look at exception handling.
+
+
+  The internal Windows function RtlDispatchException is called whenever an exception occur. This function is implemented
+  in the NTDLL module for user mode exceptions, and in the NTOSKRNL module for kernel mode exceptions, although in a
+  slightly different manner. The function begins its execution by performing some initial checks: if a user-mode
+  “vectored” exception handler is present, it will be called; otherwise standard SEH processing takes place. The thread
+  context at the time of exception is copied and the
+  
+    RtlLookupFunctionEntry  procedure is exploited to perform an important task: to get the target Image base
+  address and a
+  Runtime Function structure starting with a RIP value, that usually points to the instruction that has raised the
+  exception. Another structure is used: the Exception History Table. This is, as the name implies, a table used by the
+  Windows kernel to speed up the lookup process of the runtime function structure. It is not of particular interest, but
+  for the sake of completeness, here's its definition:
+
+
+
+#define UNWIND_HISTORY_TABLE_SIZE   12
+typedef struct _UNWIND_HISTORY_TABLE_ENTRY {
+  ULONG64 ImageBase;
+  PRUNTIME_FUNCTION FunctionEntry;
+} UNWIND_HISTORY_TABLE_ENTRY, *PUNWIND_HISTORY_TABLE_ENTRY;
+
+typedef struct _UNWIND_HISTORY_TABLE {
+  ULONG Count;          // + 0x00
+  USHORT Search;        // + 0x04
+  USHORT bHasHistory;   // + 0x06
+  ULONG64 LowAddress;   // + 0x08
+  ULONG64 HighAddress;  // + 0x10
+  UNWIND_HISTORY_TABLE_ENTRY
+    Entries[UNWIND_HISTORY_TABLE_SIZE];
+} UNWIND_HISTORY_TABLE, *PUNWIND_HISTORY_TABLE;
+
+
+
+  If no runtime function is found, the process is repeated using the saved stack frame pointer (RSP) as RIP. Indeed in
+  this case, the exception is raised in a leaf function. If the stack frame pointer is outside its limit (as in the rare
+  case when a non-leaf function does not have a linked
+  RUNTIME_FUNCTION structure associated with it), the condition is detected and the process exits.
+
+
+  Otherwise, if the RUNTIME_FUNCTION structure is found, the code calls the 
+  RtlVirtualUnwind procedure to perform the virtual unwind. This function is the key of exception dispatching:
+  starting with the Image base, the RIP register value, the saved context and a
+  RUNTIME_FUNCTION structure, it unwinds the stack to search for the requested handler (exception handler, unwind
+  handler or chained info) and returns a pointer to the handler function and the correct stack frame. Furthermore, it
+  returns a pointer to something called the “HandlerData”. This pointer is actually the SCOPE TABLE structure, used for
+  managing C++ exceptions. This kind of stack unwind is
+  virtual because no unwind handler or exception handler is actually called in the entire process: the stack unwind
+  process is actually stopped
+  only when a suitable requested handler is found.
+
+
+
+  With all the data available, the NT kernel code now builds the 
+  DISPATCHER_CONTEXT structure and exploits RtlpExecuteHandlerForException to perform the transition to the language
+  handler routine (
+  _C_specific_handler in the case of SEH and C++ exceptions). It is now the duty of the language handler routine to
+  correctly manage the exception.
+
+
+
+// Call Language specific exception handler.
+// Possible returned values:
+// ExceptionContinueExecution (0) - Execution must continue over saved RIP
+// ExceptionContinueSearch - The language specific dispatcher has not found any handler
+// ExceptionNestedException - A nested exception is raised
+// ExceptionCollidedUnwind - Collided unwind returned code (see below)
+// NO Return - A correct handler has processed exception
+EXCEPTION_DISPOSITION RtlpExecuteHandlerForException(EXCEPTION_RECORD *pExceptionRecord,
+  ULONG64 *pEstablisherFrame, CONTEXT *pExcContext, DISPATCHER_CONTEXT *pDispatcherContext);
+
+
+
+  The implementation of RtlDispatchException in kernel mode is quite the same, with 3 notable exceptions:
+
+
+  No Vectored exception handling in kernel mode
+  A lot of further checks are done, like data alignment and buffer type checks
+  
+    RtlVirtualUnwind is not employed (except for collided unwinds), but an inlined unwind code is exploited (that relies
+    on the internal procedures
+    RtlpUnwindOpSlots
+    and
+    RtlpUnwindEpilogue
+    )
+  
+
+
+SEH and C++ Language specific Handler
+
+  The standard SEH and C++ exception handler is implemented in the _C_specific_handler
+  routine. This routine is, like the RtlDispatchException, implemented either in user mode or in the kernel.
+
+
+
+  It starts by checking if it was called due to a normal or collided unwind (we will see what a collided unwind is later
+  on). If this is not the case, it retrieves the Scope Table, and starts cycling between all of the entries in table: if
+  the exception memory address is located inside a C++ scope entry segment, and if the
+  target member of the scope table is not zero, the exception will be managed by this entry. The handler member of the
+  scope entry points to an exception filter block. If the pointer is not valid, and the struct member is 1, it means
+  that the exception handler has to be
+  always called. Otherwise the exception filter is called directly:
+
+
+
+DWORD ExceptionFilter(PEXCEPTION_POINTERS pExceptionPointers, LPVOID EstablisherFrame);
+
+
+
+  The filter can return one of these three possible dispositions:
+
+
+  
+    EXCEPTION_CONTINUE_EXECUTION - The C specific handler exits with the value
+    ExceptionContinueExecution; code execution is then resumed at the point where the exception occurred (the context is
+    restored by the internal
+    routine RtlRestoreContext)
+  
+  
+    EXCEPTION_CONTINUE_SEARCH - The C specific handler ignores this Scope item and continues the search in the next
+    Scope table entry
+  
+  
+    EXCEPTION_EXECUTE_HANDLER - The exception will be managed by the _C_specific_handler code
+  
+
+
+
+  If the filter returns the code EXCEPTION_EXECUTE_HANDLER, the C specific handler prepares all the data needed to
+  execute the relative exception handler and finally calls the routine
+  
+    RtlUnwindEx. This function unwinds the stack and calls all the eventual intermediate __finally
+  handlers, and the proper C exception handler. The routine is called by the C-specific handler in a particular way: the
+  target C++ exception handler pointer is passed in the “
+  TargetIp” parameter, while the original exception pointer is located in the exception record structure. This is a
+  very important fact, as this way all the eventual intermediate terminator handlers are called. If the C-specific
+  handler had call the specific exception handler directly, all the intermediate
+  __finally handlers would have been lost, and the collided unwinds (a particular unwind case) would have been
+  impossible to manage.
+  
+    RtlUnwindEx doesn’t return to the caller if it’s able to identify the real exception handler.
+
+
+  Here we provide all the data structures related to the Scope table:
+
+
+
+// C Scope table entry
+typedef struct _C_SCOPE_TABLE_ENTRY {
+  ULONG Begin;        // +0x00 - Begin of guarded code block
+  ULONG End;          // +0x04 - End of target code block
+  ULONG Handler;      // +0x08 - Exception filter function (or “__finally” handler)
+  ULONG Target;       // +0x0C - Exception handler pointer (the code inside __except block)
+} C_SCOPE_TABLE_ENTRY, *PC_SCOPE_TABLE_ENTRY;
+
+// C Scope table
+typedef struct _C_SCOPE_TABLE {
+  ULONG NumEntries;               // +0x00 - Number of entries
+  C_SCOPE_TABLE_ENTRY Table[1];   // +0x04 - Scope table array
+} C_SCOPE_TABLE, *PC_SCOPE_TABLE;
+
+
+
+  The important thing to note is that if there is a valid handler routine in the Scope Table entry but the target
+  pointer is NULL, it means that the related target code is enclosed by a "finally" block (and only managed by the
+  unwinding process). In this case the
+  handler member points to the code located in the finally block.
+
+
+Particular Cases
+
+Frame Consolidation Unwinds
+
+  As outlined in " Programming against the x64 exception
+  handling support
+  ", this is a special form of unwind that is indicated to 
+  RtlUnwindEx with a special exception code, STATUS_UNWIND_CONSOLIDATE. This exception code slightly changes the
+  behavior of
+  RtlUnwindEx; it suppresses the behavior of substituting the TargetIp argument to RtlUnwindEx
+  with the Rip value of the unwound context (as already seen in the C-specific handler routine). Furthermore, there is
+  special logic contained within
+  RtlRestoreContext (used by RtlUnwindEx to realize the final, unwound execution context) that detects the consolidation
+  unwind case, and enables a special code path that treats the ExceptionInformation member of ExceptionRecord structure
+  as a callback function, and calls it.
+
+
+
+  Essentially, consolidation unwinds can be thought of as a normal unwind, with a conditionally assigned
+  TargetIp whose value is not determined until after all unwind handlers have been called, and the specified context has
+  been unwound. This special form of unwind is in often used in C++ exceptions.
+
+
+Collided Unwinds
+
+
+  A collided unwind, as the name imply, occurs when an unwind handler routine initiates a secondary unwind operation. An
+  unwind handler could be for example a SEH terminator handle (routine that implements the
+  __finally block). A collided unwind is what occurs when, in the process of stack unwind, one of the call frames
+  changes the target of an unwind
+  . This definition is taken from " Programming against the x64
+  exception handling support", and I found quite difficult to understand at the first sight. Let’s see an example:
+
+
+
+int _tmain(int argc, _TCHAR* argv[])
+{
+  // Let's test normal unwind and collided unwind
+  TestUnwinds();
+  return 0;
+}
+
+// Test unwind and Collided Unwinds
+BOOLEAN TestUnwinds() {
+  BOOLEAN retVal = FALSE;   // Returned value
+  DWORD excCode = 0;        // Exception code
+
+// Test unwind and Collided Unwinds
+__try {
+  // Call a function with an enclosed finally block
+  retVal = TestFinallyFunc();
+
+  } __except(                 // Filter routine
+    excCode = GetExceptionCode(), EXCEPTION_EXECUTE_HANDLER
+    ) {
+    wprintf(L"Exception 0x%08X in TestUnwinds.\r "
+    L"This message is not shown in a Collided Unwind.\r", excCode);
+    }
+    wprintf(L"TestUnwinds func exiting...\r");
+    return retVal;
+  }
+
+// Test unwind and Collided Unwinds
+BOOLEAN TestFinallyFunc() {
+  LPBYTE buff = NULL;
+  BOOLEAN retVal = FALSE;
+  BOOLEAN bPerformCollided = 0;   // Let’s set this to 1 afterwards
+
+buff = (LPBYTE)VirtualAlloc(NULL, 4096, MEM_COMMIT, PAGE_READWRITE);
+
+do {
+  __try {
+    // Call Faulting subfunc with a bad buffer address
+    retVal = FaultingSubfunc1(buff + 3590);
+
+    // Produces CALL _local_unwind assembler code
+    if (!retVal) return FALSE;    // <-- 1. Perform a regular unwind
+    // Produces JMP $LN17 label (finally block inside this function)
+    //if (!retVal) __leave;
+  } __finally {
+    if (!_abnormal_termination())
+      wprintf(L"Finally handler for TestFinallyFunc: Great termination!\r");
+    else
+      wprintf(L"Finally handler for TestFinallyFunc: Abnormal termination!\r");
+    if (buff) VirtualFree(buff, 0, MEM_RELEASE);
+
+    if (bPerformCollided) {     // ← 2. Perform COLLIDED Unwind
+      // Here we go; first example of COLLIDED unwind
+      goto Collided;
+      // Second example of a collided unwind
+      break;
+      // Other example of collided unwind:
+      return FALSE;
+    }
+  }
+  Sleep(5000);
+} while (!retVal);
+  return TRUE;
+
+Collided:
+  wprintf(L"Collided unwind: \"Collided\" exit label.\r");
+  return 0;
+// Std_Exit:
+}
+
+
+
+  The example shows some concepts explained in this analysis. TestUnwinds is the main routine that implements a
+  structured exception handler. For this routine, a related
+  RUNTIME_FUNCTION structure, followed by a C_SCOPE_TABLE , is generated by the compiler. The scope table entry contains
+  either an
+  handler, and a target valid pointers. The protected code block transfers execution to the TestFinallyFunc procedure.
+  The latter shows how a normal unwind works: when
+  FaultingSubfunc1 raises an exception, a normal stack unwind takes place: the stack is unwound and the first __finally
+  block is reached. Keep in mind that in this case only the code in the __finally block is executed (the line with the
+  “Sleep” call is
+  never reached), then the stack frame unwind goes ahead till the __except block (exception handler) of the main
+  TestUnwinds
+  procedure. This is the normal unwind process. A normal unwind process can even be manually initiated, forcing the exit
+  from a try block: the “
+  return FALSE;“ line in the __try block is roughly translated by the compiler to the following:
+
+
+
+mov   byte ptr [bAutoRetVal], 0
+lea   rdx, $LN21
+mov   rcx,qword ptr [pCurRspValue]
+call  _local_unwind
+
+$LN21:
+mov   al, byte ptr [bAutoRetVal]
+goto  Std_Exit
+
+
+
+  The compiler uses the _local_unwind function to start the stack unwind. The _local_unwind function is only a wrapper
+  to the internal routine
+  RtlUnwindEx, called with only the first 2 parameters: TargetFrame is set to the current RSP value after the function
+  prolog;
+  TargetIp is set to the exit code chunk pointer as highlighted above... This starts a local unwind that transfers
+  execution to the
+  __finally block and then returns to the caller. The stack unwind process is quite an expensive operation. This is why
+  Microsoft encourages the use of the “
+  __leave ” keyword to exit from a protected code block. The “__leave” keyword is actually translated by the compiler as
+  a much faster “
+  jmp FINALLY_BLOCK” opcode (no stack unwind).
+
+
+
+  Now let’s test what happens when a bPerformCollided variable is set to 1….
+
+
+
+  In the latter case, FaultingSubfunc1 has already launched a stack unwind (due to an exception) that has reached the
+  inner
+  __finally block. The three examples of collided unwind code lines generate quite the same assembler code like the
+  manually initialized normal stack unwind (but with a different
+  TargetIp pointer). What happens now? A stack unwind process begins from an already started unwind context. As result,
+  the
+  RtlpUnwindHandler internal Nt routine (the handler associated with RtlpExecuteHandlerForUnwind ) manages this case. It
+  restores the original DISPATCHER_CONTEXT structure (except the TargetIp pointer) and returns
+  ExceptionCollidedUnwind constant to the caller (the second call to RtlUnwindEx). We don’t cover the nitty gritty
+  implementation details here, but we encourage the reader to check the Skywing articles (
+  http://www.nynaeve.net/?p=113).
+
+
+
+  A side effect of the Collided unwinds in the SEH implementation is that we lose the parent function exception handler:
+  the code flow is diverted and the compiler informs the developer with the
+  
+    C4532 warning message. The message located in the TestUnwinds exception handler routine of our example is indeed
+  never executed when a collided unwind occurs.
+
+
+Conclusion
+
+
+  In this blog post we took a hard look at the implementation of the Windows 8.1 64-bit Structured Exception handling.
+  We even analysed one of the most important concepts related to SEH: the stack unwind process, and two of its
+  particular cases. The implementation of the last case, the so called “Collided unwind”, is very important for the
+  Windows 8.1 Kernel, because the Kernel Patch Protection feature uses it heavily, rendering its analysis much more
+  complicated.
+
+
+  In the next blog post we will talk about how Patchguard is implemented in Windows 8.1. I'll also go over how the
+  Uroburos rootkit defeated Patchguard in Windows 7 and how those techniques no longer work on Windows 8.1. Stay tuned!
+
+

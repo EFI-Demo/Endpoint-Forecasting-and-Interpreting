@@ -1,0 +1,33 @@
+
+Since his company purchased a Sourcefire IPS setup last summer, I've had a close working relationship with Mickey Lasky, the primary network security analyst at a company (which shall intentionally remain unnamed) that runs a number of public-facing web sites. He sends me PCAPs whenever he runs across something especially weird, and I help him with custom rules in return. Mickey also runs experimental rules for me from time to time, which is quite useful since the network he's protecting is especially busy, and if there's going to be a false positive, it'll show up there.
+
+A couple of weeks ago, he sent me a particularly interesting set of PCAPs, saying that he'd collected them after discovering that a single, determined intruder was busy dropping malware on the web servers he's watching over by uploading PHP code to them via POST requests. By itself, that's not all that exciting; what I found interesting was the way the attacker had obfuscated the requests. In addition to lots of Base64-encoded data, there were large chunks of code that looked like this:
+$wWfdGw['_HG3uWD_']=Array('ob'    .  '_en'.'d_flus'.  'h');      $kITFJjggfl=Array();
+function    HG3uWD($ownentes83)
+{
+global  $kITFJjggfl;    $rdupmKoww  =    'c'."hr";
+$aaSbVPTgxM   =  $rdupmKoww(98) .   $rdupmKoww(97) .'se'  . 
+$rdupmKoww(54)."4_decode";$postimagistes    =  $rdupmKoww($aaSbVPTgxM('MTA=')).   $rdupmKoww(13)
+.' '   .   $rdupmKoww($aaSbVPTgxM('MzM='))   .    $rdupmKoww(35)  .    '%'.    $rdupmKoww(38)
+.$rdupmKoww($aaSbVPTgxM('NDA=')) .   ')'  .
+...
+Since the variable names changed from one POST to another - as did the way the code sliced up underlying strings like "chr" or, in other places, "base64_decode" - the question became, is there any generic characteristic across all of these attacks that could be used to write a rule, which would simultaneously not generate massive false positives on normal traffic?
+
+What immediately sprung to mind was the odd spacing surrounding the concatenation operators, or "."s. In normal PHP code, string concatenation generally looks like:
+$longvar = $var1 . $var2;
+...or:
+$longvar = $var1.$var2;
+There's no rational reason for a human to surround the "." with more than one space on either side, and certainly not a random number ranging up to five spaces on either side. Automated code generators wouldn't do spacing like that either. That led to an easy rule:
+alert tcp $EXTERNAL_NET any -> $HOME_NET $HTTP_PORTS (msg:"WEB-PHP generic PHP code obfuscation attempt"; flow:established,to_server;
+content:"|20 20 20 20 2E|"; content:"|20 20 20 20 2E|"; distance:0; classtype:trojan-activity;)
+The problem with this rule, we quickly found, was that since some of the web sites being monitored allowed code uploads, CSS files ended up heading towards port 80 on the network being monitored. When those files used spaces instead of tabs for declarations, a la:
+.calendar-date-switcher {
+They matched the initial signature and caused a bunch of false positives, rendering the rule useless for blocking mode.
+
+Going back to the drawing board, I realized that some of the built-in PHP keywords were never obfuscated in these attacks - in particular, Array(). Since CSS doesn't declare arrays like that, the rule quickly became:
+alert tcp $EXTERNAL_NET any -> $HOME_NET $HTTP_PORTS (msg:"WEB-PHP generic PHP code obfuscation attempt"; flow:established,to_server;
+content:"Array|28|"; content:"|20 20 20 20 2E|"; within:200; classtype:trojan-activity;)
+After 24 hours of testing, Mickey determined that the false positives had been eliminated, and that the rule was still catching the attacker's POST requests, so he turned it on in inline mode. Suddenly the attacks stopped succeeding, and the rule was lighting up his console like a hyperactive pinball machine.
+
+While this same attacker has continued to look for other ways to drop his code on Mickey's systems, I've reached out to other contacts running large production networks, and found that the false positive rate of that rule is essentially none. Armed with that knowledge, we've released it as SID 18493 in today's SEU. Though it's disabled by default, as are other similar obfuscation-detection rules, we would encourage you to give it a shot if you're interested. It may be that this particular technique is confined to this specific attacker, but since the rule is high-performance and apparently high-fidelity, the risk to reward ratio on it seems favorable to us, just in case.
+

@@ -1,0 +1,297 @@
+
+
+
+//<![CDATA[
+window.__mirage2 = {petok:"ff400c71937b710dd8f006fe1155ad80cdbc7686-1652772094-1800"};
+//]]>
+
+
+
+
+
+By Nick Biasini, Chris Neal and Matt Valites.
+
+
+
+
+
+
+
+Executive summary
+One of the trickiest challenges enterprises face is managing the balance between aggressively blocking malicious advertisements (aka malvertising) and allowing content to remain online, accessible for the average user. The days of installing a basic ad blocker on your web browser and expecting full protection are gone. Between the sites that require them to be disabled and the ability for advertisers to pay to evade them, ad blockers alone are not sufficient. 
+
+As this blog will cover in detail, malvertising is a problem not strictly associated with basic web browsing. It can also come with other software programs including adware or potentially unwanted applications (PUA). These latter examples require the most attention. In today's enterprise, an aggressive approach to advertising is required to be protected against malicious threats. That may include securing your DNS or adding additional layers of inspection through a firewall, intrusion prevention system, or a web security platform. Regardless of the approach, it needs to be thorough and take into account not just the security impacts, but the potential of cascading impact on your users. 
+
+Advertising is a key part of the internet as a whole and, whether you realize it or not, is one of the most foundational aspects of it. It is one of the reasons that a large chunk of the content available on the internet is free. It allows people to support their passion projects, their small businesses, and the food blogs of people around the world. However, it is a highly complex and convoluted system that is ripe for abuse. This is an issue that should not be ignored by the public, as these malicious ads can deliver malware out of nowhere and trick traditional internet users who may not be aware of the threats that exist on some pages.
+
+This blog is going to walk through how online advertising works, what malvertising is and why it's dangerous including real life examples, and finally the options that exist for organizations and private citizens to try and protect themselves from these threats.
+
+
+
+Online advertising primer
+Online advertising is big business. In 2018, the United States digital advertising revenue exceeded $100 billion. To put that in perspective, that's as large as the annual revenues for leading aerospace and multinational banking companies. So how does this complicated industry operate and how are ads served to users? There are numerous types of online advertising and associated ways to make money from it. One common distinction is between sponsored content and banner ads. Most users are familiar with banner ads as they tend to be somewhat isolated from the content of the webpage. Sponsored content, on the other hand, can appear on a page mixed in among the original content on the page. It typically will have some sort of identifier saying "Sponsored Content" and when a user clicks the link they are typically taken through the ad network to another site. Inside of each of these categories there are a wide variety of options for the advertiser. However, for the purposes of this blog we are going to focus on the area of online advertising that is the most ripe for abuse, real time bidding (RTB).
+
+Let's start by talking about the components of an RTB advertising network. 
+
+The first piece is the publisher, who gets paid to host ads on their site. To host ads, the publisher utilizes an advertising server. There are several ad servers to choose from, including self-hosted or service solutions. Self-hosted ad server options include open-source and paid solutions. The second key portion of an RTB network is an open ad exchange. This is a public digital marketplace where the publisher posts their site's ad spots that are available for bidding. The third and final portion of a basic advertising chain are the advertisers. These advertisers can include marketing companies, individuals, or other ad networks. These groups then bid in real time on the ad real estate available on content being rendered. Now, let's walk through how exactly this works.
+
+When a random user requests a web page, the HTTP request is sent to the publisher and the bidding begins. The publisher leverages integrated code or their ad server to list the ads for bid via the advertising exchange. As part of the HTTP request and response, the publisher can gather additional information about the requestor, including things like demographics, URL, location, browser type, window size, and other identifiable pieces of information. All this information is then passed to the ad exchange where advertisers begin the bidding. The additional information provided by the publisher can allow the advertiser to target their ads more specifically and display only to those users that are likely to be engaged. The winning bid is then chosen and the advertiser provides the ad to the ad exchange.  The ad exchange in turn returns the ad to the publisher and it is rendered to the user in the browser along with the remaining content on the page. Keep in mind this all happens in a matter of milliseconds and, as such, there is a potential for abuse.
+
+
+
+Monetization
+There are several ways publishers can get paid. First, and most common, is pay per impression (PPI). This is basically receiving money any time an ad renders on your page, no user interaction required. Advertisers pay per thousand impressions, in what is known as cost-per-mile (CPM). Next is pay-per-click (PPC). In this scenario, the publisher gets paid every time a user clicks on an ad. This usually generates a higher revenue than PPI since user interaction is required, but for the same reason is also less likely to occur. Finally, there is a pay-per-order (PPO) monetization. This is the highest revenue generation of the monetization avenues but usually requires the user to complete some action. These actions can include things like installing software, signing up for a mailing list, completing a form, or any other actions that constitute an order to the advertiser. This is also the most difficult of the monetization routes because it requires a user to not only click the ad, but also complete an action afterwards.
+
+Tracking
+One final point before moving onto malicious intent: tracking. Since advertisers and marketers are spending significant amounts of money in online advertising, they want to know which methods work best and they get that information through tracking data. This provides an interesting glimpse into the ways that the traffic is sourced and driven. You may notice some of this tracking information being passed in the URLs that you visit.  Below you will find an example of one of these URL additions.
+utm_term=2310109&s=1&utm_campaign=pps_News%20Anchors%20T3%20DS%20LLE%20-%20Desktop%20USA&utm_source=taboola&utm_medium=news_site&pps_term=She%20Was%20Live%20Reporting%2C%20And%20Viewers%20Got%20Way%20More%20Than%20What%20They%20Bargained%20For&utm_content=msn-ie11-us
+
+To better understand how this works we have modified the text formatting. The elements that start with utm are the tags associated with marketing. UTM stands for Urchin Tracking Module, the standard way to track marketing in digital advertising. As you can see there is a plethora of information provided in this context. The first couple of fields are tracking for the campaign and other numerical identifiers. Some of the other clues are more interesting.  Note the utm_medium field which shows where the traffic originated, in this case news_site. Additionally, you can see what term may have been clicked from fox news' page. Now these links can be both traditional banner ads or could also be sponsored content, which you now will see commonly on most major websites. The last field is the one that deserves attention and shows why this could be valuable for a malicious actor. Attached to the utm_content variable is a key bit of information 'ie11-us' which identifies both the location and the web browser of the system accessing the link. Imagine if you were an exploit kit user and could make your landing pages target systems running specific web browsers or a specific geolocation. Enter malvertising.
+
+
+
+
+
+Malvertising
+Malvertising refers to the method by which malicious actors are abusing the online advertising markets for nefarious gains. The process is largely the same as what is outlined above, but interspersed with legitimate advertisers are a handful of malicious actors, 'domainers', and traffic directors (TDS). These groups specialize in generating traffic to a destination, whatever that destination may be. Along the way, they employ multiple layers of obfuscation before finally serving malicious content. Effectively, they bid on ads at ad exchanges and then have those ads move through multiple layers of redirection techniques until landing on some sort of malicious content. That malicious deliverable can vary widely from fake flash players and tech support scams to exploit kits which compromise the requestors systems without user intervention.
+
+What we commonly see is a user getting dumped out to an exploit kit landing page and in triaging the compromise we can see clearly how the ad campaigns try to obfuscate themselves.
+
+
+This first image walks through the traffic director systems or TDS and the common redirection technique of using HTTP/1.1 302 requests. This technique, 302 cushioning, has been used for a long time with adversaries, but is also commonly used by most websites on the internet, which makes it an effective redirection mechanism.
+
+
+Here is the final 302 redirection that actually points to an exploit kit landing page, in this particular case the RIG exploit kit. This is the first major challenge that faces advertising networks: validation of ads. How is an ad network able to verify the true purpose of an ad that relies on so many tiers of 302 redirection? Manipulation of any of the 302 redirects along the path the exploit kit could make it completely benign. For instance, if the adversary pointed the final 302 redirect to a legitimate ad and then only shifted it to a malicious location in targeted instances, it becomes increasingly difficult to defend. 
+
+Redirections can also happen server-side, as in the case of HTTP 301, 302, or response headers, as well as through client-side code such as JavaScript or HTML elements. Additionally, malicious actors can leverage the effects of certain redirects to their advantage. For instance, redirecting the browser to another site via a Javascript 'location.replace' will not leave evidence of the redirect in the browser history, a useful tactic for anyone trying to obfuscate their tracks.
+
+
+This malicious infection chain involves a large amount of components and moving pieces. This complex environment provides a malicious actor ample opportunity to divert traffic from legitimate sites into malicious territory. Below is an infographic covering this overall process and flow.
+
+
+
+
+
+
+
+
+Use Case 1: Large-scale exploit kit campaign
+Cisco Talos has noticed a marked increase over the past several weeks in the amount of global RIG activity largely driven by malvertising. Before we get too deep into the campaign itself, let's discuss why malvertising is an attractive avenue for exploit kit users.
+
+Talos has observed three different ways to interact with exploit kits: malvertising, compromised websites and adware. Let's focus on malvertising to start. The large victim pool is one of the major advantages of malvertising. When leveraging a compromised website to deliver exploits, your victim pool is confined to only people navigating to that website. However, with malvertising you can hit a much larger array of different victims in different locations. Additionally, as we highlighted above, you can potentially target specific web browsers, greatly increasing your infection success rate. Below we can see one set of options presented to advertisers on an established ad service:
+
+
+Another advantage of malvertising is its negative impact on defenders or threat researchers. An adversary using a compromised website to deliver an exploit kit creates a single point of failure: the compromised site. Defenders and researchers can find the malicious server and block the compromised web site, and potentially even engage the victim to remediate the compromised site, effectively containing the campaign. The same campaign powered by malvertising, on the other hand, has multiple different entry points from a variety of both related and unrelated web pages, making enumeration and mitigation more difficult. Additionally, malvertising networks commonly iterate through multiple ad networks when being served ads. Tracing the malicious ad back to a particular advertiser can be challenging. Trying to recreate the infection chain can be extremely difficult if not impossible, since real-time bidding introduces an element of randomness to the content served.
+
+We've also seen a surge in adware delivering malicious ads to users. In today's world, anything that generates ad revenue could be leveraged by malicious actors. Let's walk through an example of this infection path that we discovered in Threat Grid during our research into the ongoing campaign.
+
+One of the challenges software developers have is the decision of how to monetize software. There are basically three options: sell it, bundle it, or open-source it. Selling and open-sourcing are fairly straightforward options resulting in either monetary gain from the sale or (hopefully) donations or other methods of support from the open-source community. Let's instead focus on bundling, or the process of adding additional software to the installation package.
+
+Worms are just one type of threat that analysts are familiar with. Over time there have been high-profile examples of such threats like Conficker, Slammer, Code Red or the more recent WannaCry. Difficult to contain, worms spread quickly and effectively. Due to both their prevalence and the potential difficulty associated with remediation, there are many software solutions to address these types of threats. A quick web search can result in a wide variety of results from the legitimate and expensive to the quasi-legitimate and free. One of those results could lead to a site like USB Guardian.
+
+
+As you can see, USB Guardian claims to be software designed to prevent you from getting infected with a worm and scan USB devices. This screen pops up when installing the software.
+
+
+This is where the bundled software comes into the picture, in this case the BestSecurityTips toolbar. This toolbar will be installed along with USB Guardian and is the source of the malicious activity. One red flag to the user should be when you click the toolbar end user license agreement you are met with a blank webpage.
+
+
+This particular toolbar is the Best Security Tips toolbar, and after some initial research, led to the conduit toolbar. Once installed, this toolbar will change the browser homepage and default search engine, allowing adversaries to change search results and other activities to promote click fraud and excessive advertising, which can lead to more damaging results including malware infection. These changes allow the ad networks to push content onto end systems with higher efficacy. This particular infection chain demonstrates some of the ways ads are requested by this software.
+
+A series of web requests kick off immediately after installation. The first request is to an ad network called "daily ads" and it ends with the user being served an exploit kit landing page.
+
+
+The request above is to a URL ending in "indexbst.php?idapp=198." However, there were other tiers of redirects that are occuring being the scenes.
+
+
+It begins with a request to daily ads for /version/version.php and is met with the first of many HTTP/1.1 302 requests pointing it to a series of other dailyads servers. This eventually results in a get request being delivered to ww7.dailyads[.]org, shown below.
+
+
+There is one key piece of information to pull from the above packet capture: the header 'X-Adblock-Key'. This header includes an API key that allows dailyads to bypass one of the most popular ad blockers. In many cases, this ad blocker is the only thing preventing a user from being shown a malicious ad. So the presence of this key implies that at least one of the biggest ad blockers would not have stopped these ads from rendering to the user. Eventually, the user will end up with a request ending in 'indexbst.php?idapp=198' as shown above, which is when the user first starts down a malicious path.
+
+
+This presents the user with yet another 302 cushion. This time, it points to what appears to be an ad hosted on mybetterdl[.]com. That request is met with yet another 302 pointing to a different subdomain at mybetterdl[.]com.Hosting 91Hosting 91.
+
+
+That leads to another 302 cushion, which this time points to an apparent ad at a different domain bitcoinmaker[.]site — it's this final ad that results in one final 302 cushion that points the user to an actual exploit kit landing page, in this case, RIG.
+
+
+
+
+
+Once the user completes the request after the series of 302 cushions, they will be presented with a landing page and eventually will be served a patched Adobe Flash or Internet Explorer vulnerability to deliver some sort of malicious payload.
+
+Scope and impact
+The specific example above walks through how a software installation can lead to a user hitting a series of malvertisements. However, most of these infections do not have a nexus of antivirus software or adware specifically and just involve users getting compromised by malicious ads.
+
+These malicious campaigns have hit a wide variety of different sites in various different verticals from news to design, music, racing, and popular culture. Talos has observed sites ranging as high as in the top 5,000 websites, per Alexa. However, Talos has also found evidence of ways that sites in the top 100 have been indirectly linked to this malvertising campaign. These often start with sponsored content, links typically displayed on various high ranking web pages linking to other, smaller web pages. The utm tags that were discussed earlier in the blog are a prime example of this behavior.
+
+We found several examples where a user would start at an Alexa top 50 site, including some of the biggest news sites on the internet. The user would then click on some sort of sponsored content, either wittingly or unwittingly. The user is then taken to a new site, well outside the Alexa top 50 to something in the Alexa top 10,000 instead. These sites will then have ads that move through multiple 302 cushions, similarly to what is described above.
+
+
+
+
+
+
+
+Use Case 2: Malicious content shot from the hip
+In June of 2019, Talos discovered a website redirecting Safari browsers to a domain delivering a malicious Flash Player installer. As opposed to the exploit kit use-case discussed above, the behavior for this malvertising campaign is somewhat repeatable, allowing Talos researchers to extract some additional information.
+
+In this case of malvertising, the actors utilize a common service called "domain parking" to enable their campaign. Essentially, parking domainers don't wait for a user to click on an ad to generate PPC revenue, but take benign traffic that would otherwise return an error, and redirect it into their ad network, acting as an ad publisher.  
+
+The benefits of this type of malvertising are similar to the previous use case: ease of use, simple targeting and higher likelihood of traffic. Zero Click traffic is sold in "traffic marketplaces," where an owner of a domain can purchase traffic and have it directed to their domain. As in the previous use-case, using a parking service, a user can specify the category of the domain to affect bidding, user's target browser, operating system, geolocation and in some cases the age and demographic of the person viewing the ad.
+
+At the time of the investigation, the initial domain was hosted with a parking service at a cloud provider in Lithuania. Cisco Threat Grid has nearly 700 malware samples with a threat score of 95 or above associated with this host. DNS history data shows the IP has hosted hundreds of domains over time. In a one-week span, 87 domains were pointed to the IP, including some obvious typo-squats such as:
+
+
+0utlook[.]com
+
+yotub[.]com
+
+gmyail[.]com
+
+yspace[.]com
+
+yyooutube[.]com
+
+During our investigation, more often than not, and while avoiding a server-side request rate limit, a Safari browser will be redirected through a series of sites ultimately landing at the fake Flash Player installer. A non-Safari browser, on the other hand, will redirect to a default domain parking page, offering the end user a chance to buy the domain through sedo.com, one of the long established domain parking providers with more than 16 million domains for sale. 
+
+Several different redirect methods were used in the request chain that delivered malware, as can be seen in the example in the table below. 
+
+
+A number of domains are visited multiple times during the redirect chain, with different query paths on each visit. The HTTP flow shows how difficult and convoluted the online advertising process can be to follow and how easily it can be compromised.
+
+When the visitor issues an HTTP GET for the site in the first sequence, client-side JavaScript redirects the host to two subsequent sites. Site 2 sets a tracking cookie containing a user ID and closes the connection. Site 3 redirects to site 4 using an HTTP response header:
+{"Cache-Control": "max-age=0, private, must-revalidate", "Content-Length": "11", "Date": "Wed, 03 Jul 2019 17:27:44 GMT", "Location": "http://usd.franciscus-ful[.]com/zcvisitor/de20fa7f-9db7-11e9-9522-1264782e7ac8?campaignid=77a8d2a0-8209-11e9-bf85-0a5f8f5656fe", "Server": "nginx", "X-Cache": "MISS from bc01", "Via": "1.1 bc01 (squid/3.5.27)", "Connection": "close"}
+
+Here, we can see a clue to the domain's role in Zero Click parked traffic via a response header for all requests to site 4:
+"Server": "ZeroPark-Traffic"
+The code on site 4 contains capabilities for both HTML and JavaScript redirect methods, and redirects to two more sites. Our test setup executed the JavaScript element to redirect to site 5, but not before collecting and attaching identifiable information about the browser such as page width and height, as well as whether the current window is the topmost window in the browser:
+<script type="text/javascript">
+
+setTimeout(function () {
+
+var pageWidth = window.innerWidth ? window.innerWidth : (document.documentElement && document.documentElement.clientWidth ? document.documentElement.clientWidth : document.getElementsByTagName('body')[0].clientWidth);
+
+var pageHeight = window.innerHeight ? window.innerHeight : (document.documentElement && document.documentElement.clientHeight ? document.documentElement.clientHeight :
+
+
+
+var iframeDetected = window.self !== window.top;
+
+window.location="http://usd.franciscus-ful[.]com/zcredirect?visitid=de20fa7f-9db7-11e9-9522-1264782e7ac8&type=js&browserWidth=" + pageWidth +"&browserHeight=" + pageHeight +"&iframeDetected=" + iframeDetected;
+
+}, 1);
+
+</script>
+Site 5's redirect via JavaScript to Site 6 is immediately redirected through two more HTTP redirects before ultimately being served the fake Flash Player.
+
+
+All 3 buttons are HTML href's to the same path on the current domain, which, if clicked, would download the malicious .dmg installer. This particular installer would infect your system with a well-known piece of malware called "Shlayer."
+
+
+
+
+Defending against malicious advertising
+Defending against malicious advertising is a difficult task for a variety of reasons. Online advertising is the reason that internet content is free, and there needs to be a balance between blocking ads and still allowing sites to generate revenue. In recent years, there have been some major shifts in this space, notably websites requiring users to turn off ad blockers to view content. While this is understandable from a revenue perspective, it does introduce risk and, in the campaigns we've seen, you can trace the infection path back to a user-clicked sponsored link on some of the most popular sites in the world. Additionally, there have also been reports that some of the big advertisers have been paying a premium to bypass popular ad blockers. In fact, in both uses cases that Talos researched for this article, advertisers paid to bypass an ad blocker, thus rendering the ad blocker unable to stop any ad served from that advertiser.
+
+In the end, this is no more than risk assessment, with various options available as a compensating control. On one end, you have an unfettered user experience with the highest possible risk associated with malicious advertising. As you add controls to address malicious advertising you will reduce risk, but also hinder your users. One step may be adding an ad blocker to web browsers, which will reduce risk with minimal impact to the user. However, some sites will no longer be available even at that low bar of protection. There is also a danger of a user whitelisting sites that eventually host malvertising or the aforementioned advertiser opt-out. The next phase could be to start adding other technologies like a web proxy or IDS/IPS to analyze the traffic on the wire. This again will increase the security and decrease risk, but comes with a significant cost increase and adds possible points of failure along the way. Then you have more aggressive options including attempting to block all ad networks.  This will give you the greatest reduction to risk, but also has the largest impact on your users.
+
+There are many different ways to block ad networks at the domain or nameserver level, but it does require you to make use of some sort of DNS product like Cisco Umbrella to achieve that goal. Another advantage to a product like Umbrella is its ability to block the gate and TDS domains. This may allow the organization an extra layer of protection that will stop known bad domains from serving content to users, without blocking ads unilaterally. Below is a table illustrating how the controls need to balance between risk and user impact.
+
+
+From a consumer perspective there are plenty of options, including open-source solutions that can help mitigate the issue at home, as well. Among them is the pi-hole project which leverages a raspberry pi to achieve ad protections. We at Cisco also offer some options for consumers to take advantage of the protections available in Umbrella.
+
+Regardless, of how you approach it, digital advertising is one of the biggest battlegrounds on the threat landscape for drive-by attacks delivering malicious content around the globe. Both enterprises and consumers need to be prepared and make a decision on how aggressive they want to be on blocking it. However, it's a unique challenge since the risk is eliminating large chunks of free content on the internet as it becomes increasingly difficult to generate revenue from that content. These are just a couple of the major issues we will be forced to confront over the next several years and the quicker you realize you are going to need to address it, the better served you will be.
+
+
+
+
+
+
+
+Coverage
+
+
+Advanced Malware Protection (AMP) is ideally suited to prevent the execution of the malware detailed in this post. Below is a screenshot showing how AMP can protect customers from this threat. Try AMP for free here.
+
+Cisco Cloud Web Security (CWS) or Web Security Appliance (WSA) web scanning prevents access to malicious websites and detects malware used in these attacks.
+
+Network Security appliances such as Next-Generation Firewall (NGFW), Next-Generation Intrusion Prevention System (NGIPS), and Meraki MX can detect malicious activity associated with this threat.
+
+AMP Threat Grid helps identify malicious binaries and build protection into all Cisco Security products.
+
+Umbrella, our secure internet gateway (SIG), blocks users from connecting to malicious domains, IPs, and URLs, whether users are on or off the corporate network.
+
+Additional protections with context to your specific environment and threat data are available from the Firepower Management Center.
+
+Open Source Snort Subscriber Rule Set customers can stay up to date by downloading the latest rule pack available for purchase on Snort.org.
+
+
+Indicators of Compromise (IOC)
+
+Use Case 1: Rig Exploit Kit Campaign
+
+IP Addresses:
+185[.]246[.]65[.]115
+185[.]246[.]65[.]118
+185[.]246[.]65[.]119
+176[.]57[.]217[.]135
+92[.]53[.]124[.]156
+185[.]246[.]64[.]222
+185[.]246[.]64[.]233
+185[.]246[.]64[.]236
+176[.]57[.]214[.]193
+176[.]57[.]217[.]89
+185[.]43[.]4[.]106
+185[.]246[.]64[.]155
+92[.]53[.]124[.]176
+82[.]146[.]49[.]141
+188[.]225[.]25[.]248
+92[.]53[.]124[.]167
+185[.]43[.]4[.]66
+188[.]225[.]35[.]239
+188[.]225[.]18[.]213
+188[.]225[.]34[.]73
+188[.]225[.]34[.]66
+37[.]230[.]117[.]169
+37[.]230[.]117[.]43
+37[.]230[.]117[.]77
+37[.]230[.]117[.]87
+188[.]225[.]35[.]55
+188[.]225[.]24[.]229
+185[.]246[.]64[.]144
+185[.]246[.]64[.]148
+185[.]246[.]64[.]157
+188[.]225[.]25[.]246
+176[.]57[.]217[.]134
+185[.]43[.]7[.]162
+94[.]250[.]253[.]147
+94[.]250[.]253[.]29
+188[.]225[.]33[.]219
+185[.]43[.]6[.]90
+185[.]43[.]6[.]106
+188[.]225[.]26[.]80
+176[.]57[.]220[.]7
+176[.]57[.]220[.]28
+37[.]46[.]135[.]254
+
+
+Use Case 2: Shoot2020 Campaign
+
+Domains:
+shoot2020[.]com
+axiomatic[.]world
+charmolivia[.]com
+sleepdiploma[.]pw
+usd[.]franciscus-ful[.]com
+cdn[.]formatlog[.]com
+cdn[.]detectioncache[.]com
+cdn[.]browsedisplay[.]com
+cdn[.]essentialarchive[.]com
+cdn[.]alphaelemnt[.]com
+cdn[.]megaelemnt[.]com
+cdn[.]originaloption[.]com
+cdn[.]entrydisplay[.]com
+cdn[.]initiatormaster[.]com
+

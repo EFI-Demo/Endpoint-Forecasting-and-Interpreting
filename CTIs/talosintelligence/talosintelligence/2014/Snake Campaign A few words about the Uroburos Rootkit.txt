@@ -1,0 +1,282 @@
+
+
+
+    Over the past few days, analyzing the new Uroburos (aka Turla) rootkit has been exciting. That's because the sample dropper (MD5: a86ac0ad1f8928e8d4e1b728448f54f9) includes a lot of clever features. We don’t want to rehash research already publicly available, but we will expand on some features that have not been covered in previous publications (like the driver loading strategy and the main dropper architecture).
+
+
+    The dropper is compressed with a simple packer that uses integer math, such a bit shifting, unsigned multiplication, and so on, to perform data decryption. At the end of the decryption routine, we end up with a
+    jmp ebxopcode. The jump leads to a copy stub routine that replaces the original bytes of the executable:
+
+
+
+
+ Figure 1. The simple Uroburos packer and data copy routine
+
+
+    The unpacked code first disables all possible error reporting windows from popping up by using the
+      SetErrorMode Windows API function. The binary then checks the version of the operating system, even if the process is running in WOW64 mode. Arguments passed to the binary at execution time are checked as well: if any of the arguments is the string
+        up, an auto-destruction routine is executed and all Uroburos files found on disk from possible previous runs are deleted. The dropper even checks for another instance of Uroburos running in memory on the target system by trying to open the following 3 mutexes:
+
+
+  
+    
+      "{E9B1E207-B513-4cfc-86BE-6D6004E5CB9C}" - Local setup mutex
+    
+    
+      “{B93DFED5-9A3B-459b-A617-59FD9FAD693E}” - Global Uroburos setup mutex
+    
+    
+      "shell.{F21EDC09-85D3-4eb9-915F-1AFA2FF28153}" - Global still unknown mutex
+    
+  
+
+
+    If any of these mutexes is found, the executable terminates the setup process.
+
+
+    Otherwise, it prepares all data structures needed for all its inter-module communication.
+
+
+    BypassDSEAndLoadVirusDrvis the name of the key routine of the Uroburos dropper. Its final goal is to load the Uroburos rootkit driver, and this is accomplished in different ways depending on the target's operating system. We will provide an in-depth analysis of how this is done later on. After the rootkit driver is loaded, a function in an user-mode module of the dropper called
+        format_ntfs_Win32, and identified within the binary as
+          resource 4000 is used to format its virtual volume, which is accessible via the device
+          \\.\Par1. As mentioned, the entire code responsible for formatting the virtual volume is written in user-mode. The malware authors interestingly decided not to use built-in low-level Windows formatting functions. The virtual volume is backed by a file called
+           fixdata.dat found in the main directory of Uroburos. This directory is called
+          $NtUninstallQXXXXXX$ (where the letters “XXXXXX” are 6 random numbers), is located under Windows root path, and is hidden by the kernel mode driver. The encrypted configuration file, found in the dropper as
+          resource 103 is extracted in a file called
+          system in the virtual volume. Finally the dropper is copied to a file called
+          fdisk_mon.exe located in the main path for Uroburs, and its corresponding system service named ultra3 is installed. This ensures the piece of malware survives a system reboot.
+
+
+
+
+
+            Main Path: %systemroot%\$NtUninstallQxxxxxx$
+
+              fdisk.sys - Main Rootkit driver
+
+              fdisk_mon.exe - Packed dropper executed as service
+
+              fixdata.dat - Virtual File systems file
+
+
+
+    Between this and upcoming blog posts, we will go over 3 major features found in Uroburos, which are the:
+
+
+  Kernel mode driver setup strategies
+  Patchguard disarming code
+  Virtual File System
+
+
+    
+
+    
+      Figure 2. A snapshot of the Virtual Volume content. Noteworthy: the “klog” file, which contains the
+      data captured by the keylogger, and the “system” file, which is the Uroburos configuration file
+    
+
+Uroburos Dropper Architecture - Modules communication
+
+
+    We believe that to facilitate an in-depth understanding of the specific features of Uroburos, we should go over the dropper's architecture. All Uroburos modules are DLLs embedded in the resource directory of the main dropper. As needed, the dropper gets a pointer to the target module located in resource directory (using the Windows API functions FindResource and LockResource), and starts processing it: the VirusLoadDll
+           routine takes the module resource buffer pointer as input, allocates a chunk of memory big as target PE virtual size, and then proceeds with the needed IAT resolution, relocations and fix-ups. At the end, the Uroburos main dropper has correctly loaded the DLL module in its address space. We can pinpoint that each of its resource modules is composed as follows:
+
+  
+    
+      DllEntryPoint implements the unpacking routine and a simple function that saves the DLL base address to a global variable
+    
+    
+      ee, anexported function that performs the actual module job
+    
+  
+
+
+Figure 3. A snap of the simple Dll Entry point of a Uroburos module
+
+
+    The routine ee is called with 3 parameters: a synchronization routine pointer, that resides in the main dropper; 2 custom parameters that usually point to the Uroburos driver buffer and its size. These last 2 parameters are needed for the exploit execution.
+
+
+    As the name implies, the “synchronization” routine initializes all synch data structures and an array of global functions pointer that could be called from the external module. In this way, the external library can always call the main dropper's internal routines. As we
+              proceeded with the analysis, we saw that some modules were only a wrapper to some
+                of the main dropper’s internal functions.
+
+
+    In summary, we have identified the following Snake (another name of Uroburos rootkit) modules:
+
+  
+    
+      A 32-bit and 64-bit driver (resource number 101 and 161)
+    
+    
+      A configuration file extracted and saved in the virtual volume
+      system(resource number 103)
+    
+    
+      ms09_025_Win32(resource number 1000), which exploits vulnerability 
+      CVE-2009-1123 in order to execute kernel-mode code (and automatically escalate privileges)
+    
+    
+      ms10_015_Win32(resource number 2000), which exploit vulnerability 
+      CVE-2010-0232 in order to escalate privileges and gain access to the SYSTEM account
+    
+    
+      vboxdrv_Win32 which is perhaps the most interesting one: it disables Windows 7 x64 Driver Signing Enforcement (DSE) by exploiting a bug in the VirtualBox signed driver. This module requires an in-depth analysis that we will cover afterwards
+    
+    
+      format_ntfs_Win32, whichimplements virtual volume initialization and NTFS formatting code.
+    
+  
+
+
+
+
+   Loading the driver
+
+
+
+    All the work needed to properly load the unsigned driver is managed by the
+                BypassDSEAndLoadVirusDrv function. This function tries to extract and run the ms09_025_Win32module with the aim of triggering exploiting
+                  CVE-2009-1123 and divert the kernel code execution to a custom routine that automatically escalates privileges and directly loads the already mapped driver. If the target OS isn't vulnerable to 
+                  CVE-2009-1123, or if the exploit has failed, it tries to extract and run the modulems10_015_Win32, but this time with the goal of only obtaining SYSTEM privileges. By checking the following registry key (requesting
+                  KEY_SET_VALUE access right) it can determine if the attempt to escalate privileges was successful:
+
+
+
+  HKLM\Software\Microsoft\Windows Nt\CurrentVersion\Windows
+
+
+
+    This key can only be written to by a user or process with 'administrator' privileges. If the main dropper is still unable to open this key, the procedure exits and the entire setup process is aborted.
+
+
+    The function CreateTurlaPathAndExtractDrvis called to create the directory
+    $NtUninstallQXXXXXX$in root directory of the operating system, and extract the kernel driver into a file called
+    fdisk.sys. If the OS is 32-bit, the dropper creates and populates the registry key
+    HKCR\Ultra3and executes the unsigned driver
+    sengoku_x64 (the main “Uroburos” driver) by calling the
+    ZwLoadDriver native API function. This method bypasses the standard Windows Service control manager.
+
+
+    Alternatively, if the OS is 64-bit, which means that it implements DSE and Patchguard, the vboxdrv_Win32module is extracted and executed. This DLL might be the most interesting from an analysis point of view.
+
+
+
+
+ The VBoxdrv module
+
+    The DLL starts by calling 2 functions located in the main dropper, with the goal of extracting and starting the signed VirtualBox driver named “sbhub.sys. Once the VirtualBox driver has been successfully started, pxinsi64.ex” (the executable that implements the user-mode part of the “VirtualBox exploit") is extracted from the module and executed using the CreateProcess API function. The VBoxDrv module now waits for the spawned process to complete execution.
+
+    This spawned 64-bit process first tries to open the VirtualBox device
+    \\.\VBoxDrvand, if successful, calls the function GetDseSymbolPtrto get the address of the kernel DSE variable
+      g_ciEnabled. If
+      pxinsi64.exe can't open the VirtualBox device, it immediately terminates. In fact, if the VirtualBox driver has not started correctly, Uroburos is not able to load an unsigned driver in x64 environments.
+
+
+    The function GetDseSymbolPtr warrants a closer look. I provide here the pseudo code:
+
+
+
+  NTSTATUS GetDseSymbolPtr (LPVOID * pCiEnableVa) {
+    DWORD dwJmpCiIatRva = 0;  // “JMP cs:_imp_CiInitialize” RVA
+
+    // … Get needed buffer size …
+    CALL ZwQuerySystemInformation(SystemModuleInformation, lpSysModInfo, 0, &buffSize);
+    for (i = 0; i < lpSysModInfo.NumModules; i++) {
+      OPEN kernel sys file directly from Disk and map // OpenReadAndRelocModule virus routine
+      Analyse on-disk module Import Table, find “CiInitialize” imported name
+      if (IAT_Symbol not found)
+        continue;  // goto next module
+
+      for (offset = 0; offset < curModule.size; offset++) {
+        curByte = curModuleBuff[offset];
+
+        // resolve “CiInitializeStub” routine address searching for “JMP _imp_CiInitialize” opcode
+        if ((curByte == JMP FAR opcode) &&
+          (JMP FAR offset == “CiInitialize” IAT entry))
+          Save this RVA in dwJmpCiIatRva
+
+        if (((curByte == CALL FAR opcode) &&
+          (CALL FAR offset == dwJmpCiIatRva))
+          // Go backward and search “MOV CS:g_ciEnabled, 1”
+          while (offset > 0) {
+            curByte = curModuleBuff[offset];
+            if (curByte == “MOV CS:REL32, imm8” opcode &&
+              sourceOperand == 1)
+              Resolve destination REL32 operand and return it.
+              This is the “g_ciEnabled” address
+        }
+      }
+    }
+  }
+
+
+
+    Strictly speaking, the algorithm resolves the CiInitializeStub stub function address, then tries to reach the
+     CALL CiInitializeStub instruction located in the SepinitializeCodeIntegrity Nt kernel internal routine. This routine is the one responsible for initializing the Driver Signing Enforcement when the system boots up. When the Uroburos code locates this CALL, it proceeds to search backward for the
+    mov cs:REL32, 1 opcode, and, if it finds it, resolves REL32 destination operand address. This symbol is the 
+    g_ciEnabled DSE Kernel variable.
+
+    
+ Figure 4. A snap of searched Driver Signing Enforcement code
+
+
+    At this point, pxinsi64.execan exploit the VirtualBox driver, by calling the Windows API function DeviceIoControl with the SUP_IOCTL_FAST_DO_NOP control code, as explained here.
+
+    However, before triggering the exploit, pxinsi64.exe prepares the VirtualBox device, sending the following input/output controls, also known as IOCTLs: SUP_IOCTL_COOKIE, SUP_IOCTL_LDR_OPEN, SUP_IOCTL_LDR_LOAD. This is important, because the supdrvIOCtlFastinternal VirtualBox driver function, should return 0, and not an error code. The Write What Where conditions should indeed update the value of the g_ciEnabled variable with the value 0.
+
+
+    If all goes well, the Windows Driver Signature Enforcement protection is disabled and pxinsi64.exeexits with the error code 0. Otherwise, it terminates with a different error code.
+
+
+    The VboxDrv module wakes up and deletes the 2 extracted files (now no longer needed): the exploit executable pxinsi64.exe, and the bugged VirtualBox driver usbhub.sys. It finally exits. The main Uroburos dropper can now load and start its infection driver in the same manner as it does for 32-bit systems.
+
+
+
+
+Conclusion
+
+
+    In this brief analysis, we provided an overview of the architecture of the Uroburos rootkit. Uroburos made use of a lot of clever tricks. We also provided an in-depth description of how Uroburos bypasses Driver Signature Enforcement (DSE).
+
+
+    In upcoming blog posts, we'll cover Uroburos':
+
+  
+    
+      code to bypass Patchguard
+    
+    
+      Virtual file system
+    
+  
+
+
+    Uroburos seems to have been put together with a lot of care. Interestingly, the packer used with the dropper doesn't seem to be as sophisticated as the rest of the techniques that are employed...
+
+
+    One last question remains: does the DSE bypass technique work on Windows 8 and/or Windows 8.1? The answer is no. As a matter of fact, if the host OS is a 64-bit version of Windows 8 or Windows 8.1, the
+      VBoxDrv module fails to run and the entire setup process is aborted. DSE and Pathguard are implemented in a different way in Windows 8 and Windows 8.1. In upcoming blog posts we will look into the how in DSE and Patchguard are implemented differently between Windows 7 and Windows 8, and whether exploit mitigation techniques available on Windows 7 can be bypassed in Windows 8.
+
+
+    Stay tuned!
+
+
+    Past papers/bogs on Uroburos/Turla:
+
+    
+      
+        BAE System reports: 
+        http://info.baesystemsdetica.com/rs/baesystems/images/snake_whitepaper.pdf
+      
+      
+        Artemon Security report: 
+        http://artemonsecurity.com/uroburos.pdf
+      
+      
+        
+        GData Software blog post
+      
+    
+

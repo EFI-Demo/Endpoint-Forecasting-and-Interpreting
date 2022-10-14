@@ -1,0 +1,43 @@
+Bitdefender antimalware researcher Octavian Minea explains the detailed inner workings of the Cryptolocker ransomware:
+The Cryptolocker ransomware gets installed by a Zbot variant and upon being run it immediately adds itself to Startup under a random name and tries to talk to a command and control server – sending a 192 byte encrypted packet of the form
+"version=1&id=1&name={COMPUTER_NAME}&group={GROUP_NAME}&lid={LOCATION_ID}"
+where {GROUP_NAME} seems to be related to the time of compilation of the malware and an example for {LOCATION_ID} is “en-US”
+If successful, it receives from the server a (presumably freshly-generated) public key and a corresponding Bitcoin address. These are added to the registry in registry keys of the form
+HKEY_CURRENT_USER\Software\Cryptolocker_NUMBER\
+which contain the values PublicKey, VersionInfo, Wallpaper – PublicKey stores the public key, VersionInfo stores the Bitcoin address and the command and control server address in an encrypted form, while Wallpaper stores the path to an actual wallpaper, containing instructions for the victim:
+
+ 
+This done, Cryptolocker begins encrypting documents which are in any of these formats: [download id=”3804″]. An AES key is generated for each file to be encrypted, the file is then AES-encrypted and the AES key is itself encrypted using the public key. The encrypted AES key is then appended to the encrypted file.
+The paths to the documents are stored in
+HKEY_CURRENT_USER\Software\Cryptolocker\Files\
+with DWORD values with this type of name
+C:?DIR?SUBDIR?SUBDIR?readme.doc
+Meanwhile, a variety of messages and instructions are being displayed:
+
+			
+				
+			
+			
+				
+			
+			
+				
+			
+			
+				
+			
+			
+				
+			
+			
+				
+			
+		
+
+Payment of the ransom can generally be performed in Bitcoins, although some Cryptolocker variants also accept payment methods Ukash, CashU or, only in the US of A, in MoneyPack prepaid cards which can only be bought with cash. All these payment methods are practically anonymous.
+Once the victim pays the ransom, the transaction ID must be entered and purportedly verifications ensue. If a private key is sent by the server, it is added to the registry and the decryption process begins. If any encrypted files are inaccessible, they are moved to the end of the decryption queue after an Error dialog is prompted, telling the victim
+<<Failed to decrypt a previously encrypted file {FILE_PATH} Perhaps the file may be damaged or used by another process>>
+with <<Retry>> and <<Cancel>> buttons provided. The victims are instructed that
+“If part of the files had not been decrypted – move them to the desktop and click Retry button”.
+When decryption ends, the Cryptolocker files are deleted, but the registry entries are kept. Bitdefender software detects and blocks Cryptolocker from installing, so Bitdefender customers are protected.
+For hardy souls who still don’t believe in total security, a Cryptolocker-blocking tool is available here.

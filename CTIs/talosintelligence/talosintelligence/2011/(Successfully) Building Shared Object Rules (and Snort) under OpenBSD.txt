@@ -1,0 +1,16 @@
+
+Here at the VRT, we have been adding support for more platforms and operating systems for shared object rules in the VRT Certified rule packs. Recently we started work on building shared object rules for Snort under OpenBSD. We ran into problems. After careful investigation, I have found the cause of the problem and can now present a fix for it. The following has been successfully tested under OpenBSD 4.8 on the amd64 platform.
+
+The issue stems from a consequence that occurs when attempting to build a shared object which links to a static library. In this case, the static library is libdnet, which will not properly create a shared library on OpenBSD with its default configuration (if you did ./configure && make && make install, you have this problem). This prevents the dynamic library for lib_sfengine from being built, which the so rules in turn rely on. Fortunately, the fix is pretty easy.
+
+Libdnet must be rebuilt, using the following configure line:
+./configure --with-gnu-ld --enable-sharedAfter libdnet is rebuilt, you must then create a symlink between the shared file and the name which snort expects as follows, and rebuild the library cache:
+ln -s /usr/local/lib/libdnet.1.1 /usr/local/lib/libdnet.so
+ldconfig -R /usr/local/libOnce this has been completed,  configure and make snort and the so rules just as you normally would.  However, if you have any further issues, adding the following flags to the snort configure command should take care of them:
+--disable-static-daq --with-dnet-includes=/usr/local/include --with-dnet-libraries=/usr/local/libThe final, related quirk, is that the .so links are not created for each of the .so.0.0 libraries created for either the engine, or the preprocessor.  You will want to run the following two commands to take care of that after installing:
+perl -e 'for(@ARGV){$nf = $_ ; $nf =~ s/\.0\.0//; link($_,$nf)}' /usr/local/lib/snort_dynamicengine/*
+
+perl -e 'for(@ARGV){$nf = $_ ; $nf =~ s/\.0\.0//; link($_,$nf)}' /usr/local/lib/snort_dynamicpreprocessor/*After this, you should be good to go.
+
+We will have pre-compiled shared object rules for OpenBSD coming to a rule pack near you in the not too distant future.
+

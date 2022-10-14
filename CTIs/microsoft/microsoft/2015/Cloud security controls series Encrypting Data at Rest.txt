@@ -1,0 +1,60 @@
+
+		In the last article I wrote in this series on cloud security controls I discussed controls that help protect data while its in-transit between Microsoft’s cloud services and our cloud service customers. Many of the customers I talk to are also interested in understanding the controls that are available to help manage the security of data stored and processed in Microsoft’s cloud services.
+There are many controls available that help mitigate different threats to data at rest, whether the data is stored online or offline. I’ll discuss some of these controls in this article. Given very high customer interest in this topic area, new features/functionality that provide customers control over data at rest are frequently announced and introduced into Microsoft cloud services. This article isn’t intended to be a complete list – it’s just an introduction.
+When it comes to data at rest, there are at least a few different categories of threats that enterprise customers tend to be interested in discussing with me when they first start evaluating cloud services. Some examples include:
+
+The threat that attackers are able to compromise a cloud service and gain access to their data that is processed by and/or stored in the Cloud.
+The “insider threat” where a malicious or rogue administrator steals a physical disk drive or server that contains data the customer has in the cloud service.
+The threat that a government uses a subpoena or warrant to get access to the customer’s data in the cloud without their knowledge.
+
+In all of these scenarios, encrypting customer data and properly managing the encryption keys can help mitigate the risk of unauthorized access to that data. While I’m going to discuss encryption controls in this article, it’s important to note that there are additional security controls such as physical security, access control, auditing, logging, key management, etc. that are used in concert with encryption options to mitigate some of these risks; I won’t be discussing these other controls in any detail in this already lengthy article.
+For example, the insider threat risk I mention above is also mitigated by all the physical security controls (gates, guards, locks, cameras, biometrics, etc.) that prevent unauthorized access and control authorized access to Microsoft datacenters. For the aforementioned insider threat scenario, the combination of all the physical security controls and data encryption controls make the probability of someone stealing a disk drive or server from a Microsoft datacenter and getting access to any customer data on it, very remote.
+Now let’s look at some of the encryption controls for data at rest that are available to customers.
+For some of the customers I talk to that are evaluating the security of Infrastructure as a Service (IaaS), they want to know about encryption options available to them in Microsoft Azure. There are several encryption related solutions that customers can choose from depending on the risks they are trying to mitigate. Let’s look at a few of these solutions.
+Some of the customers I talk to that are interested in moving some or all of their infrastructure into the cloud want to ensure that the virtual machines (VMs) they manage in the cloud are secured at rest and only boot and operate when their organization authorizes them to do so. They want to mitigate the risk that if someone managed to steal one of their VMs from the cloud, attackers could siphon off data stored in the VM using an offline attack or boot the VM with the intent of stealing data or modifying the VM in some way. Encryption can help manage these types of risks; without access to the encryption keys, the VMs stored in the Cloud won’t boot or provide easy access to data stored in them.
+Azure Disk Encryption
+Whether you are creating a new IaaS VM from the Azure gallery or migrating existing encrypted VMs from your on-premises operations, Azure Disk Encryption can help you manage encryption of disks used with Windows or Linux VMs. Using Azure Disk Encryption, Windows VMs can be encrypted using native BitLocker Drive Encryption which many enterprise customers already use to protect data stored on their on-premises Windows-based systems.  Those customers leveraging Linux VMs in Azure can protect them using DM-Crypt technology with a passphrase they provide.
+The BitLocker encryption keys or Linux DM-Crypt passphrases that are used to encrypt and decrypt the VM drives are stored in Azure Key Vault which provides protection for the keys via FIPS 140-2 Level 2 validated hardware security modules (HSMs). This means, among other things, that the HSMs that store customer keys and secrets have tamper-evident seals to protect against unauthorized physical access and role-based authentication for administration. This helps mitigate the risk that someone with physical access to the HSMs inside the heavily protected datacenter could easily tamper with HSMs or steal keys from them.
+The theft of a VM that has been protected this way would not allow an attacker to boot the VM or harvest data from it.
+Native BitLocker encryption for VMs running in Azure is something that many enterprise customers have asked me about and Azure Disk Encryption is what they are looking for. A preview of Azure Disk Encryption will be available soon – keep a look out for related announcements in the near future.
+Here are more resources where you can get more information on Azure Disk Encryption and Azure Key Vault:
+Azure Disk Encryption Management for Windows and Linux Virtual Machines
+Enabling Data Protection in Microsoft Azure (video)
+Azure Key Vault
+Introduction to Microsoft Azure Key Vault (video)
+Azure Key Vault – Making the cloud safer
+CloudLink SecureVM
+CloudLink SecureVM by EMC also provides native Windows BitLocker and Linux OS encryption for VMs running in Microsoft Azure. It emulates Trusted Platform Module (TPM) functionality to provide pre-boot authorization. CloudLink SecureVM allows you to define a security policy that permits VMs to start, verifies their integrity and helps to protect against unauthorized modifications. It also provides the ability to store the encryption keys so they reside inside customers’ own datacenters.
+You can find CloudLink SecureVM in the Microsoft Azure Marketplace as I have highlighted below.
+
+More information is available in the Microsoft Azure Market place, as well as:
+http://www.cloudlinktech.com/choose-your-cloud/microsoft-azure/
+Encrypting Azure Virtual Machines with CloudLink SecureVM
+Azure Virtual Machine Disk Encryption using CloudLink
+Guest Post: CloudLink Secures Azure VMs via BitLocker and Native Linux Encryption (video)
+Deploying CloudLink SecureVM from the Microsoft Azure Marketplace (video)
+CloudLink SecureVM Administration Guide
+StorSimple
+StorSimple is a hybrid-cloud storage appliance that you can put into your datacenter and connect to the Azure Storage service. This solution provides many benefits and security controls, but for data at rest, StorSimple systems encrypt data stored in the cloud with a customer-provided encryption key using standard AES-256 encryption that is derived from a customer passphrase or generated by a key management system.
+ 
+You can use the Azure Portal (as seen below) or Windows PowerShell for StorSimple for some management activities and there’s a StorSimple Adapter for SharePoint available.
+
+You can get more information from these resources:
+Introducing Microsoft Azure StorSimple
+StorSimple
+StorSimple Hybrid cloud storage security
+Cloud Storage Security Best Practices
+Episode 159: StorSimple with Ahmed El-Shimi (video)
+Client-Side Encryption for Microsoft Azure Storage
+Client-Side Encryption for Microsoft Azure Storage enables you to encrypt data contained in Azure Storage accounts including Azure Table storage, Azure Blob storage and Azure Queues. This feature enables developers to encrypt data inside client applications before putting in into Azure Storage. It also allows developers to decrypt the data stored in Azure Storage while downloading it to the client.
+For some customers, the advantage of this approach is that they completely control the keys used for encrypting and decrypting the data stored in Azure Storage. The Azure Storage service doesn’t have the encryption keys, only the customer does. Even if the customer’s Azure Storage Account keys were compromised, the data encrypted using client-side encryption would still be secure. This feature also supports integration with Azure Key Vault, which I mentioned earlier in this article.
+To take advantage of this capability, developers use a new open-source Azure Storage Client Library for .NET that’s interoperable across a number of programming languages. The storage client library uses Cipher Block Chaining (CBC) mode with AES to encrypt the data.
+Many details you’ll need are available including code samples:
+Get Started with Client-Side Encryption for Microsoft Azure Storage
+Client-Side Encryption for Microsoft Azure Storage – Preview
+Microsoft Azure Storage Client-Side Encryption Goes into General Availability
+I’ve covered a lot of ground in this article on protecting data at rest in Microsoft’s cloud. Frankly, there is a lot more I could write about here including SQL database encryption (Transparent Data Encryption (TDE), Cell Level Encryption (CLE), SQL Server Encrypted Backups, SQL Server Extensible Key Management (EKM), Office 365 encryption controls, OneDrive security controls, custom application encryption, etc. But this article provides a starting point for those customers evaluating the data protection controls available in Microsoft’s cloud.
+Tim Rains
+Chief Security Advisor
+Worldwide Cybersecurity & Data Protection
+	

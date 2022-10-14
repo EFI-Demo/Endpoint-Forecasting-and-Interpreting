@@ -1,0 +1,61 @@
+
+		This post is authored by Michael Melone, Principal Cybersecurity Consultant, Enterprise Cybersecurity Group. 
+Earlier this year, the world experienced a new and highly-destructive type of ransomware. The novel aspects of WannaCry and Petya were not skills as ransomware, but the combination of commonplace ransomware tactics paired with worm capability to improve propagation.
+WannaCry achieved its saturation primarily through exploiting a discovered and patched vulnerability in a common Windows service. The vulnerability (MS17-010) impacted the Windows Server service which enables communication between computers using the SMB protocol. Machines infected by WannaCry propagate by connecting to a nearby unpatched machine, performing the exploit, and executing the malware. Execution of the exploit did not require authentication, thus enabling infection of any unpatched machine.
+Petya took this worming functionality one step further and additionally introduced credential theft and impersonation as a form of worming capability. These techniques target single sign-on technologies, such as traditional domain membership. This added capability specifically targeted enterprise environments and enabled the malware to use a single unpatched endpoint to springboard into the network, then used active sessions on the machine to infect other machines regardless of patch level. To an enterprise, a single unpatched endpoint paired with poor credential hygiene could be used to enable propagation throughout the enterprise.
+Most impersonation and credential theft attacks are possible only when malware obtains local administrator or equivalent authorization to the operating system. For Petya, this would mean successful exploitation of MS17-010, or running under the context of a user with local administrator authorization.
+Measuring the value of a user account
+To a hacker, an infected or stolen identity is measurable in two ways: the breadth of computers that trust and grant authorization to the account and the level of authorization granted upon successful authentication. Since encryption can be performed by any user account, ransomware benefits most when it infects an account which can convey write authorization to a large amount of data.
+In most cases (thus far), the data sought out by ransomware has been either local files or those accessible over a network attached share – data which can be accessed by the malware using out-of-the-box operating system interfaces. As such, data encrypted by most ransomware includes files in the user’s profile, home directory, or on shared directories where the user has access and write authorization.
+In the case of WannaCry, the identity used by the ransomware was SYSTEM – an effectively unrestricted account from an authorization perspective. Running as SYSTEM, WannaCry had authorization to encrypt any file on the infected machine.
+Petya’s encryption mechanism required the ability to overwrite the boot sector of the hard drive to invoke its encryption mechanism. The malware then creates a scheduled task to restart the machine at least 10 minutes later to perform the encryption. The offline encryption mechanism prevented destruction of network files by Petya.
+Infected machines and worms
+Pivoting our focus to the worm aspect of these ransomware variants, the value of an infected host to a hacker is measurable in two ways: the quantity of newly accessible targets resulting from infection and the data which now becomes available because of the infection. Malware with worming capability focuses on widespread propagation, thus machines which can access new targets are highly valuable.
+To both WannaCry and Petya, a newly infected system offered a means to access previously inaccessible machines. For WannaCry, any potential new targets needed to be vulnerable to MS17-010. Vulnerability gave both malware variants SYSTEM-level authority, thus enabling successful execution of their payload.
+Additionally, in the case of Petya, any machine having reusable credentials in memory furthered its ability to propagate. Petya searches for active sessions on an infected machine and tries to use the session to infect machines which may not have been vulnerable to MS17-010. As a result, a single vulnerable endpoint may expose a reusable administrative credential usable to infect potential targets which grant that credential a necessary level of authorization.
+Codifying the vulnerability
+To defend against a ransomware application with worm capability we need to target the following areas:
+
+Ransomware
+
+Reduce the authorization level of users relative to the operating system of an infected machine
+Perform backups or versioning of files to prevent loss of data due to encryption, deletion, or corruption
+Limit authorization to delete or tamper with the data backups
+
+
+Worms
+
+Reduce the ability for an infected host to access a potential infection target
+Reduce the number of remotely exploitable vulnerabilities that provide remote code execution
+Reduce exposure of reusable credentials relative to the likelihood of a host to compromise
+
+
+
+Resolving Concerns through design
+Many of the risks associated with ransomware and worm malware can be alleviated through systems design. Referring to our now codified list of vulnerabilities, we know that our solution must:
+
+Limit the number (and value) of potential targets that an infected machine can contact
+Limit exposure of reusable credentials that grant administrative authorization to potential victim machines
+Prevent infected identities from damaging or destroying data
+Limit unnecessary risk exposure to servers housing data
+
+Windows 10, BYOD, and Azure AD Join
+Windows 10 offers a new management model that differs significantly from traditional domain joined machines. Azure Active Directory joined machines can still convey identity to organizational resources; however, the machine itself does not trust domain credentials. This design prevents reusable accounts from exposure to workstations, thus protecting the confidentiality of the credential. Additionally, this limits the impact of a compromised domain account since Azure AD joined machines will not trust the identity.
+Another benefit of Windows 10 with Azure AD is the ability to move workstations outside of the firewall, thus reducing the number of potential targets once infection occurs. Moving endpoints outside the firewall reduces the impact of any workstation threat by reducing the benefits normally gained by compromising a machine within the corporate firewall. As a result, this design exposes fewer server ports to potentially compromised endpoints, thus limiting the attack surface and reducing the likelihood of worm propagation.
+Moving workstations outside of the firewall offers added security for the workstation as well. Migrating to a BYOD architecture can enable a more stringent client firewall policy, which in turn reduces the number of services exposed to other hosts, and thus improves the machine’s defense against worms and other inbound attacks.
+Additionally, most organizations use many laptops which often connect from untrusted locations outside the firewall. While outside of the firewall, these machines can connect to untrusted sources, become infected, then bring the infection inside the firewall next time it is able to connect to the internal network. This causes confusion when trying to identify the initial infection during an incident response, and potentially exposes the internal network to unnecessary risk.
+Consider migration file shares to OneDrive or Office365
+Migrating data from traditional file shares into a solution such as SharePoint or OneDrive can limit the impact of a ransomware attack. Data stored in these technologies can enforce version control, thus potentially simplifying recovery. To further protect this data, limit the number of SharePoint users who had administrative authority to the site to prevent emptying of the recycle bin.
+Ensure resilient backups
+When an attack occurs, it is crucial to ensure ransomware cannot destroy data backups. Although convenient, online data backups may be subject to destruction during an attack. Depending on design, an online backup solution may trust a stolen reusable single sign-on credential to enable deletion or encryption of backup data. If this occurs, backups may be rendered unusable during the attack.
+To prevent against this, consider Azure Cloud Backup – a secure off-site backup solution. Azure Cloud Backup is managed through the Azure Portal which can be configured to require separate authentication, to include multi-factor authentication. Volumes used to store backup data reside in Azure and cannot be initialized or overwritten using on-premises domain credentials.
+Closing
+Windows 10 and BYOD architecture offers significant defense against a variety of cyberattacks, to include worms and ransomware. This article covers only some of the protections that Windows 10 offers against credential theft, bootkits, rootkits, and other malware techniques employed by this class of highly destructive malware.
+To better defend your organization against future malware outbreaks:
+
+Prepare to migrate client machines to Windows 10
+Plan for BYOD device management using Microsoft Intune and Azure AD joined machines
+Implement Azure Backup to provide a resilient and malware-resistant backup solution
+Learn how Windows Defender Advanced Threat Protection (ATP) can help your organization quickly detect and respond to malware outbreaks
+
+	

@@ -1,0 +1,221 @@
+
+This is the fourth in a series of five blog posts about the Content IQ Test. Please see ClamAV vs. Content IQ Test, part 1, ClamAV vs. Content IQ Test, part 2 and ClamAV vs. Content IQ Test, part 3.
+
+How would ClamAV do against dangerous VBA (Visual Basic for Applications) embedded in Office documents?
+
+Test file 22 has the target string contained in VBA embedded in a Powerpoint file.
+
+
+azidouemba@ubuntu:~/Downloads$ cat test.ldb 
+TestSig2;Target:0;(0|1);6576616c{-200}756e657363617065{-200}282725363525373625363925366325323825323927;6500760061006c{-200}75006e006500730063006100700065{-200}2800270025003600350025003700360025003600390025003600630025003200380025003200390027
+azidouemba@ubuntu:~/Downloads$ clamscan -d test.ldb Test_File_22_Ts_in_Vba_in_Ppt.pptm 
+Test_File_22_Ts_in_Vba_in_Ppt.pptm: TestSig2.UNOFFICIAL FOUND
+
+----------- SCAN SUMMARY -----------
+Known viruses: 1
+Engine version: 0.97.4
+Scanned directories: 0
+Scanned files: 1
+Infected files: 1
+Data scanned: 0.30 MB
+Data read: 0.32 MB (ratio 0.96:1)
+Time: 0.449 sec (0 m 0 s)
+
+azidouemba@ubuntu:~/Downloads$ clamscan -d test.ldb Test_File_22_Negative_Control.pptm
+Test_File_22_Negative_Control.pptm: OK
+
+----------- SCAN SUMMARY -----------
+Known viruses: 1
+Engine version: 0.97.4
+Scanned directories: 0
+Scanned files: 1
+Infected files: 0
+Data scanned: 0.68 MB
+Data read: 0.31 MB (ratio 2.16:1)
+Time: 0.069 sec (0 m 0 s)
+
+
+A PPTM file is a macro-enabled Powerpoint Presentation file and follows the Microsoft Office OpenXML format, which combines XML and ZIP compression. ClamAV treats PPTM files as archives and has no problem seeing the following in one of the files within that archive:
+
+
+[snip]
+00000600  01 00 00 20 00 1c 02 b6  00 2d 00 65 76 61 6c 28  |... .....-.eval(|
+00000610  75 6e 65 73 63 61 70 65  28 27 25 36 35 25 37 36  |unescape('%65%76|
+00000620  25 36 39 25 36 63 25 32  38 25 32 39 27 29 29 20  |%69%6c%28%29')) |
+00000630  3d 20 65 76 69 6c 28 29  00 11 00 20 00 1e 02 11  |= evil()... ....|
+[/snip]
+
+
+Test files 23, 24 and 25 are respectively Word, Excel and Powerpoint Show files that have the target string contained in an embedded VBA script. Simarly to test file 22, ClamAV treats these DOCM, XLSM and PPSM files as archives. See below:
+
+
+azidouemba@ubuntu:~/Downloads$ cat test.ldb 
+TestSig2;Target:0;(0|1);6576616c{-200}756e657363617065{-200}282725363525373625363925366325323825323927;6500760061006c{-200}75006e006500730063006100700065{-200}2800270025003600350025003700360025003600390025003600630025003200380025003200390027
+azidouemba@ubuntu:~/Downloads$ clamscan -d test.ldb Test_File_23_Ts_in_Vba_in_Doc.docm 
+Test_File_23_Ts_in_Vba_in_Doc.docm: TestSig2.UNOFFICIAL FOUND
+
+----------- SCAN SUMMARY -----------
+Known viruses: 1
+Engine version: 0.97.4
+Scanned directories: 0
+Scanned files: 1
+Infected files: 1
+Data scanned: 0.00 MB
+Data read: 0.34 MB (ratio 0.00:1)
+Time: 0.013 sec (0 m 0 s)
+azidouemba@ubuntu:~/Downloads$ clamscan -d test.ldb Test_File_23_Negative_Control.docm 
+Test_File_23_Negative_Control.docm: OK
+
+----------- SCAN SUMMARY -----------
+Known viruses: 1
+Engine version: 0.97.4
+Scanned directories: 0
+Scanned files: 1
+Infected files: 0
+Data scanned: 0.72 MB
+Data read: 0.34 MB (ratio 2.14:1)
+Time: 0.086 sec (0 m 0 s)
+azidouemba@ubuntu:~/Downloads$ clamscan -d test.ldb Test_File_24_Ts_in_Vba_in_Xls.xlsm 
+Test_File_24_Ts_in_Vba_in_Xls.xlsm: TestSig2.UNOFFICIAL FOUND
+
+----------- SCAN SUMMARY -----------
+Known viruses: 1
+Engine version: 0.97.4
+Scanned directories: 0
+Scanned files: 1
+Infected files: 1
+Data scanned: 0.04 MB
+Data read: 0.29 MB (ratio 0.14:1)
+Time: 0.017 sec (0 m 0 s)
+azidouemba@ubuntu:~/Downloads$ clamscan -d test.ldb Test_File_24_Negative_Control.xlsm 
+Test_File_24_Negative_Control.xlsm: OK
+
+----------- SCAN SUMMARY -----------
+Known viruses: 1
+Engine version: 0.97.4
+Scanned directories: 0
+Scanned files: 1
+Infected files: 0
+Data scanned: 0.59 MB
+Data read: 0.29 MB (ratio 2.01:1)
+Time: 0.159 sec (0 m 0 s)
+azidouemba@ubuntu:~/Downloads$ clamscan -d test.ldb Test_File_25_Ts_in_Vba_in_Pps.ppsm 
+Test_File_25_Ts_in_Vba_in_Pps.ppsm: TestSig2.UNOFFICIAL FOUND
+
+----------- SCAN SUMMARY -----------
+Known viruses: 1
+Engine version: 0.97.4
+Scanned directories: 0
+Scanned files: 1
+Infected files: 1
+Data scanned: 0.30 MB
+Data read: 0.32 MB (ratio 0.96:1)
+Time: 0.051 sec (0 m 0 s)
+azidouemba@ubuntu:~/Downloads$ clamscan -d test.ldb Test_File_25_Negative_Control.ppsm 
+Test_File_25_Negative_Control.ppsm: OK
+
+----------- SCAN SUMMARY -----------
+Known viruses: 1
+Engine version: 0.97.4
+Scanned directories: 0
+Scanned files: 1
+Infected files: 0
+Data scanned: 0.68 MB
+Data read: 0.31 MB (ratio 2.16:1)
+Time: 0.063 sec (0 m 0 s)
+
+
+
+Test file 26 is a file that has the target string contained in an executable file embedded in a PDF file.
+
+
+
+azidouemba@ubuntu:~/Downloads$ cat test.ldb 
+TestSig2;Target:0;(0|1);6576616c{-200}756e657363617065{-200}282725363525373625363925366325323825323927;6500760061006c{-200}75006e006500730063006100700065{-200}2800270025003600350025003700360025003600390025003600630025003200380025003200390027
+azidouemba@ubuntu:~/Downloads$ clamscan -d test.ldb Test_File_26_Ts_in_Exe_in_Pdf.pdf 
+Test_File_26_Ts_in_Exe_in_Pdf.pdf: TestSig2.UNOFFICIAL FOUND
+
+----------- SCAN SUMMARY -----------
+Known viruses: 1
+Engine version: 0.97.4
+Scanned directories: 0
+Scanned files: 1
+Infected files: 1
+Data scanned: 0.02 MB
+Data read: 0.01 MB (ratio 2.00:1)
+Time: 0.011 sec (0 m 0 s)
+azidouemba@ubuntu:~/Downloads$ clamscan -d test.ldb Test_File_26_Negative_Control.pdf 
+Test_File_26_Negative_Control.pdf: OK
+
+----------- SCAN SUMMARY -----------
+Known viruses: 1
+Engine version: 0.97.4
+Scanned directories: 0
+Scanned files: 1
+Infected files: 0
+Data scanned: 0.02 MB
+Data read: 0.01 MB (ratio 3.00:1)
+Time: 0.011 sec (0 m 0 s)
+
+
+
+ClamAV was able to determine that an executable was embedded in the PDF file, extracted it and found the following in it:
+
+[snip]
+000025e0  6e 00 67 00 73 00 21 00  0a 00 0a 00 00 4d 65 00  |n.g.s.!......Me.|
+000025f0  76 00 61 00 6c 00 28 00  75 00 6e 00 65 00 73 00  |v.a.l.(.u.n.e.s.|
+00002600  63 00 61 00 70 00 65 00  28 00 27 00 25 00 36 00  |c.a.p.e.(.'.%.6.|
+00002610  35 00 25 00 37 00 36 00  25 00 36 00 39 00 25 00  |5.%.7.6.%.6.9.%.|
+00002620  36 00 63 00 25 00 32 00  38 00 25 00 32 00 39 00  |6.c.%.2.8.%.2.9.|
+00002630  27 00 29 00 29 00 0a 00  0a 00 01 5f 49 00 66 00  |'.).)......_I.f.|
+00002640  20 00 74 00 68 00 69 00  73 00 20 00 68 00 61 00  | .t.h.i.s. .h.a.|
+[/snip]
+
+
+Test file 27 consists of the target string contained in an executable file embedded in a PDF file in a polymorphic Zip file. We can take an educated guess as to whether ClamAV will be able to find the target string in such a file, but let's look at the test results:
+
+
+azidouemba@ubuntu:~/Downloads$ cat test.ldb 
+TestSig2;Target:0;(0|1);6576616c{-200}756e657363617065{-200}282725363525373625363925366325323825323927;6500760061006c{-200}75006e006500730063006100700065{-200}2800270025003600350025003700360025003600390025003600630025003200380025003200390027
+azidouemba@ubuntu:~/Downloads$ clamscan -d test.ldb Test_File_27_Ts_in_Exe_in_Pdf_in_Zip.zip 
+Test_File_27_Ts_in_Exe_in_Pdf_in_Zip.zip: TestSig2.UNOFFICIAL FOUND
+
+----------- SCAN SUMMARY -----------
+Known viruses: 1
+Engine version: 0.97.4
+Scanned directories: 0
+Scanned files: 1
+Infected files: 1
+Data scanned: 0.02 MB
+Data read: 0.02 MB (ratio 1.00:1)
+Time: 0.063 sec (0 m 0 s)
+azidouemba@ubuntu:~/Downloads$ clamscan -d test.ldb Test_File_27_Negative_Control.zip 
+Test_File_27_Negative_Control.zip: OK
+
+----------- SCAN SUMMARY -----------
+Known viruses: 1
+Engine version: 0.97.4
+Scanned directories: 0
+Scanned files: 1
+Infected files: 0
+Data scanned: 0.05 MB
+Data read: 0.01 MB (ratio 4.00:1)
+Time: 0.016 sec (0 m 0 s)
+
+
+Finding the target string in test file 27 is no harder for ClamAV than it is for us to open Russian dolls. ClamAV extracted the contents of the Zip archive, found and opened the PDF file. The PDF was analyzed and found to contain an executable that was extracted. In the executable, ClamAV came across the following string which caused it to alert:
+
+
+[snip]
+000025e0  6e 00 67 00 73 00 21 00  0a 00 0a 00 00 4d 65 00  |n.g.s.!......Me.|
+000025f0  76 00 61 00 6c 00 28 00  75 00 6e 00 65 00 73 00  |v.a.l.(.u.n.e.s.|
+00002600  63 00 61 00 70 00 65 00  28 00 27 00 25 00 36 00  |c.a.p.e.(.'.%.6.|
+00002610  35 00 25 00 37 00 36 00  25 00 36 00 39 00 25 00  |5.%.7.6.%.6.9.%.|
+00002620  36 00 63 00 25 00 32 00  38 00 25 00 32 00 39 00  |6.c.%.2.8.%.2.9.|
+00002630  27 00 29 00 29 00 0a 00  0a 00 01 5f 49 00 66 00  |'.).)......_I.f.|
+00002640  20 00 74 00 68 00 69 00  73 00 20 00 68 00 61 00  | .t.h.i.s. .h.a.|
+[/snip]
+
+
+The next post in this series will examine how well ClamAV does against the Malicious Content IQ Test.
+

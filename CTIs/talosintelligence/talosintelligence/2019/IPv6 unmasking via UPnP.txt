@@ -1,0 +1,159 @@
+
+
+
+Martin Zeiser and Aleksandar Nikolich authored this post.
+
+
+
+Executive summary
+
+
+With tools such as ZMap and Masscan and general higher bandwidth availability, exhaustive internet-wide scans of full IPv4 address space have become the norm after it was once impractical. Projects like Shodan and Scans.io aggregate and publish frequently updated datasets of scan results for public analysis, giving researchers greater insight into the current state of the internet.
+
+While IPv4 is the norm, the use of IPv6 is on the rise. However, there's been very little analysis on the most recent version of the internet protocol because it's impossible to run exhaustive scans given the size of the address space. We need to deploy novel techniques to enumerate active IPv6 hosts.
+
+In the following post, we'll present a technique that uses the properties of the Universal Plug and Play (UPnP) protocol to get specific IPv4 hosts to divulge their IPv6 address. This allows us to enumerate a particular subset of active IPv6 hosts which can then be scanned. We performed comparative scans of discovered hosts on both IPv4 and IPv6 and presented the results and analysis. Our findings show that this technique is valid and that there are significant security discrepancies in filtering between IPv4 and IPv6 interfaces of these hosts and unintended IPv6 connectivity will be a growing problem.
+
+
+Introduction, motivation and previous research
+Multiple high-profile vulnerabilities have prompted extensive scans of the entire internet to gauge the concrete impact and remediation to such an extent that exhaustive scans of full IPv4 address space have become an integral part of modern network security research. The Heartbleed vulnerability, a bug in the OpenSSL cryptographic software library, prompted extensive analysis of how widespread the vulnerability is, as well as patch adoption over time.
+
+Several research publications tried to raise awareness of database misconfiguration issues that plague publicly accessible MongoDB and Redis instances.
+
+We have previously conducted internet-wide scans for accessible Memcached servers to assess the exposure to multiple vulnerabilities. We scanned the software affected by the vulnerabilities TALOS-2016-0219, TALOS-2016-0220 and TALOS-2016-0221 to study patch adoption rates and if they were vulnerable.
+
+Distributed denial-of-service (DDoS) campaigns such as the Mirai botnet rely on IPv4 scans and default credentials to spread and infect millions of devices.
+
+All of these, good and bad, are enabled by the fact that with relatively few resources, one can conduct a full IPv4 port scan in a matter of hours.
+
+With IPv6 currently being the only viable long term solution to IPv4 address exhaustion, we are witnessing a steady rise in both IPv6-capable networks and active IPv6 hosts.
+
+
+
+
+
+To alleviate the problem of IPv4 exhaustion, IPv6 uses 128-bit addresses, resulting in the theoretical maximum number of hosts being tens of orders of magnitude larger than IPv4. Such astronomical numbers of available addresses make the current IPv6 address space very sparse. There's a relatively small number of actual IPv6 addresses in use, and the addresses that are used are somewhat random, meaning that addresses are scattered. Enumerating all active hosts by scanning all of this address space is practically, and theoretically, infeasible. With the greater adoption of IPv6, this threatens to hide an ever larger number of hosts in future internet surveys. This is especially critical as a growing number of unsecured internet-of-things devices come online.
+
+Several researchers have developed novel techniques to uncover active, internet-connected, IPv6 hosts to solve this issue. Some use a privileged network position to compile lists of active hosts, while others use legitimate features of different protocols that could be misused. The Shodan project used features of Network Time Protocol to get hosts to reveal their IPv6 addresses. The IPv6Hitlist project uses multiple sources and techniques to make a daily updated list of active IPv6 hosts and networks such as forward DNS lookups, certificate transparency logs, RIPE Atlas and others. The IPv6 Farm project has used properties of DNS and DNSSEC to uncover active hosts and do comparative scans against IPv4 address counterparts.
+
+We intend to contribute to public IPv6 research with a technique that relies on UPnP NOTIFY packets to uncover pairs of IPv4 and IPv6 addresses of dual-homed hosts. Although relatively small in magnitude, our resulting dataset consists of mostly end-user, client-side, consumer devices that are largely not covered in previously published datasets.
+
+
+UPnP and the internet
+Universal Plug And Play is a set of network protocols initially designed for network discovery. In essence, different devices on a local network can announce their presence and capabilities to others. Another common use for UPnP is Network Address Translation or NAT traversal where devices can use Internet Gateway Device Protocol to forward ports.
+
+As designed, UPnP has no place outside the local network, yet many devices do expose UPnP ports openly to the internet. This has led to abuses and attacks over the years. UPnP has been abused to maliciously punch holes in NAT, remotely disclose sensitive network configuration information and perform DDoS attacks, among others. We have previously published research into possible UPnP client-side attacks and abuses, which gives us an idea of how to use it to umask IPv6 addresses.
+
+When a new device connects to the network, it announces its presence and capabilities by sending a UPnP NOTIFY packet to a multicast address. The packet usually looks like this:
+
+NOTIFY * HTTP/1.1
+Host:239.255.255.250:1900
+Cache-control:max-age=1800
+Location: http://host/description.xml
+Nt:upnp:rootdevice
+Nts:ssdp:alive
+Usn:uuid:de5d6118-bfcb-918e-0000-00001eccef34::upnp:rootdevice
+The important bit in that packet is the "Location" header, which specifies a description URL that points to an XML file describing the device's capabilities. When this packet is sent via UDP to special address "239.255.255.250" any device that supports UPnP and Simple Service Discovery Protocol (SSDP) is supposed to visit that URL, fetch the XML and parse it. Coincidentally, this was the core of MiniUPnP vulnerability we published in 2015 (TALOS-2015-0035).
+
+UPnP implementations don't care where the NOTIFY packet comes from, whether from the local network to multicast IP address or if it was delivered to the endpoint directly. This means that by sending this specific UPnP packet, we can have the target UPnP endpoint connect back to a URL of our choosing. As previously mentioned, many devices on the internet expose UPnP port, 1900 UDP by default, unfiltered.
+
+Combining this, we can have a NOTIFY packet that specifies an URL containing an IPv6 address. If we send that NOTIFY packet to an IPv4 address that has UPnP port open and if that host also has IPv6 connectivity, it would connect back to the specified URL, thus revealing it's IPv6 address. If we do this for all IPv4 addresses, we expect to get various IPv6 hosts connecting back. That way, we can make pairs of IPv4 and corresponding IPv6 addresses, scan both and look for discrepancies.
+
+
+Scan execution
+The scanning consists of two steps. First, we send specific UPnP NOTIFY packets to every IPv4 address to gather IPv6/IPv4 pairs. Then, we perform full port scans of uncovered pairs and compare the open port states on the IPv4 and IPv6 side.
+
+For the first step, we decided to use Masscan's modified packet templates to send our NOTIFY packet. To record the HTTP requests coming from hosts that try to retrieve the description URL, we simply ran a web server with full logging. To be able to distinguish HTTP requests coming from different hosts, we needed a way to make every request unique. A nice way to do so was to encode the target IPv4 address into the "Location" URL. Our NOTIFY packet looks like this:
+
+NOTIFY * HTTP/1.1
+Host:239.255.255.250:1900
+Cache-control:max-age=1800
+Location:http://[IPv6_address_of_our_server]/?IPv4_ADDR_OF_TARGET
+Nt:upnp:rootdevice
+Nts:ssdp:alive
+Usn:uuid:de5d6118-bfcb-918e-0000-00001eccef34::upnp:rootdevice
+If the target UPnP IPv4 host receives this packet and has IPv6 connectivity, it will make an HTTP GET request to our IPv6 server with its IPv4 address in the URL. In our HTTP server log file we would see something like this:
+
+
+
+
+
+2406:XXXX:XXXX:XXXX:XXXX:XXXX:XXXX:7090 [IPv6_address_of_our_server]:55555 –[20/Dec/2018:16:47:30 -0500] "GET /?IPv4_ADDR_OF_TARGET HTTP/1.1" 404 345"-" "Linux/3.10.0_hi3536, UPnP/1.0, Portable SDK for UPnP devices/1.6.18"
+
+
+In the above output, we can see the target host's IPv6 address, its corresponding IPv4 address in the GET request, and its User-Agent string, which reveals its UPnP implementation and version. Additionally, since we didn't want anyone intentionally polluting our data, we used a simple encryption scheme to encrypt the IPv4 address embedded in the URL. That way, when parsing logs, we could authenticate that what we got were legitimate requests resulting from our NOTIFY packets.
+
+After tallying the results, the second part of the scan can begin. We conducted two more detailed scans, one for each IPv4 and IPv6 address in the resulting dataset. Since the number of hosts that replied was manageable, we scanned the top 100 most popular ports using NMap.
+
+
+The results
+To have an internet host connect back to us and reveal its IPv6 address, there are conditions that need to be satisfied. First, the host needs to have UDP port 1900 open, it needs to accept and parse our UPnP packet and it needs to request the specified URL. In order for the URL request to succeed, the host needs to be dual-homed (connected to both IPv4 and IPv6) and the outgoing traffic to our HTTP port needs to be allowed. We conducted these scans multiple times over the course of two months. Each time, about 12,000 unique IPv6 addresses were logged. Given the requirements, we expected and were proven correct, to see a majority of consumer devices in our results. As such, a large number of them have dynamic IPv4 addresses which change occasionally meaning that the validity of the dataset degrades over time.
+
+There are multiple ways to assign an IPv6 address to a host and there are a few transitional technologies in use. For example, 8 percent of the hosts in the dataset have their IPv6 address assigned by using "6to4" mechanism which is a transition mechanism in place to enable transport of IPv6 traffic over IPv4 networks by way of relays. Similarly, Teredo Tunneling is also a transition mechanism employed by default in some versions of Windows. Less than 1 percent of the hosts replied to our scans with a Teredo address.
+
+Some of the devices in the dataset rely on default IPv6 addressing scheme which specifies that 64 bits that represent interface identifier are based on hosts MAC address. Since MAC addresses each fit into their own group, we can make an educated guess about the device type. The user agent strings further corroborate this.
+
+Top 10 device manufacturers
+
+Huawei Technologies
+Zhejiang Uniview Technologies
+Amazon Technologies
+Swann communications
+LT Security
+Trendnet
+Netgem
+Shenzhen Giec Electronics
+Synology Incorporated
+Panasonic AVC Networks Company
+
+Based on reported user agent strings, 98 percent of the hosts are embedded Linux devices such as security cameras, media and NAS servers and Android devices that consist of smart TVs and media dongles. Windows hosts that replied consisted of mostly BitTorrent clients such as Azureus.
+
+The most common UPnP implementation is still LibUPNP, with the most popular version being 1.6.18, which was likely released in 2013. Second is MiniUPNP with less than 1 percent of hosts. The most popular version of MiniUPnP is 1.9, released in 2014. Both of these versions contain multiple public vulnerabilities.
+
+Other common user agent strings
+Android/4.4.2 UPnP/1.0 Cling/2.0
+Android/5.0 UPnP/1.0 Cling/2.0
+Android/5.0.2 UPnP/1.0 Cling/2.0
+Android/7.1.2 UPnP/1.0 Cling/2.0
+Android/8.0.0 UPnP/1.0 Cling/2.0
+Android/8.1.0 UPnP/1.0 Cling/2.0
+Azureus 4.3.0.6
+Azureus 4.9.0.0
+Azureus 5.7.5.0;Mac OS X;Java 1.8.0_66
+Azureus 5.7.5.0;Windows 10;Java 1.8.0_121
+Azureus 5.7.5.0;Windows Server 2012 R2;Java 1.8.0_121
+Azureus 5.7.5.0;Windows Server 2012;Java 1.8.0_121
+Dalvik/2.1.0 (Linux; U; Android 6.0; vivo Y67L Build/MRA58K)
+Dalvik/2.1.0 (Linux; U; Android 7.0; JMM-AL00 Build/HONORJMM-AL00)
+Dalvik/2.1.0 (Linux; U; Android 8.0.0; DUK-AL20 Build/HUAWEIDUK-AL20)
+Dalvik/2.1.0 (Linux; U; Android 8.0.0; SM-A720F Build/R16NW)
+Dalvik/2.1.0 (Linux; U; Android 8.1.0; EML-AL00 Build/HUAWEIEML-AL00)
+Debian/8 UPnP/1.0 MiniUPnPc/
+Linux/2.6.32-042stab128.2 UPnP/1.0 Cling/2.0
+Linux/3.0.35 UPnP/1.0 Portable SDK for UPnP devices/1.6.21
+Linux/3.10.0_s40 UPnP/1.0 Portable SDK for UPnP devices/1.6.19
+Linux/3.18.22+ UPnP/1.0 HUAWEI_iCOS/iCOS V1R1C00 DLNADOC/1.50
+Linux/3.4.67_s40 UPnP/1.0 HUAWEI_iCOS/iCOS V1R1C00 DLNADOC/1.50
+Linux/4.14.79 UPnP/1.0 jUPnP/2.0
+Linux/4.9.97 UPnP/1.0 HUAWEI_iCOS/iCOS V1R1C00 DLNADOC/1.50
+Ubuntu/12.04 UPnP/1.1 MiniUPnPc/1.9
+WindowsNTunknown/6.2 UPnP/1.0 Teleal-Cling/1.0
+
+
+The most common implementation, LibUPNP embeds a Linux kernel name and version into the user agent string. The most popular Linux kernel version is 3.0, with 4,248 hosts out of 10,390, followed by 3.10 with 3,950 hosts. Only 196 hosts are using Linux kernel version 4.x. A total of 660 hosts replied with Linux kernel version 2.6, which is still very common with consumer-grade wireless routers. Out of the 523 hosts that explicitly stated their Android version, 293 were on 5.1.1 version, followed by 102 on various releases of Android 8.
+
+When we started this research, we hypothesized that we would likely find hosts that have proper filtering, all important ports firewalled, on IPv4 side, but more relaxed, or non-existent filtering on the IPv6 side. And indeed, after comparing the top 100 TCP port scan results on corresponding IPv6 and IPv4 addresses, we have found 3 percent of hosts to have more open ports on IPv6 side. This leads to unintended exposure of sensitive data and services such as SMB network shares, FTP and HTTP servers.
+
+As previously mentioned, the IPv6 Hitlist project maintains a daily updated list of known active IPv6 hosts aggregated from multiple sources. Comparing active hosts from our scans to their list yielded less than 0.1 percent of overlap, meaning that even though our resulting dataset is small, it represents a unique subset of active IPv6 devices which were so far unexplored.
+
+
+
+
+Conclusion
+We can infer several things by looking at this data. First, the problem of open UPnP devices on the internet isn't going away. And we can confirm that there are thousands of devices on the internet whose owners aren't aware of their IPv6 connectivity. Our test required that a host has a publicly accessible IPv4 address along with IPv6 — the number of hosts with public IPv6, but private IPv4, addresses unbeknownst by their owners is likely even higher. Coupled with the fact that there are a significant number of scanned hosts with less filtering on the IPv6 side than on IPv4, this unintended IPv6 connectivity results in additional exposure of these devices and their networks. Additionally, from our relatively small dataset, we can see that these hosts run severely outdated software and operating systems, compounding the effect of unintended exposure to the internet.
+
+With a growing number of connected IPv6 hosts, even though they cannot be directly and exhaustively enumerated, higher exposure through public addresses means that poorly configured and maintained devices that are usually hidden behind NAT in private IPv4 space can and will be abused by employing techniques to actively uncover them.
+
+Users should ensure that their devices don't have unintentional IPv6 connectivity or if it's intentional, that it's adequately firewalled.
+
+

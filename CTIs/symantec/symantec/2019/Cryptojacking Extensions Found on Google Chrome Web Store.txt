@@ -1,0 +1,40 @@
+On May 8, we discovered two extensions for Google’s Chrome web browser that secretly perform coin mining after they are installed. Both extensions were found on the official Google Chrome Web Store.
+
+One of the extensions, called 2048, is a version of a popular math-based strategy game. The extension was published in August 2017 and has over 2,100 users, which suggests the publisher has made some profit using the CPU cycles of those users to mine for cryptocurrency.
+.The other extension, Mp3 Songs Download, claims to be an MP3 downloader but just redirects the user to an MP3 download website when they click on the extension button. The MP3 download website secretly launches a coin-mining script in the background. The Mp3 Songs Download extension was published in June 2017 and has around 4,000 users.
+.Coin-mining script: 2048
+
+The source code for the 2048 extension contains a hardcoded domain that is triggered when Chrome is launched.
+.The form in http://www.madafak[DOT]in/landing sends a POST request with a hidden field to www.madafak[DOT]in after one second.
+.The main page www.madafak[DOT]in attempts to pass itself off as Google Analytics but it secretly loads a coinminer library (ga.js) in the background.
+.From the script shown in Figure 7 we can see that the coinminer mines Monero, throttles CPU usage at 0.5 (50 percent), and contains a hardcoded Monero wallet address (5bdd3443937ebe08d3e3c99e9524afc13702eba28340).
+
+Coin-mining script: Mp3 Songs Download
+
+The extension Mp3 Songs Download doesn’t start its coin-mining script until the user clicks on the extension button and is redirected to a website. As the JavaScript in Figure 8 shows, the extension redirects the user to http://mp3song-s[DOT]com.
+.This website looks just like a normal MP3 download site (Figure 9) and actually functions as one. However, it also loads coin-mining JavaScript (VEZ4.js) secretly, which can be seen in the website’s source code (Figure 10). From the source code we can also see the hardcoded wallet key and throttling ratio, which is set at 0, meaning 100 percent of the user’s CPU cycles can be used for mining.
+.Impact on users
+
+The coin mining will persist for as long as the browser (with the 2048 extension installed) or website (in the case of the Mp3 Songs Download extension) remains open. The effects of this activity could include device slowdown, overheating batteries, increased energy consumption, and even devices becoming unusable.
+
+Figure 11 shows our test computer’s CPU usage spiking at 100 percent after the Mp3 Songs Download extension was installed.
+.Furthermore, the malicious activity of these extensions is made harder to detect by the fact that they function as described. For example, the game 2048 is playable just like any 2048 game and the MP3 website contains downloadable MP3 files. This means that many users will not be suspicious and may not realize their computing power is being hijacked to make money for the developers behind these extensions.
+
+We notified Google about these coin-mining extensions and they have now been removed from the Google Chrome Web Store.
+
+Protection
+
+Symantec and Norton products detect the extensions as the following:
+
+
+	Miner.Jswebcoin
+
+
+Mitigation
+
+
+	Install a suitable security app, such as Norton or Symantec Endpoint Protection, to protect your device and data.
+	Pay close attention to CPU and memory usage on your computer or device. Abnormally high usage could be an indication of coin-mining.
+	Check the app developer’s name, which can be found on the app’s store page. Do an internet search for the developer as there may be users who have had experience of their apps—good or bad.
+	Check the app reviews. While fake reviews are common, they’re often short and generic. There may also be legitimate reviews from users who have figured out that the app isn’t what it appears to be.
+

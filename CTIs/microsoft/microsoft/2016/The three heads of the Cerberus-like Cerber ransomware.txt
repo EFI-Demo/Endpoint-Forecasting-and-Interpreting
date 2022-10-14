@@ -1,0 +1,47 @@
+
+		(Note: Read our latest comprehensive report on ransomware: Ransomware 1H 2017 review: Global outbreaks reinforce the value of security hygiene.)
+ 
+Early this month, we saw a new ransomware family that launches a three-prong attempt to get you to hand over your hard-earned cash.
+Called “Cerber” (it replaces file extensions with .cerber), we like to think of this three-prong approach as a nod to the mythical multiple-headed hound, Cerberus.
+The attack starts with a text-to-speech (TTS) synthesized recording of a text message:
+
+Attention! Attention! Attention! Your documents, photos, databases and other important files have been encrypted!
+
+While it’s not terribly original, originality doesn’t count for much in malware circles – if something works (that “something” usually forcing victims to pay money or lose data), then everyone just jumps on the bandwagon and before you know it, bam macros are being used to deliver malware.
+So perhaps expect to see a lot more synthesized, robotic-sounding messages making the rounds, attempting to steal your data and money.
+The use of audio files as part of a ransomware attack isn’t particularly new, Tobfy was doing it way back in 2014, but the rise of TTS through the popularity of Cortana, Siri, and Android Now might see a new (easier) way for ransomware authors to annoy their victims into paying, if only to quiet the constant TTS announcement at every logon.
+In Cerber’s case, it uses a VisualBasic Script (.vbs file) to call the Microsoft Speech API (SAPI) SpVoice.Speak method at every start up.
+
+If the API can’t call the speech synthesizer, you’ll see an error message similar to this:
+
+The other “prongs” in the attack are the usual flavor of current ransomware notices – a simple .html page or .txt file is opened using the native handler. The files include instructions to download the Tor browser, connect to a specific Tor site and start transferring some Bitcoins. It might display the ransom notes in different languages, based on the victim’s IP geolocation.
+
+
+Ransomware has come a long way from the non-encrypting lockscreen FBI and national police authority scare warnings, and this newer “low-cost approach” is both frustrating and effective.
+Unlike other current ransomware (like Crowti) it completely renames the extension and the file name for files it targets. It’s also very selective in choosing the folders where it won’t infect. The list of folders it avoids mostly includes system folders, such as Program Files, the Users folder, the Recycle Bin and various others. It does, however, encrypt files in folders in network shares, and in all drives on the machine, and uses RSA encryption.
+The list of file types it targets is extensive, and includes common types such as Office documents, some database files (including .sql, and .sqlite), and archive files (for example, .rar and .zip).
+It stores configuration data in JSON format, which it decrypts and loads directly to memory at run time. The data includes:
+
+The list of file extensions it targets
+The folders it avoids
+The public RSA key used for encryption (the private key is stored on the attacker’s server)
+The mutex name format
+The .html and .txt content used in the ransom note
+The IP of a server it sends statistical data to
+
+See our malware encyclopedia entry for details on the file types and folders it targets.
+Encrypted files are given a randomized jumble of 10 characters for the file name, and the extension is changed to .cerber. Therefore, a file called kawaii.png could be renamed to something like 5kdAaBbL3d.cerber.
+The instructions presented to a victim will lead them to a website where they can choose their language (considerate!) and must enter a CAPTCHA or anti-spambot challenge (ironic!). The language-choice page begins with an instruction to “choose your language”. This phrase rotates between the 12 languages the user can choose from.
+
+
+After they’ve passed these gates, the site provides details on how the victim can obtain and transfer Bitcoins to the attackers. There will be a “special price” that increases based on how quickly the victim pays the ransom, which is reminiscent of Crowti and others.
+
+Our strongest suggestion to prevent attacks from Cerber and other ransomware remains the same: use Windows Defender as your antimalware client, and ensure that MAPS has been enabled.
+Both ransomware and macro-based malware are on the rise, users can disable the loading of macros in Office programs, and administrators can disable macro loading using Group Policy settings.
+ 
+
+Talk to us
+Questions, concerns, or insights on this story? Join discussions at the Microsoft community and Windows Defender Security Intelligence.
+Follow us on Twitter @WDSecurity and Facebook Windows Defender Security Intelligence.
+ 
+	

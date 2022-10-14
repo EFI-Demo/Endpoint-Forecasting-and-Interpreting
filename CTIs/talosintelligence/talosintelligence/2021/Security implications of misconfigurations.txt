@@ -1,0 +1,63 @@
+
+By Jaeson Schultz.
+
+When defenders regularly monitor their organization's Domain Name System (DNS) queries, they can often snuff out potential attacks before they happen. At the very least, it's important to identify and fix configuration mistakes that could lead to nasty security breaches.  
+
+Most DNS queries in a network are created automatically by a user's applications. For example, when someone types "talosintelligence.com" into a web browser, the browser triggers a DNS query intended to map the friendly domain name to an internet IP address. DNS queries might fail to find an IP corresponding to a domain name for a variety of reasons — perhaps the user mistyped the domain name. However, when DNS lookup failures occur at regular intervals, or in large numbers, the result may be a misconfiguration somewhere. These misconfigurations can leave a security flaw in an organization's network, opening them up to typo-squatting attacks or potential impersonation in phishing campaigns.
+
+Cisco Talos regularly monitors networks and domain names that may have once formed a part of attacker infrastructure, or perhaps are victims currently targeted by attackers. This sometimes involves monitoring passive DNS and finding domain names that receive substantial internet traffic, despite the fact that the domain name is unregistered, and for all intents and purposes, does not exist.
+  
+An accidental autodiscovery
+Talos recently stumbled upon an unregistered domain name, "tiburoninc.net". The company Tiburon Inc. initially owned and operated this domain. According to Tiburon's former website: "Tiburon delivers computer aided dispatch, mobility, records management and corrections management solutions built to meet the rigorous demands of state, local and federal law enforcement, fire & rescue and corrections agencies."
+
+In 2015, Tiburon Inc. was acquired by a different organization, TriTech. According to an announcement on LinkedIn, "TriTech is honored to welcome Tiburon customers and employees to the TriTech family. For over 30 years, Tiburon has supplied public safety software to some of the largest and most advanced agencies in the United States and throughout the world. With the acquisition, TriTech's combined customer base includes some of the most highly-regarded police, fire, and EMS agencies who protect and serve more than 250+ million people in 13 countries throughout the world."
+
+
+
+The new owner, TriTech, merged with several other companies in 2018 to form a new entity, CentralSquare Technologies. CentralSquare let Tiburon's domain names expire in April 2019. However, when we look at passive DNS data, there was still a considerable amount of internet traffic trying to reach this domain. Telemetry in Umbrella Investigate showed a daily influx of DNS traffic. Unfortunately, the mere presence of DNS traffic as indicated by Umbrella doesn't describe what types of queries comprise the DNS traffic. The DNS volume appearing in Umbrella could be a number of things, including queries for MX servers, queries for the address of a web server, or someone seeking SPF records. In many instances, old domains that have been abandoned by legitimate companies can be a spam goldmine, so Talos decided to investigate further.
+
+
+Talos registered the domain and we immediately noticed a significant majority of the DNS requests were related to internet computers looking for a file called "wpad.dat" on tiburoninc.net's web server.
+
+
+
+Wpad.dat is used by the Web Proxy Autodiscovery (WPAD) protocol. WPAD is used by organizations to centrally manage their organization's web browser proxy settings. When WPAD is enabled, a computer will fetch the proxy settings automatically using either DHCP or DNS. The WPAD protocol is flexible enough that proxy settings can be different depending on the destination host the user is trying to reach. Because WPAD is enabled and users are fetching a copy of the wpad.dat file from the tiburoninc.net host specifically, we can conclude that these are likely employees of Tiburon/TriTech. Abusing the proxy settings communicated to these employees could have allowed a potential attacker to establish their own proxy, inspect all data transmitted from the employees' computers, and manipulate the data returned in response.
+
+Seeing the severity of the problem, Talos reached out to CentralSquare to inform them of the issue and assist the company in resolving any technical misconfigurations that may have resulted in the misdirected DNS traffic. Talos has transferred the domain name back to CentralSquare, and any traffic destined for the domain is back where it belongs.
+Hey! That's my intranet!
+Other types of misconfigurations can be similarly costly to an organization's security posture. While out spelunking for potential spamtrap domains, we found another unregistered domain name that, according to Umbrella Investigate, was receiving a huge number of DNS queries, "asssaabloy.net".
+
+
+
+It turns out that the domain name "asssaabloy.net" is just one extra "s" character away from the domain name "assaabloy.net". According to Google, the domain "assaabloy.net" is the intranet domain for the ASSA ABLOY Group. Initially, it appeared that attackers were taking advantage of a typosquat of the assaabloy.net domain name. Typosquatting is a very common social engineering tactic employed by attackers.
+
+
+The ASSA ABLOY Group specializes in physical access control. According to their website, "If you've ever walked through an automatic door, stayed in a hotel, or gone through passport control, you've probably used one of our products or services. From reliable home security to cutting-edge biometric technology for businesses, governments, airports, hospitals, schools and more, we touch every part of every day." Some of the brands under the ASSA ABLOY group include well-known physical access/security companies such as Yale and HID. 
+
+Thinking we had possibly stumbled upon attacker infrastructure, Talos registered the domain name. After standing up a DNS server to examine the traffic, we found that the majority of the queries were looking for a host named "vpn.asssaabloy.net". 
+
+
+
+From the traffic we observed, it appeared that this was not an attacker taking advantage of a typosquatted domain. Rather, an administrator at ASSA ABLOY had likely typo'd their intranet domain name inside of a VPN configuration file that was then distributed to employees. These employees were reaching out to an unregistered domain, "asssaabloy.net", looking to connect to the organization's VPN. Imagine the damage could have resulted if an attacker had registered this domain. The attacker potentially could have posed as the legitimate VPN endpoint for ASSA ABLOY Group, and intercepted the traffic from employees attempting to connect to the corporate internal resources. Thankfully, all traffic destined for the typo'd version of ASSA ABLOY's intranet is now being directed to the correct place.
+Who's your GoDaddy?
+While out searching for unregistered domain names that still receive unusual DNS traffic, Talos encountered multiple situations where a domain's MX records had a typo in a hostname. For example, domains with email services hosted at GoDaddy typically use two different MX servers: smtp.secureserver.net and mailstore1.secureserver.net. We found multiple instances where a typo in a domain's MX records omitted the first dot in one of the MX hostnames, resulting in the entirely new domain names: smtpsecureserver.net and mailstore1secureserver.net. Of course, neither of these are the intended GoDaddy MTA domain, secureserver.net. 
+
+
+
+When a typo like this occurs, resulting in a domain name that does not exist, the problem may not be noticed. In the example above, legitimate mail servers could still deliver mail to the other MX servers that do exist. However, all an attacker needs to do is simply register the typo'd domain name and they can begin intercepting email for any domain having that particular typo in their DNS records. The domain name smtpsecureserver.net was in fact registered by unknown parties back in May of 2021, and is currently parked at GoDaddy. The IP for this domain is accepting connections on port 25 (SMTP). Because of redactions in WHOIS, it is unclear who may be behind this activity.
+
+GoDaddy isn't the only hosted services provider out there. We found other domains hosted with services such as Yandex, Zoho, ProtonMail and Google, all having typos in their domain's MX records. These typos resulted in traffic being misdirected to unregistered domains such as 'mxyandex.net', 'mxzoho.com', 'mailprotonmail.ch', 'aspmx3googlemail.com', and others. Sometimes these typos even occurred in a primary MX record for a domain name, which could potentially allow an attacker to intercept all legitimate email destined for the domain in question. 
+
+
+
+In total, Talos was able to identify almost 150 different domains which were misconfigured in this fashion. Fortunately, the email traffic destined for most of these typo'd versions of these popular mail servers is now being redirected to the proper destination, and less email is at risk of being intercepted.
+What do I do now?
+Umbrella, Cisco's cloud-based Secure Internet Gateway (SIG) platform, integrates secure web gateway, firewall, DNS-layer security, and cloud access security broker (CASB) functionality and can provide organizations with the visibility necessary to hunt down and eliminate both misconfigurations as well as internet-based threats. If you don't currently use Umbrella, you can enroll in a free 14-day trial, and Umbrella can be easily deployed across your network in just a few minutes. 
+
+With respect to DNS, Umbrella comes configured out-of-the-box with logging enabled and by default logs all requests an identity makes to reach destinations. Umbrella logs are CSV formatted, compressed (gzip), and saved every 10 minutes. 
+
+Administrators will want to first review the log format used by Umbrella, focusing particular attention on the field dedicated to the Response-Code. The Response-Code tells you the disposition of a particular DNS request. When a DNS query is successful, you will find a Response-Code of "NOERROR." However, by searching for DNS queries that return other Response-Codes, such as "NXDOMAIN," administrators can identify potential misconfigurations like the ones described in this blog. For reference, here is a list of all the possible Response-Codes you may encounter while reviewing your Umbrella DNS logs.
+Conclusion
+Network defenders are always juggling a thousand different things at any given time. Besides the constant threat of adversaries who would intentionally inflict harm upon your organization, network defenders also need to be prepared to contend with security problems that don't arise out of any malicious intent, but rather are the product of a misconfiguration somewhere. By paying attention to your network traffic, including monitoring your DNS, defenders might spot potential issues before they become a serious security liability.
+
+

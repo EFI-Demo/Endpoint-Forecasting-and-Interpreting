@@ -1,0 +1,53 @@
+
+
+By Amit Raut
+
+We often joke that for SNORT® rule development, you have to live by the saying “PCAP or it didn’t happen.” PCAP files are very important for Snort rule development, and a new tool from Cisco Taloscalled “Re2Pcap” allows users to generate a PCAP file in seconds just from a raw HTTP request or response.
+
+Re2Pcap consumes a small number of resources — the docker image is less than 90MB, reduces Snort rule development processing time and there’s no complex setup.
+
+
+Let's consider you want to create a Snort rule to protect your customers from bugs like this Sierra Wireless AirLink ES450 ACEManager iplogging.cgi command injection vulnerability.
+
+There are two different ways to create a PCAP file and test your rule:
+
+Get the vulnerable product and run the exploit code while capturing the traffic
+Run a dummy server, then the exploit code while capturing the traffic
+
+But these methods require a lot of time and resources. Re2Pcap improves the productivity of Snort rule development.
+
+Let's see how Re2Pcap can help us create a PCAP file for a vulnerability like the Sierra Wireless one we just mentioned. Talos’ advisory lists a raw HTTP POST request that is used to exploit this vulnerability, which we’ll put below:
+
+POST /admin/tools/iplogging.cgi HTTP/1.1 
+
+Host: 192.168.13.31:9191 
+
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:60.0) Gecko/20100101 Firefox/60.0Accept: text/plain, */*; q=0.01 
+
+Accept-Language: en-US,en;q=0.5 
+
+Accept-Encoding: gzip, deflate 
+
+Referer: http://192.168.13.31:9191/admin/tools/iplogging.html 
+
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8 
+
+X-Requested-With: XMLHttpRequest 
+
+Content-Length: 63 
+
+Cookie: token=1e9c07e135a15e40b3290c320245ca9a 
+
+Connection: close 
+
+tcpdumpParams=tcpdump -z reboot -G 2 -i eth0&stateRequest=start
+We can take this raw HTTP request and feed it to the Re2Pcap web interface and get PCAP file back in seconds.
+
+We have a short video showing you how to use the program.
+
+
+
+Re2Pcap uses the Python3 requests library to send the parsed HTTP raw request, so it supports  HTTP methods (GET, POST, HEAD, DELETE, OPTIONS, PATCH and PUT). Re2Pcap uses Python3 http.server.BaseHTTPRequestHandler to handle the raw requests. As we are not using this in production, the use of http.server is enough for Re2Pcap. Learn more about this project over at GitHub.
+
+
+

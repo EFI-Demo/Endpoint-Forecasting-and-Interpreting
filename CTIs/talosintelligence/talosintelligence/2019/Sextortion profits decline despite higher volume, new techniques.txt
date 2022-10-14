@@ -1,0 +1,92 @@
+
+
+
+
+Post authored by Nick Biasini and Jaeson Schultz.
+
+Sextortion spammers continue blasting away at high volume. The success they experienced with several high-profile campaigns last year has led these attackers to continue transmitting massive amounts of sextortion email. These sextortion spammers have been doing everything they can to keep their approach fresh. Not only does this help sextortionists evade spam filters, increasing their chances of landing in recipients' inboxes, but it also ups their chances of finding a message that has language that resonates, convincing potential victims that the perceived threat is indeed real. Let's take a look at some of the recent changes we've seen in the sextortion email landscape.
+
+Sextortion profits decline sharply
+
+In an effort to see how lucrative sextortion schemes continue to be, Cisco Talos revisited some of the larger campaigns we had seen since the beginning of 2019. We selected one of the highest volume campaigns for deeper analysis: sextortion messages containing "Subject: <username> : <password>." The same attackers behind the "Aaron Smith" campaigns last year, which we wrote about in October, are behind these new efforts.
+
+After collating all the email samples we could find in SpamCop, we then extracted the Bitcoin addresses where victims were asked to deposit their extortion payments. Talos identified over 1 million sextortion emails transmitted by these sextortionists between January and March 2019. However, after reviewing the targets, we found only 29,000 unique email recipients. This means that each user is receiving an average of 38 emails from this one sextortion campaign. This seems like a counter-intuitive approach since after a user receives one or maybe two of these emails, the effectiveness is going to be greatly reduced. However, that doesn't mean at least some of the targets aren't paying up.
+
+The reuse of Bitcoin addresses are rampant in this campaign, with only about 9,000 unique Bitcoin addresses among the entire set of messages. We began an analysis of these addresses to determine how many Bitcoins have been deposited into the attackers' accounts. After pulling the current value of these addresses, we were able to find ~3.5 BTC in the addresses, which equals about $17,000. These returns are quite disappointing when compared with the $150,000 these same attackers obtained in just two months of sextortion attacks last fall. Rather than face the harsh reality that fewer victims continue to fall for their scams, however, sextortionists are redoubling their efforts.
+
+A lot of simple tricks and nonsense
+For a large sextortion spam campaign, there is no greater nemesis than the anti-spam filter. Messages reusing the same content over and over are quite easy to identify and preempt into the trash bin as they arrive. Last year, many of the sextortion emails we encountered varied some of the wording inside the emails but did not make much effort to try and bypass anti-spam filters. For example, below is the HTML body from one of the messages sent last October as a part of the "Aaron Smith" sextortion campaign.
+
+
+Now, however, these same attackers have taken to designing their messages with the objective of improving their performance against anti-spam filters. From the perspective of the victim, the message itself is still as readable as it ever was. However, the underlying code that the mail client uses to render the message has become much more complex. In the example below, the attackers are using a combination of the username in comments, plain text letters and HTML character entities.
+
+
+
+
+Since tricks like this aren't guaranteed to bypass anti-spam filters, spammers have also dusted off some crusty old techniques dating from back in 2005: image spam. The concept of image spam is simple enough — instead of transmitting the body of the email as text, spammers include only an image of the text, leaving very little for the anti-spam system to examine. Below is an example of a sextortion message using this image spam technique. Unfortunately for the attackers, this tactic wasn't thought through completely. The sextortion email asks the victim to copy and paste the Bitcoin address, but this is impossible to do, as the text is inside the image.
+
+
+
+Scammers offer "proof"
+Besides varying the technical and structural details of their messages, sextortion spammers are similarly freshening up their social engineering approach. Previously, in order to convince recipients that the lies in the sextortion email were true, many early sextortion campaigns included victim's passwords that attackers had obtained from publicly available data breaches. Other techniques we saw early on included supposedly sending the sextortion email from the same address as the recipient (The emails are coming from *inside* the house!!) Now, sextortion attackers are once again upping the ante by offering "proof" associated with their extortion claims.
+
+Sextortion messages from this particular campaign include a ZIP file attachment which purportedly contains evidence. When extracted, this file prompts the user to visit a URL, and then extracts a file, "Password.txt," that contains the same URL and instructions, plus another ZIP file. A variation of this same technique includes a similar setup with the instructions to get the password in the email itself, as is shown in the example below.
+
+
+
+
+At this point, the URLs have resulted in dead links or non-existent pages. However, if the link is active, the user is prompted with a request to purchase the password for $50. This would ensure that the actor would at least get some money from the victim.
+
+Another campaign switched from attaching ZIP files to PDFs. These PDFs then link to a webpage, which is redirecting to a Cryptonator — a cryptocurrency wallet — portal requesting $25 for the ZIP file. This may be an indication that the initial effort of sending a ZIP file directly is not paying off as well as expected.
+
+
+
+
+If you try to decompress the ZIP file without a password, some of the files will decompress and others will not. What the user will see is some directories being created that appear to be associated with a free digital audio recorder, editor and mixer. There are files that would appear interesting to the user as well, but those files, obviously, do not extract.
+
+
+Without paying for the password, we have been unable to identify the contents of these files, but they are likely just some sort of innocuous junk data. Ideally, the adversary is hoping that just the presence of these files is enough to persuade the users to pay the ransom, and unfortunately, it appears to have worked. During the investigation, we were able to find a small number of victims that appear to have paid the extortion payment into the attackers' Bitcoin addresses.
+
+Conclusion
+Early success has led to a proliferation of sextortion spam, but profits from these types of scams are declining rapidly. Going back to their inception months ago, the adversaries have made hundreds of thousands of dollars with little more than publicly available data and some ingenuity. Users need to understand that these sextortion attempts are nothing but a sham, and the threat isn't backed up by real data. Unfortunately, the reality is that it is still far too easy to extort users with the threat of exposure without any real data backing it up and the bad guys are continuing to cash in on users' own paranoia.
+
+As always, users are encouraged to use strong, unique passwords for accounts online and to rotate those passwords regularly. This type of simple password hygiene can greatly reduce the success of these types of attacks and protect the user from real account compromise impacts. In today's internet, having usernames and passwords breached is a part of being online, and users need to be prepared for that eventuality. Using multi-factor authentication for those critical accounts is a great additional step users can take to help eliminate some of the risks. As the efficacy of sextortion scams continues to decline, Talos expects attackers to pivot to one of the many other tricks they have up their sleeves.
+
+Coverage
+
+
+
+Email Security can block malicious emails sent by threat actors as part of their campaign.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+IOC
+
+Email Subjects:
+
+Ticket: #<Random Number>
+Re: #<Random Number>
+RE: Case #<Random Number>
+Subject: <Username> : <Password>
+
+
+Attachments:
+
+<Random String>_Proof#<Random Number from subject>.zip
+<Random String>_Proof#<Random Number from subject>.pdf
+
+
+BTC Wallet Addresses
+
+

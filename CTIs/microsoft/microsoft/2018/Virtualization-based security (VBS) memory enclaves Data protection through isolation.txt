@@ -1,0 +1,31 @@
+
+		The escalating sophistication of cyberattacks is marked by the increased use of kernel-level exploits that attempt to run malware with the highest privileges and evade security solutions and software sandboxes. Kernel exploits famously gave the WannaCry and Petya ransomware remote code execution capability, resulting in widescale global outbreaks.
+Windows 10 remained resilient to these attacks, with Microsoft constantly raising the bar in platform security to stay ahead of threat actors. Virtualization-based security (VBS) hardens Windows 10 against attacks by using the Windows hypervisor to create an environment that isolates a secure region of memory known as secure memory enclaves.
+Figure 1. VBS secure memory enclaves
+An enclave is an isolated region of memory within the address space of a user-mode process. This region of memory is controlled entirely by the Windows hypervisor. The hypervisor creates a logical separation between the “normal world” and “secure world”, designated by Virtual Trust Levels, VTL0 and VT1, respectively. VBS secure memory enclaves create a means for secure, attestable computation in an otherwise untrusted environment.
+VBS enclaves in Microsoft SQL Server
+A key technology that will leverage VBS secure memory enclaves is Microsoft SQL Server. The upcoming SQL Server secure enclave feature ensures that sensitive data stored in an SQL Server database is only decrypted and processed inside an enclave. SQL Server’s use of secure enclaves allows the processing of sensitive data without exposing the data to database administrators or malware. This reduces the risk of unauthorized access and achieves separation between those who own the data (and can view it) and those who manage the data (but should have no access). To learn more about the use of secure enclaves in SQL Server, see the blog post Enabling confidential computing with Always Encrypted using enclaves.
+Data protection
+One of the major benefits of secure memory enclaves is data protection. Data resident in an enclave is only accessible by code running inside that enclave. This means that there is a security boundary between VTL0 and VTL1. If a process tries to read memory that is within the secure memory enclave, an invalid access exception is thrown. This happens even when a kernel-mode debugger is attached to the normal process – the debugger will fail when trying to step into the enclave.
+Code integrity
+Code integrity is another major benefit provided by enclaves. Code loaded into an enclave is securely signed with a key; therefore, guarantees can be made about the integrity of code running within a secure memory enclave. The code running inside an enclave is incredibly restricted, but a secure memory enclave can still perform meaningful work. This includes performing computations on data that is encrypted outside the enclave but can be decrypted and evaluated in plaintext inside the enclave, without exposing the plaintext to anything other than the enclave itself. A great example of why this is useful in a multi-tenant cloud computing scenario is described in the Azure confidential computing blog post. This move allowed us to continually make significant innovations in platform security.
+Attestation
+Attestation is also a critical aspect of secure memory enclaves. Sensitive information, such as plaintext data or encryption keys, must only be sent to the intended enclave that must be trusted. VBS enclaves can be put into debug mode for testing but lose memory isolation. This is great for testing, but in production this impacts the security guarantees of the enclave. To ensure that a production secure enclave is never in debug mode, an attestation report is generated to state what mode the enclave is in (among various other configuration and identity parameters). This report is then verified by a trust relationship between the consumer and producer of the report.
+To establish this trust, VBS enclaves can expose an enclave attestation report that is fully signed by the VBS-unique key. This can prove the relationship between the enclave and host, as well as the exact configuration of the enclave. This attestation report can be used to establish a secure channel of communication between two enclaves. In Windows this is possible simply by exchanging the report. For remote scenarios, an attestation service can use this report to establish a trust relationship between a remote enclave and a client application.
+One feature that relies on secure memory enclave attestation is Windows Defender System Guard runtime attestation, which allows users to measure and attest to all interactions from the enclave to other capabilities, including areas of runtime and boot integrity.
+Figure 2. Windows Defender System Guard runtime attestation
+Elevating data security
+There are many secure memory enclave technologies in the industry today. Each have pros and cons in capabilities. The benefit of using a VBS secure memory enclave is that there are no special hardware requirements, only that the processor supports hypervisor virtualization extensions:
+
+VBS-capable hardware
+OEM hardware configuration
+Hypervisor protected code integrity (HVCI) compliant drivers
+
+Additionally, VBS enclaves do not have the same memory constraints as a hardware-based enclave, which are usually quite limited.
+VBS secure memory enclaves provide hardware-rooted virtualization-based data protection and code integrity. They are leveraged for new data security capabilities, as demonstrated by Azure confidential computing and the Always Encrypted feature of Microsoft SQL Server. These are examples of the rapid innovation happening all throughout Microsoft to elevate security. This isn’t the last you’ll hear of secure memory enclaves. As Microsoft security technologies continue to advance, we can expect secure memory enclaves to stand out in many more protection scenarios.
+ 
+ 
+Maxwell Renke, Program manager, Windows
+Chris Riggs, Principal Program Manager, Microsoft Offensive Security Research
+ 
+	

@@ -1,0 +1,81 @@
+
+By Andrea Marcelli and Holger Unterbrink.
+
+If you're looking for something to keep you busy while we're all stuck inside during the holidays, Cisco Talos has a few tools for you you can play with in the coming days and weeks. 
+
+We recently updated GhIDA to work with the latest version of IDA and we are releasing new features for the award-winning Dynamic Data Resolver (DDR).
+
+GhIDA
+
+GhIDA is an IDA Pro plugin that integrates the Ghidra decompiler in IDA Pro. The plugin either communicates with Ghidra directly, by calling the Headless Analyzer, or by REST APIs, through the Ghidraaas docker container. GhIDA provides an easy and convenient way to display Ghidra decompiled code in IDA Pro and allows some basic interaction, such as function renaming, code highlighting and comments.
+
+Here's a rundown of the main functionalities of GhIDA and Ghidraaas. If you need more information, you can refer to the original blog post and the GitHub page.
+
+Let GhIDA help you while reversing
+
+Taking a look at the decompiled code may help identify the core operations of a function, especially if there are many basic blocks and a complex CFG. We will look at two functions — 0x00403860 and 0x00403960 — from an Emotet binary to show how to use GhIDA effectively during the binary reversing:
+
+Launch GhIDA decompilation on 0x00403860 using the CTRL+ALT+D shortcut.
+
+
+Move the GhIDA decompiled view side-to-side to the IDA Text or Graph view.
+
+
+
+
+Use the decompiled view and the "N" shortcut to update function and variables names. You can also add comments using the ":" shortcut. In the screenshot below, we change the name of "sub_403860" to "Custom_RC4".
+
+
+ 
+
+
+If you want to update the function names in a caller function, remove the decompiled code of the caller function from the cache (right click > Clear cache for current function) and decompile it again. In the example below, we decompile one more time the 0x00403960 function to update the name of the called function "Custom_RC4" in the decompiled code.
+
+
+
+
+
+
+  You can also watch a full walk-through of GhIDA functionalities in the following video.
+
+
+ GhIDA is available for Python 2 and 3
+
+GhIDA is available in two versions, one for Python 2 and one for Python 3. With IDA 7.4, we added the  Python 3 version of the IDAPython API and we created a new Python 3 version of GhIDA, as well. Since not all the users have moved to IDA Python 3 yet, we plan to maintain both versions of the plugin.
+
+You can visit the GitHub release page to download the latest version of GhIDA: we have tested the plugin in IDA 7.3 (Python 2 version) and IDA 7.5 (Python 3 version) using Ghidra 9.1.2.
+
+Automate the binary analysis with Ghidraaas
+
+Ghidraaas is a Docker container that provides simple REST APIs to automate the binary analysis with Ghidra. When it comes to analyzing several samples from the same family, it is useful to integrate Ghidraaas in your analysis workflow and automate the functions extraction and decompilation.
+
+The current set of APIs provides three main functionalities: launch the Ghidra binary analysis, retrieve the list of functions, and decompile a specific function. However, it's easy to include new Ghidra plugins and update the REST APIs to expose new functionalities based on your specific requirements.
+
+DDR version 1.0.2
+
+We are also releasing a new version of Dynamic Data Resolver for IDA, adding several features many users asked about. DDR allows users to trace dynamic values like registers or memory locations. You can also dump buffers or patch the sample and manipulate the code execution flow. For more, see our previous DDR blogs. As usual, you can download DDR from GitHub.
+
+In previous DDR versions, you had to enter an absolute code range, like 0x410000 - 0x412000, or you had to mark certain basic blocks you were interested in. We have changed this to a much more flexible model by introducing the start address and break address features. Beside defining the address range you are interested in, now, you can also add a start and break address as described in Figure 1. This gives you more granular options to define the code range you are searching for.
+
+Figure 1
+
+The new architecture has several advantages. First, it improves the workflow in IDA. It also speeds up analysis by narrowing down which parts you want to analyze. Finally, we added the break address feature to stop code execution after you've examined the portion you're interested in. As described in Figure 1, the difference between the start and break address is that the code before the start address gets executed.
+
+Another new option is that you can now hand over command line parameters (Figure 2) to the sample you are analysing. You can set all these new features via the DDR/Select menu.
+
+Figure 2
+
+We have also added a check for relocations in IDA, as this was confusing for some users in the past. DDR is using the virtual address handed over from IDA — for example, 0x410010 — and maps it to the virtual address the sample uses at execution time. DDR automatically handles relocations. This process doesn't work in the moment if you rebase the sample in IDA or if it was automatically rebased by the IDA debugger. For example, you have debugged the sample in IDA and the loader relocated it, so IDA rebased the code segment. The DDR plugin expects to get the PE file-based original virtual address for its operations from IDA, so DDR will use an incorrect address. 
+Walk-through video
+
+The following video is a walk-through of the new features we have implemented in DDR 1.0.2. beta. We would recommend to use this version even if it is called beta as far as it is the most complete and tested version of DDR.
+
+
+
+
+ Update and installation
+
+You can update your existing DDR installation by just downloading and executing the installer as usual. The installer script will detect if the installation directory on the server side exists and will delete it if you confirm the "existing installation found" information message. The same applies for the plugin side. Keep in mind that the installer script will delete the whole directory and its content, for example C:ools\DDR. Make sure you have saved any files you still need in this directory, before letting the installer delete the directory. DDR only supports Python3.
+
+We hope you will have some fun with our tools and are wishing you all the best for 2021. No matter where this holiday season finds you, we are hoping you can slow down a bit and you are surrounded with love, fun and good fortune. Happy reversing.
+

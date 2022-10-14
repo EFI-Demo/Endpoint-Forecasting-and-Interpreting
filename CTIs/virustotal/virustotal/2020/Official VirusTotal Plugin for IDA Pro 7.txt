@@ -1,0 +1,90 @@
+
+
+
+
+
+
+
+ATTENTION: In order to use the content search functionality you will need to have access to VT Intelligence. If you want to jump straight ahead and install the plugin, please refer to its GitHub repository. 
+
+
+
+
+
+
+
+
+
+VirusTotal is very excited to announce a beta release of a new plugin for IDA Pro v7 which integrates VT Intelligence’s content search directly into IDA. 
+
+This plugin adds a new "VirusTotal" entry to the IDA Pro context menu (disassembly and strings windows), enabling you to search for similar or exact data on VirusTotal. It translates the user selection into a query that VTGrep understands.
+
+
+
+The current beta release provides the following search options:
+
+Search for bytes: it searches for the bytes contained in the selected area.
+Search for string: it searches for the same string as the one selected in the Strings Window.
+Search for similar code: identifies memory offsets or addresses in the currently selected area and ignores them when searching.
+Search for similar code (strict): same as above but it also ignores all the constants in the currently selected area.
+Search for similar functions: same as "similar code" but you don’t need to select all the instructions that belong to a function. Just right-click on one instruction, and it will automatically detect the function boundaries, selecting all the instructions of the current function.
+
+
+
+
+
+
+
+Using VTGrep content search to trace DTrack samples
+
+
+As an example of how this plugin can speed up the analysis process, we have conducted a preliminary analysis of the DTrack sample that appeared last October 2019. As a reminder, this malware was used in an attack against the Kudankulam Nuclear Power Plant (KKNPP - India) on September 4, 2019, but was not publicly acknowledged by India’s Nuclear Power Corporation of India Limited (NPCIL) until nearly the end of October. 
+
+It's not the first time that a DTrack sample reuses code from previous attacks. Indeed, if we search for the string dkwero38oerA^t@# (VT Intelligence query: content:"dkwero38oerA^t@#") we can find 79 samples in VirusTotal that contain this string, and some of them are DTrack samples.
+
+
+
+This string is used as a key to compress a "C.TMP" file containing files and directories of "C:\" (one zip file per connected device). There's another interesting string (abcd@123) that's used to encrypt a zip file containing all the evidence collected. There are a total of nine occurrences of this second string in the VirusTotal database.
+
+These results can serve as a starting point to dive into previous versions of this sample. Additionally, we can look for similar code in the VirusTotal database. If we select the WinMain function's code, one sample shows up that looks promising.
+
+
+
+Comparing both WinMain functions, we can see that they are almost identical; they only differ in the values of memory addresses and offsets. Therefore, we can argue that we've just found another version of the current sample because this match points to another file that starts with the same code. 
+
+
+Thus, just one click ahead of the WinMain function, we are driven to another sample that looks interesting. 
+
+
+There’s another approach we can take to find related samples. We can search for identical sequences of strings. Although generated code usually changes between compilations, strings are placed in the same order inside the file. Taking a look at the strings used for gathering information about the current IP addresses, running processes, and open ports, we can jump to another sample that looks similar.
+
+
+
+We’ve just landed on another sample that shares code with our DTrack file. Taking a look at the disassembly, we can see a lot of similar functions (401B10, 402EB0, 4020E0, 403730, etc.). Even the function located at 11933B0 (related to the last search) seems to be a more completed version of the function located at 4038B0 in this last sample ("sct.jpg").
+
+
+
+Keep in mind that the number of samples shown depends on your license type. Standard licenses allow 90 days retrospection, but Threat Hunter PRO will allow you to go back in time one year.
+
+
+As we continue to develop this plugin here is some additional functionality that we are considering for future releases:
+
+Display a preview of the detection results in an IDA Pro window.
+Automatically identify domains, IPs and URLs contained in the strings of the file and summarize their detection information.
+Automatically suggest a YARA rule to detect the file.
+VT Enterprise shortcuts, such as searching for similar files.
+Automatically rank strings according to interest.
+Annotations community and collaborative RE.
+Improve the searching for similar functions (fuzzy hashes).
+Enrich the disassembly with behavior information obtained from our sandboxes.
+
+
+
+VirusTotal is interested in user feedback and priorities. Please do not hesitate to contact us to rank these features and suggest additional ones. 
+
+
+
+Email ThisBlogThis!Share to TwitterShare to Facebook
+
+
+

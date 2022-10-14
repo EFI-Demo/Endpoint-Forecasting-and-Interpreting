@@ -1,0 +1,287 @@
+
+This is the third post in a series of blog posts about the Content IQ Test. Please see ClamAV vs. Content IQ Test, part 1 and ClamAV vs. Content IQ Test, part 2.
+
+Today we look at how ClamAV would handle detecting the target string when embedded in polymorphic files. If you were to compute the MD5 checksum of these test files, you'd see that not two are the same.
+
+Test file 17 contains the target string in text file contained in a polymorphic zip file.
+
+
+azidouemba@ubuntu:~/Downloads$ clamscan -d test.ndb Test_File_17_Polymorphic_Zip_File.zip
+Test_File_17_Polymorphic_Zip_File.zip: TestSig1.UNOFFICIAL FOUND
+
+----------- SCAN SUMMARY -----------
+Known viruses: 1
+Engine version: 0.97.4
+Scanned directories: 0
+Scanned files: 1
+Infected files: 1
+Data scanned: 0.00 MB
+Data read: 0.00 MB (ratio 0.00:1)
+Time: 0.011 sec (0 m 0 s)
+azidouemba@ubuntu:~/Downloads$ clamscan -d test.ndb Test_File_17_Negative_Control
+Test_File_17_Negative_Control: OK
+
+----------- SCAN SUMMARY -----------
+Known viruses: 1
+Engine version: 0.97.4
+Scanned directories: 0
+Scanned files: 1
+Infected files: 0
+Data scanned: 0.00 MB
+Data read: 0.00 MB (ratio 1.00:1)
+Time: 0.009 sec (0 m 0 s)
+
+
+Without any problems, ClamAV scans the zip archive, then extracts its contents and scans them. In this case, there were 3 files named Test_File_17_MYYndDNqBllL.txt, Test_File_17_TNBjFqvcNFee.txt and Test_File_17_tRmkMMCCDuuF.txt. ClamAV identified the target string in Test_File_17_MYYndDNqBllL.txt.
+
+
+Test file 18 contains the target string a text file buried within several levels of Zip archives.
+
+azidouemba@ubuntu:~/Downloads$ cat test.ndb 
+TestSig1:0:*:6576616c{-200}756e657363617065{-200}282725363525373625363925366325323825323927
+azidouemba@ubuntu:~/Downloads$ clamscan -d test.ndb Test_File_18_Multilevel_Polymorphic_Zip_File
+Test_File_18_Multilevel_Polymorphic_Zip_File: TestSig1.UNOFFICIAL FOUND
+
+----------- SCAN SUMMARY -----------
+Known viruses: 1
+Engine version: 0.97.4
+Scanned directories: 0
+Scanned files: 1
+Infected files: 1
+Data scanned: 0.02 MB
+Data read: 0.09 MB (ratio 0.17:1)
+Time: 0.017 sec (0 m 0 s)
+azidouemba@ubuntu:~/Downloads$ clamscan -d test.ndb Test_File_18_Negative_Control 
+Test_File_18_Negative_Control: OK
+
+----------- SCAN SUMMARY -----------
+Known viruses: 1
+Engine version: 0.97.4
+Scanned directories: 0
+Scanned files: 1
+Infected files: 0
+Data scanned: 0.42 MB
+Data read: 0.12 MB (ratio 3.38:1)
+Time: 0.062 sec (0 m 0 s)
+
+
+
+With our signature, ClamAV detects that presence of the target string in the text file contained in a zip file contained in a zip file contained in a file contained in a zip file. This is what I mean:
+
+Test_File_18_Multilevel_Polymorphic_Zip_File
+|____Test_File_18_imoYSCAxenHA.zip
+|____Test_File_18_GKTpHFrEVhPB.zip
+|____Test_File_18_okTnanDKaYNd.zip
+|____Test_File_18_qKzdSzFAMafI.zip
+     |____Test_File_18_INkwmLoZzlSr.zip
+     |____Test_File_18_HAWdWhuUwIPe.zip
+          |____Test_File_18_BCFeZtUZuyjM.zip
+          |____Test_File_18_kpAusgeGkKba.zip
+          |____Test_File_18_AgixVmtpbAAN.zip
+          |____Test_File_18_AYXLMdygOPXV.zip
+               |____Test_File_18_AAZcByKsqjWN.txt
+               |____Test_File_18_UcLAagbhtANi.txt
+               |____Test_File_18_gTKfBOaOdKSK.txt   <-- contains target string
+
+
+
+Test file 19 contains the target string in a Flash (SWF) file embedded in a polymorphic Zip file. To detect this string, we use a feature of ClamAV that is current undergoing testing and is not available in the latest stable release. You will need to download the development release, and uncomment the following in libclamav/scanners.c before compiling:
+
+
+case CL_TYPE_SWF:
+            if(DCONF_DOC & DOC_CONF_SWF)
+                ret = cli_scanswf(ctx);
+
+            break;
+
+
+We run clamav-devel/clamscan/clamscan with the option --leave-temps. ClamAV "sees":
+
+
+
+
+We go ahead and scan Test file 19:
+
+
+azidouemba@ubuntu:~/Downloads$ cat test.ndb 
+TestSig1:0:*:6576616c{-200}756e657363617065{-200}282725363525373625363925366325323825323927
+TestSig:4:*:64616e69656c627261766e6d
+azidouemba@ubuntu:~/Downloads$ ~/Programs/clamav-devel/clamscan/clamscan -d test.ndb Test_File_19_Ts_in_Swf_in_Polymorphic_Zip.zip 
+Test_File_19_Ts_in_Swf_in_Polymorphic_Zip.zip: TestSig1.UNOFFICIAL FOUND
+
+----------- SCAN SUMMARY -----------
+Known viruses: 2
+Engine version: devel-clamav-0.97-434-gd510390
+Scanned directories: 0
+Scanned files: 1
+Infected files: 1
+Data scanned: 0.01 MB
+Data read: 0.02 MB (ratio 0.33:1)
+Time: 0.035 sec (0 m 0 s)
+azidouemba@ubuntu:~/Downloads$ ~/Programs/clamav-devel/clamscan/clamscan -d test.ndb Test_File_19_Negative_Control.zip 
+Test_File_19_Negative_Control.zip: OK
+
+----------- SCAN SUMMARY -----------
+Known viruses: 2
+Engine version: devel-clamav-0.97-434-gd510390
+Scanned directories: 0
+Scanned files: 1
+Infected files: 0
+Data scanned: 0.07 MB
+Data read: 0.03 MB (ratio 2.57:1)
+Time: 0.046 sec (0 m 0 s)
+
+
+We successfully detect the target string. This is how Test file 19 was organized:
+
+
+Test_File_19_Ts_in_Swf_in_Polymorphic_Zip.zip
+|____Test_File_19_danIsVGoyReO.zip
+|____Test_File_19_aSueIXzLOWMg.zip
+|____Test_File_19_eGqvUDOwatPF.zip
+     |____Test_File_19_pCvytqMyyBQy.zip
+     |____Test_File_19_EkxSSRNNmJnq.zip
+          |____Test_File_19_cwMLACFrAhxm.bin
+          |____Test_File_19_FIpZyWddMazx.bin
+          |____Test_File_19_MKPqAHCkwZUY.bin <-- SFW containing target string
+
+
+Test file 20 contains the target string in a recently compiled executable file.
+
+
+azidouemba@ubuntu:~/Downloads$ cat test.ndb 
+TestSig1:0:*:6576616c{-200}756e657363617065{-200}282725363525373625363925366325323825323927
+azidouemba@ubuntu:~/Downloads$ clamscan -d test.ndb Test_File_20_Recently_Compiled_Executable.exe 
+Test_File_20_Recently_Compiled_Executable.exe: OK
+
+----------- SCAN SUMMARY -----------
+Known viruses: 1
+Engine version: 0.97.4
+Scanned directories: 0
+Scanned files: 1
+Infected files: 0
+Data scanned: 0.02 MB
+Data read: 0.02 MB (ratio 1.00:1)
+Time: 0.030 sec (0 m 0 s)
+
+
+Using the signature we wrote, ClamAV was not able to alert on the presence of the target string. Let's look at a snippet of the executable's code:
+
+000025d0  6e 00 00 19 47 00 72 00  65 00 65 00 74 00 69 00  |n...G.r.e.e.t.i.|
+000025e0  6e 00 67 00 73 00 21 00  0a 00 0a 00 00 4d 65 00  |n.g.s.!......Me.|
+000025f0  76 00 61 00 6c 00 28 00  75 00 6e 00 65 00 73 00  |v.a.l.(.u.n.e.s.|
+00002600  63 00 61 00 70 00 65 00  28 00 27 00 25 00 36 00  |c.a.p.e.(.'.%.6.|
+00002610  35 00 25 00 37 00 36 00  25 00 36 00 39 00 25 00  |5.%.7.6.%.6.9.%.|
+00002620  36 00 63 00 25 00 32 00  38 00 25 00 32 00 39 00  |6.c.%.2.8.%.2.9.|
+00002630  27 00 29 00 29 00 0a 00  0a 00 01 5f 49 00 66 00  |'.).)......_I.f.|
+00002640  20 00 74 00 68 00 69 00  73 00 20 00 68 00 61 00  | .t.h.i.s. .h.a.|
+00002650  64 00 20 00 62 00 65 00  65 00 6e 00 20 00 61 00  |d. .b.e.e.n. .a.|
+00002660  20 00 72 00 65 00 61 00  6c 00 20 00 61 00 74 00  | .r.e.a.l. .a.t.|
+00002670  74 00 61 00 63 00 6b 00  2c 00 20 00 79 00 6f 00  |t.a.c.k.,. .y.o.|
+00002680  75 00 27 00 64 00 20 00  62 00 65 00 20 00 6f 00  |u.'.d. .b.e. .o.|
+00002690  77 00 6e 00 65 00 64 00  21 00 01 15 47 00 72 00  |w.n.e.d.!...G.r.|
+
+
+The target string is present in executable, only Unicode encoded. Therefore, we can rewrite create a new signature that we will call TestSig2 that will continue to detect the target string in all the test files we've looked at so far and additionally detect the unicode-encoded target string in files.
+
+Here's TestSig2 and it's decoding as provided by sigtool --decode-sig (sigtool ships with ClamAV):
+
+
+TestSig2;Target:0;(0|1);6576616c{-200}756e657363617065{-200}282725363525373625363925366325323825323927;6500760061006c{-200}75006e006500730063006100700065{-200}2800270025003600350025003700360025003600390025003600630025003200380025003200390027
+VIRUS NAME: TestSig2
+TDB: Target:0
+LOGICAL EXPRESSION: (0|1)
+ * SUBSIG ID 0
+ +-> OFFSET: ANY
+ +-> DECODED SUBSIGNATURE:
+eval{WILDCARD_ANY_STRING(LENGTH<=200)}unescape{WILDCARD_ANY_STRING(LENGTH<=200)}('%65%76%69%6c%28%29'
+ * SUBSIG ID 1
+ +-> OFFSET: ANY
+ +-> DECODED SUBSIGNATURE:
+eval{WILDCARD_ANY_STRING(LENGTH<=200)}unescape{WILDCARD_ANY_STRING(LENGTH<=200)}('%65%76%69%6c%28%29'
+
+
+We see that the 2 substrings detect the same this. The only difference is that one detects the ASCII-encoded test string whereas the other detects the unicode-encoded string.
+
+Let's see how ClamAV does with this new signature:
+
+
+azidouemba@ubuntu:~/Downloads$ cat test.ldb
+TestSig2;Target:0;(0|1);6576616c{-200}756e657363617065{-200}282725363525373625363925366325323825323927;6500760061006c{-200}75006e006500730063006100700065{-200}2800270025003600350025003700360025003600390025003600630025003200380025003200390027
+azidouemba@ubuntu:~/Downloads$ clamscan -d test.ldb Test_File_20_Recently_Compiled_Executable.exe 
+Test_File_20_Recently_Compiled_Executable.exe: TestSig2.UNOFFICIAL FOUND
+
+----------- SCAN SUMMARY -----------
+Known viruses: 3
+Engine version: 0.97.4
+Scanned directories: 0
+Scanned files: 1
+Infected files: 1
+Data scanned: 0.02 MB
+Data read: 0.02 MB (ratio 1.00:1)
+Time: 0.040 sec (0 m 0 s)
+
+azidouemba@ubuntu:~/Downloads$ clamscan -d test.ldb Test_File_20_Negative_Control.exe 
+Test_File_20_Negative_Control.exe: OK
+
+----------- SCAN SUMMARY -----------
+Known viruses: 3
+Engine version: 0.97.4
+Scanned directories: 0
+Scanned files: 1
+Infected files: 0
+Data scanned: 0.02 MB
+Data read: 0.02 MB (ratio 1.00:1)
+Time: 0.011 sec (0 m 0 s)
+
+
+
+ClamAV detected the unicode-encoded string, while it remains able to detect the ASCII-encoded target string.
+
+
+Finally, Test file 21 contains the target string a recently compiled executable file embedded in a polymorphic Zip file.
+
+
+Just like for tests file 20, test file 21 contains several levels of embedded archives before we got to the executable:
+
+Test_File_21_Recently_Compiled_Executable_Zipped.zip
+|____Test_File_21_rYorsJjKqXSK.zip
+|____Test_File_21_pTFjcGqFOlyq.zip
+     |____Test_File_21_kLRkHHudAQfc.bin
+     |____Test_File_21_PjCefACftYOr.bin
+     |____Test_File_21_MXirTDkPArWW.bin <-- Executable containing target string
+
+
+ClamAV again is able to scan the archive and all the files that are embedded in it in order to successfully detect the presence of the unicode-encode target string inside of the executable:
+
+
+azidouemba@ubuntu:~/Downloads$ cat test.ldb
+TestSig2;Target:0;(0|1);6576616c{-200}756e657363617065{-200}282725363525373625363925366325323825323927;6500760061006c{-200}75006e006500730063006100700065{-200}2800270025003600350025003700360025003600390025003600630025003200380025003200390027
+azidouemba@ubuntu:~/Downloads$ clamscan -d test.ldb  Test_File_21_Recently_Compiled_Executable_Zipped.zip
+Test_File_21_Recently_Compiled_Executable_Zipped.zip: TestSig2.UNOFFICIAL FOUND
+
+----------- SCAN SUMMARY -----------
+Known viruses: 3
+Engine version: 0.97.4
+Scanned directories: 0
+Scanned files: 1
+Infected files: 1
+Data scanned: 0.02 MB
+Data read: 0.01 MB (ratio 1.33:1)
+Time: 0.031 sec (0 m 0 s)
+azidouemba@ubuntu:~/Downloads$ clamscan -d test.ldb  Test_File_21_Negative_Control 
+Test_File_21_Negative_Control: OK
+
+----------- SCAN SUMMARY -----------
+Known viruses: 3
+Engine version: 0.97.4
+Scanned directories: 0
+Scanned files: 1
+Infected files: 0
+Data scanned: 0.04 MB
+Data read: 0.01 MB (ratio 3.00:1)
+Time: 0.013 sec (0 m 0 s)
+
+
+In the next post I'll take a look at how ClamAV does against test files with VBA content.
+

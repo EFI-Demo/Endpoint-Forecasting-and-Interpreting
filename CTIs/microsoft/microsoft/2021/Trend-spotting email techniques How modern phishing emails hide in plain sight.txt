@@ -1,0 +1,103 @@
+
+		With the massive volume of emails sent each day, coupled with the many methods that attackers use to blend in, identifying the unusual and malicious is more challenging than ever. An obscure Unicode character in a few emails is innocuous enough, but when a pattern of emails containing this obscure character accompanied by other HTML quirks, strange links, and phishing pages or malware is observed, it becomes an emerging attacker trend to investigate. We closely monitor these kinds of trends to gain insight into how best to protect customers.
+This blog shines a light on techniques that are prominently used in many recent email-based attacks. We’ve chosen to highlight these techniques based on their observed impact to organizations, their relevance to active email campaigns, and because they are intentionally designed to be difficult to detect. They hide text from users, masquerade as the logos of trusted companies, and evade detection by using common web practices that are usually benign:
+
+Brand impersonation with procedurally-generated graphics
+Text padding with invisible characters
+Zero-point font obfuscation
+Victim-specific URI
+
+We’ve observed attackers employ these tricks to gain initial access to networks. Although the examples we present were primarily seen in credential theft attacks, any of these techniques can be easily adapted to deliver malware.
+By spotting trends in the threat landscape, we can swiftly respond to potentially malicious behavior. We use the knowledge we gain from our investigations to improve customer security and build comprehensive protections. Through security solutions such as Microsoft Defender for Office 365 and the broader Microsoft 365 Defender, we deliver durable and comprehensive protection against the latest attacker trends.
+Brand impersonation with procedurally-generated graphics
+We have observed attackers using HTML tables to imitate the logos and branding of trusted organizations. In one recent case, an attacker created a graphic resembling the Microsoft logo by using a 2×2 HTML table and CSS styling to closely match the official branding.
+Spoofed logos created with HTML tables allow attackers to bypass brand impersonation protections. Malicious content arrives in users’ inboxes, appearing to recipients as if it were a legitimate message from the company. While Microsoft Defender for Office 365 data shows a decline in the usage of this technique over the last few months, we continue to monitor for new ways that attackers will use procedurally-generated graphics in attacks.
+
+Figure 1. Tracking data for small 2×2 HTML tables
+How it works
+A graphic resembling a trusted organization’s official logo is procedurally generated from HTML and CSS markup. It’s a fileless way of impersonating a logo, because there are no image files for security solutions to detect. Instead, the graphic is constructed out a specially styled HTML table that is embedded directly in the email.
+Of course, inserting an HTML table into an email is not malicious on its own. The malicious pattern emerges when we view this technique in context with the attacker’s goals.
+Two campaigns that we have been tracking since April 2021 sent targets emails that recreated the Microsoft logo. They impersonated messages from Office 365 and SharePoint. We observed the following email subjects:
+
+Action Required: Expiration Notice On <Email Address>
+Action Required: 3 Pending Messages sent <date>
+New 1 page incoming eFax© message for “<Email Alias>”
+
+
+Figure 2. Sample emails that use HTML code to embed a table designed to mimic the Microsoft logo
+Upon extracting the HTML used in these emails, Microsoft analysts determined that the operators used the HTML table tag to create a 2×2 table resembling the Microsoft logo. The background color of each of the four cells corresponded to the colors of the quadrants of the official logo.
+
+Figure 3. Page source of the isolated HTML mimicking the Microsoft logo
+HTML and CSS allow for colors to be referenced in several different ways. Many colors can be referenced in code via English language color names, such as “red” or “green”. Colors can also be represented using six-digit hexadecimal values (i.e., #ffffff for white and #000000 for black), or by sets of three numbers, with each number signifying the amount of red, green, or blue (RGB) to combine. These methods allow for greater precision and variance, as the designer can tweak the numbers or values to customize the color’s appearance.
+
+Figure 4. Color values used to replicate the Microsoft logo
+As seen in the above screenshot, attackers often obscure the color references to the Microsoft brand by using color names, hexadecimal, and RGB to color in the table. By switching up the method they use to reference the color, or slightly changing the color values, the attacker can further evade detection by increasing variance between emails.
+Text padding with invisible characters
+In several observed campaigns, attackers inserted invisible Unicode characters to break up keywords in an email body or subject line in an attempt to bypass detection and automated security analysis. Certain characters in Unicode indicate extremely narrow areas of whitespace, or are not glyphs at all and are not intended to render on screen.
+Some invisible Unicode characters that we have observed being used maliciously include:
+
+Soft hyphen (U+00AD)
+Word joiner (U+2060)
+
+Both of these are control characters that affect how other characters are formatted. They are not glyphs and would not even be visible to readers, in most cases. As seen in the following graph, the use of the soft hyphen and word joiner characters has seen a steady increase over time. These invisible characters are not inherently malicious, but seeing an otherwise unexplained rise of their use in emails indicates a potential shift in attacker techniques.
+
+Figure 5. Tracking data for the invisible character obfuscation technique
+How it works
+When a recipient views a malicious email containing invisible Unicode characters, the text content may appear indistinguishable from any other email. Although not visible to readers, the extra characters are still included in the body of the email and are “visible” to filters or other security mechanisms. If attackers insert extra, invisible characters into a word they don’t want security products to “see,” the word might be treated as qualitatively different from the same word without the extra characters. This allows the keyword to evade detection even if filters are set to catch the visible part of the text.
+Invisible characters do have legitimate uses. They are, for the most part, intended for formatting purposes: for instance, to indicate where to split a word when the whole word can’t fit on a single line. However, an unintended consequence of these characters not displaying like ordinary text is that malicious email campaign operators can insert the characters to evade security.
+The animated GIF below shows how the soft hyphen characters are typically used in a malicious email. The soft hyphen is placed between each letter in the red heading to break up several key words. It’s worth noting that the soft hyphens are completely invisible to the reader until the text window is narrowed and the heading is forced to break across multiple lines.
+
+Figure 6. Animation showing the use of the invisible soft hyphen characters
+In the following example, a phishing email has had invisible characters inserted into the email body: specifically, in the “Keep current Password” text that links the victim to a phishing page.
+
+Figure 7. Microsoft Office 365 phishing email using invisible characters to obfuscate the URL text.
+The email appears by all means “normal” to the recipient, however, attackers have slyly added invisible characters in between the text “Keep current Password.” Clicking the URL directs the user to a phishing page impersonating the Microsoft single sign-on (SSO) page.
+In some campaigns, we have seen the invisible characters applied to every word, especially any word referencing Microsoft or Microsoft products and services.
+Zero-point font obfuscation
+This technique involves inserting hidden words with a font size of zero into the body of an email. It is intended to throw off machine learning detections, by adding irrelevant sections of text to the HTML source making up the email body. Attackers can successfully obfuscate keywords and evade detection because recipients can’t see the inserted text—but security solutions can.
+Microsoft Defender for Office 365 has been blocking malicious emails with zero-point font obfuscation for many years now. However, we continue to observe its usage regularly.
+
+Figure 8. Tracking data for emails containing zero-point fonts experienced surges in June and July 2021
+How it works
+Similar to how there are many ways to represent colors in HTML and CSS, there are also many ways to indicate font size. We have observed attackers using the following styling to insert hidden text via this technique:
+
+font-size: 0px
+font-size: 0.0000em
+font-size: 0vw
+font-size: 0%
+font: italic bold 0.0px Georgia, serif
+font: italic bold 0em Georgia, serif
+font: italic bold 0vw Georgia, serif
+font: italic bold 0% Georgia, serif
+
+Being able to add zero-width text to a page is a quirk of HTML and CSS. It is sometimes used legitimately for adding meta data to an email or to adjust whitespace on a page. Attackers repurpose this quirk to break up words and phrases a defender might want to track, whether to raise an alert or block the content entirely. As with the invisible Unicode character technique, certain kinds of security solutions might treat text containing these extra characters as distinct from the same text without the zero-width characters. This allows the visible keyword text to slip past security.
+In a July 2021 phishing campaign blocked by Microsoft Defender for Office 365, the attacker used a voicemail lure to entice recipients into opening an email attachment. Hidden, zero-width letters were added to break up keywords that might otherwise have been caught by a content filter. The following screenshot shows how the email appeared to targeted users.
+
+Figure 9. Sample email that uses the zero-point font technique
+Those with sharp eyes might be able to spot the awkward spaces where the attacker inserted letters that are fully visible only within the HTML source code. In this campaign, the obfuscation technique was also used in the malicious email attachment, to evade file-hash based detections.
+
+Figure 10. The HTML code of the email body, exposing the use of the zero-point font technique
+Victim-specific URI
+Victim-specific URI is a way of transmitting information about the target and creating dynamic content based upon it. In this technique, a custom URI crafted by the attacker passes information about the target to an attacker-controlled website. This aides in spear-phishing by personalizing content seen by the intended victim. This is often used by the attacker to create legitimate-seeming pages that impersonate the Single Sign On (SSO) experience.
+The following graph shows cyclic surges in email content, specifically links that have an email address included as part of the URI. Since custom URIs are such a common web design practice, their usage always returns to a steady baseline in between peaks. The surges appear to be related to malicious activity, since attackers will often send out large numbers of spam emails over the course of a campaign.
+
+Figure 11. Tracking data for emails containing URLs with email address in the PHP parameter
+In a campaign Microsoft analysts observed in early May 2021, operators generated tens of thousands of subdomains from Google’s Appspot, creating unique phishing sites and victim identifiable URIs for each recipient. The technique allowed the operators to host seemingly legitimate Microsoft-themed phishing sites on third-party infrastructure.
+How it works
+The attacker sends the target an email, and within the body of the email is a link that includes special parameters as part of the web address, or URI. The custom URI parameters contain information about the target. These parameters often utilize PHP, as PHP is a programming language frequently used to build websites with dynamic content—especially on large platforms such as Appspot.
+Details such as the target’s email address, alias, or domain, are sent via the URI to an attacker-controlled web page when the user visits the link. The attacker’s web page pulls the details from the parameters and use that to present the target with personalized content. This can help the attacker make malicious websites more convincing, especially if they are trying to mimic a user logon page, as the target will be greeted by their own account name.
+Custom URIs containing user-specific parameters are not always, or even often, malicious. They are commonly used by all kinds of web developers to transmit pertinent information about a request. A query to a typical search engine will contain numerous parameters concerning the nature of the search as well as information about the user, so that the search engine can provide users with tailored results.
+However, in the victim identifiable URI technique, attackers repurpose a common web design practice to malicious ends. The tailored results seen by the target are intended to trick them into handing over sensitive information to an attacker.
+In the Compact phishing campaign described by WMC Global and tracked by Microsoft, this technique allowed the operators to host Microsoft-themed phishing sites on any cloud infrastructure, including third-party platforms such as Google’s Appspot. Microsoft’s own research into the campaign in May noted that not only tens of thousands of individual sites were created, but that URIs were crafted for each recipient, and the recipient’s email address was included as a parameter in the URI.
+Newer variants of the May campaign started to include links in the email, which routed users through a compromised website, to ultimately redirect them to the Appspot-hosted phishing page. Each hyperlink in the email template used in this version of the campaign was structured to be unique to the recipient.
+The recipient-specific information passed along in the URI was used to render their email account name on a custom phishing page, attempting to mimic the Microsoft Single Sign On (SSO) experience. Once on the phishing page, the user was prompted to enter their Microsoft account credentials. Entering that information would send it to the attacker.
+Microsoft Defender for Office 365 delivers protection powered by threat intelligence
+As the phishing techniques we discussed in this blog show, attackers use common or standard aspects of emails to hide in plain sight and make attacks very difficult to detect or block. With our trend tracking in place, we can make sense of suspicious patterns, and notice repeated combinations of techniques that are highly likely to indicate an attack. This enables us to ensure we protect customers from the latest evasive email campaigns through Microsoft Defender for Office 365. We train machine learning models to keep an eye on activity from potentially malicious domains or IP addresses. Knowing what to look out for, we can rule out false positives and focus on the bad actors.
+This has already paid off. Microsoft Defender for Office 365 detected and protected customers from sophisticated phishing campaigns, including the Compact campaign. We also employed our knowledge of prevalent trends to hunt for a ransomware campaign that might have otherwise escaped notice. We swiftly opened an investigation to protect customers from what seemed at first like a set of innocuous emails.
+Trend tracking helps us to expand our understanding about prevalent attacker tactics and to improve existing protections. We’ve already set up rules to detect the techniques described in this blog. Our understanding of the threat landscape has led to better response times to critical threats. Meanwhile, deep within Microsoft Defender for Office 365, rules for raising alerts are weighted so that detecting a preponderance of suspicious techniques triggers a response, while legitimate emails are allowed to travel to their intended inboxes.
+Threat intelligence also drives what new features are developed, and which rules are added. In this way, generalized trend tracking leads to concrete results. Microsoft is committed to using our knowledge of the threat landscape to continue to track trends, build better protections for our products, and share intelligence with the greater online community.
+Learn how to protect all of Office 365 against advanced threats like business email compromise and credential phishing with Microsoft Defender for Office 365.
+ 
+Microsoft 365 Defender Threat Intelligence Team
+ 
+	

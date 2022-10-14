@@ -1,0 +1,101 @@
+
+
+This blog post was authored by Chris Marczewski
+
+Cisco Talos has been tracking a series of Imminent RAT infections for the past two months following reported data from Cisco Advanced Malware Protection's (AMP) Exploit Prevention engine. AMP successfully stopped the malware before it was able to infect the host, but an initial analysis showed a strong indication that stages exist before the deployment of the RAT. Surprisingly, the recovered samples showed no sign of Imminent RAT, but instead a commercial grade packer.
+
+This was a series of attacks engineered to evade detection and frustrate analysis. From the outside, we have a commercially available, yet affordable packer called "Obsidium" that has been used in the past to protect the intellectual property of some legitimate software vendors. The payload results in a RAT called Imminent that has also been used previously for legitimate purposes. Imminent is a commercially available RAT that retails for $25 to $100, depending upon the size of the customer's expected user base. While it is not intended for malicious use, in this case, its detection suggested otherwise.
+
+Although a Potentially Unwanted Application (PUA) detection approach could suffice, not everyone enables blocking of PUAs. We have other technologies in place, such as the Exploit Prevention engine, that are well-suited to detect such threats. We hope that after reading this research, you'll have a better understanding of not only what it takes to investigate an attack using a complex packer, but also how AMP is equipped to stop such attacks that planned on successfully evading static detection or thwarting the benefits of dynamic analysis from a malware sandbox.
+
+
+After AMP detected this particular strain of Imminent, and when we saw how complex the packer was that's used to hide the malware from detection, we decided to investigate further. The following dynamic run shows this:
+
+
+
+
+
+We identified the use of a commercial-grade packer, but we were also curious about the extent of the anti-debugging and anti-virtual machine techniques employed by this particular run of the packer. It starts with several instances of overriding SEH exception handlers. This is accomplished by pushing one handler before and after FS:0, then moving the stack pointer to FS:0. This is possible since the sample is 32-bit and was not compiled with SafeSEH. Intentional access violations and illegal instructions redirect to some preparation code, leading to the initial decryption of malicious code.
+
+
+
+
+
+Since the overrides lead to mostly preparation code, most of this can be skipped by following where all user-land exceptions must go: ntdll->KiUserExceptionDispatcher. You can pass the exception to the application and break just before the jump condition to determine if another exception exists in the chain, or if runtime can continue.
+
+
+
+
+
+Finally, follow the pointer stored at ECX to resolve a CONTEXT structure and determine the EIP for the instruction that will be executed upon calling NtContinue. EIP can be manually resolved by following ECX at this point during runtime and applying the CONTEXT structure for a 32-bit context.
+
+The malware decrypts and re-encrypts sections of malicious code one at a time, making it hard to determine a complete timeline for a full decryption point without manually stepping through each section. The cryptographic scheme uses AES per native x86 instructions and wrapper functions.
+
+
+
+
+
+
+
+
+
+Past the initial code decryption, you start to see some semblance of complex API resolving, the first of which resembles other portions of the binary, but deters analysis overall: junk byte insertion for anti-disassembly.
+
+
+
+
+
+
+
+
+
+As one might expect, this makes modern disassembler rendering of control flow graphs and function blocks quite messy. Several breakpoints and call returns later, you start to notice API strings getting tossed around the general purpose registers. With some trial and error, it's not impossible to break on the pivotal return points where the resolved API address is stored in EAX. You can then run the debugger until a call return, but you will encounter some additional access violations and illegal instructions acting as code trampolines, as shown below. The access violations and illegal instructions are a standard feature of the packer if the end user decides to include anti-debugging when running the payload through the packer.
+
+
+
+
+
+
+
+
+
+It's also worth mentioning that resolved API addresses should not be broken on, nor jumped to by running until you hit call returns. Call returns are not always used by the packer to move to the desired API. Also, the address of the API is not used directly but is instead invoked a few instructions within the function, & the depth varies for each API. Your best course of action is to break a few calls in the API code early enough to view the original parameters that were haphazardly passed to the resolved API. What's more, the packer code will check the target of the trampoline within the API code for software breakpoints prior to redirection (0xCC, or int 3 disassembled).
+
+After you've established such control over the debugging session, you can begin to handle the anti-debugging checks. This is a necessary step to unpack the original payload successfully. Conventional techniques of letting a sample a run and dumping full images or relevant sections of code are not possible in this case due to such checks. With this packer, the anti-debugging checks include the following:
+
+
+Class registration, passed to CreateWindowsEx, containing a callback parameter to be called by CallWindowProc. The callback function itself invokes NtQueryInformationProcess with ProcessDebugPort set as the requested ProcessInformationClass enumeration.
+The API is called again twice for undocumented ProcessInformationClass enumerations ProcessDebugObjectHandle and ProcessDebugFlags.
+NtQuerySystemInformation is called with an undocumented enumeration of the SystemInformationClass parameter: SystemKernelDebuggerInformation. In this particular case, the standard SYSTEM_BASIC_INFORMATION structure is not returned, but instead, a SYSTEM_KERNEL_DEBUGGER_INFORMATION structure is returned, containing UCHAR KernelDebuggerEnabled and UCHAR KernelDebuggerNotPresent. The user can bypass this debugger check by toggling the flags appropriately.
+CloseHandle is called for an invalid handle. When debugging a process, this will generate an exception, rather than resulting in a silent failure of the API. In this case, the exception leads back to the debugger being detected (EnumWindows->MessageBoxA->"Debugger detected…"). Discard the exception when debugging to bypass this check.
+CreateFileA is called several times to check if file objects with the following debugger-related file names can be instantiated on the host:
+
+
+
+\\.SICE
+\\.\NTICE
+\\.\NTFIRE
+
+
+
+
+The next check is interesting in that is resolves more than 20 APIs before commencing with the actual debugger check. Fortunately, only the last few API's are involved with the check (InternalGetWindowText, IsWindowVisible, and EnumWindows). As discussed earlier, usually getting EnumWindows at this point of the unpacking is a bad sign that you've failed a debugger check. In this case, it's different. The callback function passed to EnumWindows must be handled with a breakpoint and iterated until you see InternalGetWindowText and IsWindowVisible getting called as standalone debugger checks.
+An arbitrary value is passed to SetLastError, followed by an intentional error. GetLastError is called to check if the set value remains, as expected when debugging.
+GetCurrentThread grabs the current thread handle and passes it to NtSetInformationThread coupled with the ThreadHideFromDebugger enumeration from THREAD_INFORMATION_CLASS. This will detach the process from the debugger if present.
+CheckRemoteDebuggerPresent
+FindWindowW looking for the following debugger class names, rather than window names: ObsidianGUI, WinDbgFrameClass, ID, and OLLYDBG
+CreateFileW checking for a failed attempt at creating \\.\VBoxGuest
+
+This is just a portion of the anti-debugging phase. Unfortunately, we don't have the space here to cover the malware's anti-VM techniques, but this will give you a good start. We decided to proceed with the unpacking of the sample on a bare-metal host to dump the final binary. We identified the final stage as a commercial RAT being used with malicious intent. Pivoting off a dynamic domain name revealed other samples with similarly complex packers (Themida, etc.) The host is not running one, but several control panels for various RAT's (including the one we unpacked).
+
+This was a series of attacks that further complicates detection strategy. In the beginning, we had a commercially available packer that has been used in the past to protect the intellectual property of legitimate software vendors. Further on, the payload resulted in a commercially available RAT that has also been used for legitimate purposes. Although a PUA detection approach could suffice in this case, we have technologies in place such as the Exploit Prevention engine to detect such threats dynamically, in addition to preventing telemetry for further investigations. Attackers are relentlessly attempting new methods of bypassing threat detection. In this particular case, commercially available software was used to no avail. The attacks were successfully stopped by the Cisco Advanced Malware Protection's (AMP) Exploit Prevention engine, and the resulting event data only helped out more by providing valuable information on what tools the attackers are using against their targets.
+
+
+IOCs
+Original Obsidium packed sample
+3bc0ae9cd143920a55a4a53c61dd516ce5069f3d9453d2a08fc47273f29d1cf3
+
+Unpacked Imminent RAT sample
+12cca4fcfe311d1136db6736e7f17854746a5e6c7a284c27ea84a5016bf982d7
+
+

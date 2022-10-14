@@ -1,0 +1,76 @@
+UPDATE June 30: Further investigation by Symantec has confirmed dozens of U.S. newspaper websites owned by the same parent company have been compromised by SocGholish injected code. Some of the organizations targeted by WastedLocker could have been compromised when an employee browsed the news on one of its websites. Symantec has notified the company and it has now removed the malicious code.
+
+Symantec, a division of Broadcom (NASDAQ: AVGO), has identified and alerted our customers to a string of attacks against U.S. companies by attackers attempting to deploy the WastedLocker ransomware (Ransom.WastedLocker) on their networks. The end goal of these attacks is to cripple the victim’s IT infrastructure by encrypting most of their computers and servers in order to demand a multimillion dollar ransom. At least 31 customer organizations have been attacked, meaning the total number of attacks may be much higher. The attackers had breached the networks of targeted organizations and were in the process of laying the groundwork for staging ransomware attacks.
+
+WastedLocker is a relatively new breed of targeted ransomware, documented just prior to our publication by NCC Group, while Symantec was performing outreach to affected networks. WastedLocker has been attributed to the notorious “Evil Corp” cyber crime outfit. Evil Corp has previously been associated with the Dridex banking Trojan and BitPaymer ransomware, which are believed to have earned their creators tens of millions of dollars. Two Russian men who are alleged to be involved in the group have open indictments against them in the U.S.
+
+The attacks begin with a malicious JavaScript-based framework known as SocGholish, tracked to more than 150 compromised websites, which masquerades as a software update. Once the attackers gain access to the victim’s network, they use Cobalt Strike commodity malware in tandem with a number of living-off-the-land tools to steal credentials, escalate privileges, and move across the network in order to deploy the WastedLocker ransomware on multiple computers.
+
+Discovery
+
+The attacks were proactively detected on a number of customer networks by Symantec’s Targeted Attack Cloud Analytics, which leverages advanced machine learning to spot patterns of activity associated with targeted attacks. The activity was reviewed by Symantec’s Threat Hunter team (part of Symantec’s Endpoint Security Complete offering) who verified it and quickly realized it corresponded closely to publicly documented activity seen in the early stages of WastedLocker attacks.
+
+This discovery enabled us to identify further organizations that had been targeted by WastedLocker and identify additional tools, tactics, and procedures used by the attackers, helping us to strengthen our protection against every stage of the attack.
+.Major corporations in the crosshairs
+
+Symantec has uncovered attacks against 31 organizations to date, all of which were located in the U.S. The vast majority of targets are major corporations, including many household names. Aside from a number of large private companies, there were 11 listed companies, eight of which are Fortune 500 companies. All but one of the targeted organizations are U.S. owned, with the exception being a U.S.-based subsidiary of an overseas multinational.
+.Organizations in a diverse range of sectors were attacked. Manufacturing was the sector most affected, accounting for five targeted organizations. This was followed by Information Technology (four) and Media and Telecommunications (three). Had the attackers not been disrupted, successful attacks could have led to millions in damages, downtime, and a possible domino effect on supply chains.
+
+How WastedLocker attacks unfold
+
+The initial compromise of an organization involves the SocGholish framework, which is delivered to the victim in a zipped file via compromised legitimate websites. Symantec has discovered at least 150 different legitimate websites that refer traffic to websites hosting the SocGholish zip file. It is possible that these websites lead to different malware, as such redirection services can be utilized by multiple actors at the same time.
+
+The zipped file contains malicious JavaScript, masquerading as a browser update. A second JavaScript file is then executed by wscript.exe. This JavaScript first profiles the computer using commands such as whoami, net user, and net group, then uses PowerShell to download additional discovery related PowerShell scripts.
+
+The next stage of the attack is to deploy Cobalt Strike. PowerShell is used to download and execute a loader from a domain publicly reported as being used to deliver Cobalt Strike as part of WastedLocker attacks. The loader also shared a command and control (C&C) domain with this reported Cobalt Strike infrastructure. The loader contained a .NET injector, also reportedly seen in WastedLocker attacks. The injector, along with the loader for Cobalt Strike Beacon, is reportedly taken from an open-source project called Donut, which is designed to help inject and execute in-memory payloads.
+
+The injected payload is known as Cobalt Strike Beacon and can be used to execute commands, inject other processes, elevate current processes or impersonate other processes, and upload and download files. The Get-NetComputer command from PowerView is renamed by the attackers to a random name. This command was then seen searching for all the computer objects in the Active Directory database with filter condition like *server* or *2003* or *7* (returning all Windows Server, Windows Server 2003, or Windows 7 instances). The attackers then logged this information in a .tmp file.
+
+Privilege escalation was performed using a publicly documented technique involving the Software Licensing User Interface tool (slui.exe), a Windows command line utility that is responsible for activating and updating the Windows operating system.
+
+The attackers used the Windows Management Instrumentation Command Line Utility (wmic.exe) to execute commands on remote computers, such as adding a new user or executing additional downloaded PowerShell scripts. Cobalt Strike was also used to carry out credential dumping using ProcDump and to empty log files.
+
+In order to deploy the ransomware, the attackers use the Windows Sysinternals tool PsExec to launch a legitimate command line tool for managing Windows Defender (mpcmdrun.exe) to disable scanning of all downloaded files and attachments, remove all installed definitions, and, in some cases, disable real-time monitoring.
+
+It is possible that the attackers use more than one technique to perform this task, since NCC reported suspected use of a tool called SecTool checker for this purpose.
+
+PsExec is then used to launch PowerShell which uses the win32_service WMI class to retrieve services and the net stop command to stop these services. After Windows Defender is disabled and services have been stopped across the organization, PsExec is used to launch the WastedLocker ransomware itself, which then begins encrypting data and deleting shadow volumes.
+.Immediate threat to corporations
+
+The attackers behind this threat appear to be skilled and experienced, capable of penetrating some of the most well protected corporations, stealing credentials, and moving with ease across their networks. As such, WastedLocker is a highly dangerous piece of ransomware. A successful attack could cripple the victim’s network, leading to significant disruption to their operations and a costly clean-up operation.
+
+Protection/Mitigation
+
+The following protections are in place to protect customers against WastedLocker attacks and associated activity:
+
+File-based protection
+
+
+	Ransom.WastedLocker
+	Ransom.WastedLocker!g1
+	Ransom.WastedLocker!gm
+	Trojan.Gen.2
+	Trojan Horse
+	Trojan.Gen.MBT
+	Downloader
+	JS.Downloader
+	Packed.Generic.459
+	ISB.Downloader!gen403
+	ISB.Downloader!gen404
+	Heur.AdvML.B
+	Heur.AdvML.C
+	SONAR.SuspLaunch!g18
+
+
+Intrusion Prevention 
+
+
+	System Infected: Trojan.Backdoor Activity 478
+	Malicious Site: Malicious Domains Request
+	System Infected: Trojan.Backdoor Domains 2
+	Web Attack: Fake Browser Update 8
+
+
+Indicators of Compromise
+
+Note: C&C domains linked to this activity have been reported by Symantec to the relevant registrar.

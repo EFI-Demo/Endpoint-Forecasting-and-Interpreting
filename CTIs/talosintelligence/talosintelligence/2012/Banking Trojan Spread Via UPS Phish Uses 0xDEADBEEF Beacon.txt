@@ -1,0 +1,21 @@
+
+
+In addition to collecting phishing emails directly, the VRT often receives malicious email and associated binaries through the ClamAV submission page. Today's post is about a sample that was attached as a zip file in a fake UPS notification email campaign seen in the wild late last week.
+
+The actual phish itself wasn't particularly interesting:
+
+
+
+
+
+We've seen many similar messages, and this one is riddled with subtle errors that would tip off anyone paying close attention. Of course, people continue to fall for traps like this, so the attached malware is always worth analyzing.
+
+Looking at the strings contained in the binary, it's clear that this particular trojan's main purpose is to steal banking credentials. We found 78 distinct strings related to banking web sites, from Chase through the Bank of East Asia. Again, this is not interesting on its own; there are plenty of banking trojans aroung the globe.
+
+What made this especially interesting was the initial C&C communications we observed, a POST with the hex value "DE AD BE EF".  This is an interesting value to see in network traffic since it is normally used to mark memory; it's often used as a joke signifying that a given system has been compromised.
+
+
+
+
+We've written Snort rule 23262 to detect this type of request. What we would love to know, though, is what motivated a banking trojan author to use such an easily spotted, well-known string in what is an otherwise well-obfuscated communications protocol. Are they taunting us, or do they just think that it's their own private joke that no one will ever notice?
+

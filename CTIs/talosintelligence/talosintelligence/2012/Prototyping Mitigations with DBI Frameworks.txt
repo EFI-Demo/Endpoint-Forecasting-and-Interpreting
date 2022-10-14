@@ -1,0 +1,175 @@
+
+
+
+A couple weeks ago I had the privilege of both attending my first Austin Hackers Association meeting and speaking at the first Infosec Southwest conference in Austin, Texas. I had been wanting to visit Austin for several years now and was excited to see the dynamics of the local hack scene since Austin is home to several world class vulnerability research teams. I was not disappointed and I had the chance to have several great conversations on low level research topics such as PCI Bootkits and the particulars of Java’s JVM translation for instructions used in JIT spray.
+
+My talk was about prototyping mitigations with existing dynamic binary instrumentation frameworks. It was a random side project that I had decided to check out since I’ve spent a lot of time developing dynamic analysis tools recently and I have always had an interest in mitigation design. I also read plenty of academic materials which are full of great ideas but rarely provide code implementations so I felt there is a need for a prototyping environment. I initially thought I might compare and contrast some of the features that are available in PIN, DynamoRIO, and Valgrind but I felt the comparison would be of less interest to the security community and there was plenty to cover with a discussion of return oriented programming and just-in-time spray exploitation techniques, proposed mitigations for each, and also example code implementing those mitigations. 
+
+The reason I felt this was an interesting topic is because nearly all mitigations that are currently released are developed by the vendor themselves. This may be the operating system vendor, compiler vendor, or application developer in the case of sandboxes or custom heaps. It would be nice to test out custom mitigations as point fixes in critical environments until the vendor is able to deploy resistances to known mitigation bypasses such as ROP shellcode techniques. In some instances the vendor will determine that the potential cost in performance or stability will not be worth the benefit of developing mitigations at all. In this case, there are no other options than to be able to develop the mitigations ourselves. 
+
+For those unfamiliar with dynamic binary instrumentation frameworks such as DynamoRIO, PIN, and Valgrind; they can be considered to be in-process debuggers. They are able perform the program loading themselves and hook into various points of the program such as functions, basic blocks, and instructions and typically provide an API for abstracting the underlying CPU architecture. Uses outside of computer security include optimization, binary translation, profiling, etc. In the case of computer security, it provides a method for efficient debugging by way of eliminating CPU context switches for breakpoints as well as a nice API for injecting code or inspecting a running application. Performance numbers show these frameworks offer the quickest form of instruction or block tracing, however this of course relies upon the individual hook functions themselves. 
+
+RETURN ORIENTED PROGRAMMING
+
+Return oriented programming (ROP) will be the first exploitation technique that we will attempt to mitigate. ROP is the modern term for a technique first pioneered on UNIX platforms that supported non-executable pages of memory. ROP achieves controlled shellcode execution by building a fake callstack and then hijacking the stack pointer. Each frame of the attacker controlled callstack performs a primitive programming operation such as arithmetic or memory store and load operations followed by a RET instruction. The following fake callstack shows three calls chained together to perform a Write-4 operation.
+
+rop += "\xD2\x9F\x10\x10“                   #0x10109FD2 :
+                                            # POP EAX
+                                            # RET
+rop += "\xD0\x64\x03\x10“                   #0x100364D0 :
+                                            # POP ECX
+                                            # RET
+rop += "\x33\x29\x0E\x10“                   #0x100E2933 :
+                                            # MOV DWORD PTR DS:[ECX], EAX
+                                            # RET
+
+
+By chaining several calls together a complete shellcode stub to change memory permissions of a page containing a larger payload can be executed. This is typically achieved by calling VirtualProtect, VirtualAlloc, HeapCreate, or WriteProcessMemory functions. The below example shows how a complete call to VirtualProtect would be built by first preparing the arguments on the stack and then executing a call chain to find kernel32 and resolve a pointer to the VirtualProtect function.
+
+########## VirtualProtect call placeholder ##########
+rop += "\x41\x41\x41\x41"                   # &Kernel32.VirtualProtect() placeholder
+rop += "WWWW"                               # Return address param placeholder
+rop += "XXXX"                               # lpAddress param placeholder
+rop += "YYYY"                               # Size param placeholder
+rop += "ZZZZ"                               # flNewProtect param placeholder
+rop += "\x60\xFC\x18\x10"                   # lpflOldProtect param placeholder 
+                                              0x1018FC60 {PAGE_WRITECOPY}
+rop += rop_align * 2
+
+########## Grab kernel32 pointer from the stack, place it in EAX ##########
+rop += "\x5D\x1C\x12\x10" * 6               #0x10121C5D :  
+                                            # SUB EAX, 30 
+                                            # RETN
+rop += "\xF6\xBC\x11\x10"                   #0x1011BCF6 :  
+                                            # MOV EAX, DWORD PTR DS:[EAX] 
+                                            # POP ESI 
+                                            # RETN
+rop += rop_align
+
+########## EAX = kernel32 pointer, now retrieve pointer to VirtualProtect() ##########
+rop += ("\x76\xE5\x12\x10" + rop_align) * 4 #0x1012E576 :  
+                                            # ADD EAX,100 
+                                            # POP EBP 
+                                            # RETN
+rop += "\x40\xD6\x12\x10"                   #0x1012D640 :  
+                                            # ADD EAX,20 
+                                            # RETN
+rop += "\xB1\xB6\x11\x10"                   #0x1011B6B1 :  
+                                            # ADD EAX,0C 
+                                            # RETN
+rop += "\xD0\x64\x03\x10"                   #0x100364D0 :  
+                                            # ADD EAX,8 
+                                            # RETN
+rop += "\x33\x29\x0E\x10"                   #0x100E2933 :  
+                                            # DEC EAX 
+                                            # RETN
+rop += "\x01\x2B\x0D\x10"                   #0x100D2B01 :  
+                                            # MOV ECX,EAX 
+                                            # RETN
+rop += "\xC8\x1B\x12\x10"                   #0x10121BC8 :  
+                                            # MOV EAX,EDI 
+                                            # POP ESI 
+                                            # RETN
+
+
+One thing to notice about the design of ROP shellcodes is that they are composed of sub-blocks. Compilers generally exhibit two behaviors when creating control flow: a) nearly all RET instructions return to an address immediately following a CALL or JMP instruction and b) all CALL and JMP instructions will next execute an instruction at the beginning of a basic block. In this discrepancy, we have two mitigation designs.
+
+The first is called a shadow stack and the basic principle is that at each CALL instruction, we will push the address of the next instruction on a private stack prior to entering into the called function. On the next RET, we should be returning to the address that we have stored on our private stack copy:
+
+INSTRUMENT_PROGRAM
+for each IMAGE
+    for each INSTRUCTION in IMAGE
+        if INSTRUCTION is CALL
+            push BRANCH_TARGET on SHADOW_STACK
+        if INSTRUCTION is RET
+            insert code to retrieve SAVED_EIP from stack
+            insert CALL to ROP_VALIDATE(SAVED_EIP) before INSTRUCTION
+
+ROP_VALIDATE
+if SAVED_EIP not top of SHADOW_STACK
+    exit with error 
+else pop top of SHADOW_STACK
+
+
+The second method, branch monitoring, tracks whether the CALL or JMP is pointing to a block entry point and is just as simple and leaves less room for error:
+
+INSTRUMENT_PROGRAM
+for each IMAGE
+    for each BLOCK in IMAGE
+        insert BLOCK in BLOCKLIST
+        for each INSTRUCTION in BLOCK
+            if INSTRUCTION is RETURN or BRANCH
+                insert code to retrieve SAVED_EIP from stack
+                insert CALL to ROP_VALIDATE(SAVED_EIP) before INSTRUCTION
+
+ROP_VALIDATE
+if SAVED_EIP not in BLOCKLIST
+    exit with error 
+
+
+Check out the slides and source code to see how easy it is to implement these mitigations using PIN. Less than 200 lines of source will get you both mitigations. It is also worth noting that these mitigations protect against the new technique released by Dan Rosenberg which defeats the newly implemented ROP defense in Windows 8. The method implemented by Microsoft relies upon observing the value of the stack pointer rather than the integrity of the stack itself. 
+
+JUST-IN-TIME SHELLCODE
+
+JIT shellcode is a mitigation bypass technique that utilizes the built in JIT engines to convert attacker supplied non-executable data such as JavaScript or ActionScript into an attacker controlled executable shellcode. In the case of the ActionScript and JavaScript VMs, the code that results in the least amount of translation (and therefore the most attacker control) are arithmetic operators. In particular, it has been shown that the XOR operator will chain a mostly attacker controlled sequence of assembly instructions together in an executable area of memory. 
+
+var y=(0x11223344^0x44332211^0x44332211…);
+
+Compiles as:0x909090: 35 44 33 22 11  XOR EAX, 11223344
+0x909095: 35 44 33 22 11  XOR EAX, 11223344
+0x90909A: 35 44 33 22 11  XOR EAX, 11223344
+
+
+As we can see above, the immediate values we passed to a chain of XOR instructions stays intact. You may be asking how this can help us, but thanks to the ability for x86 processors to execute unaligned instructions, we can manipulate a vulnerability into executing at an offset within this now mostly controlled executable memory space. If we begin disassembling at a byte offset into the above memory, we get the following:
+
+0x909091: 44                  INC ESP
+0x909092: 33 22               XOR ESP, [EDX]
+0x909094: 11 35 44 33 22 11   ADC [11223344], ESI
+0x90909A: 35 44 33 22 11      XOR EAX, 11223344
+
+
+Okay, so without going much further into the pain it really is to pull off a successful shellcode using this method (hat tip to Dion and Alexey for the mind-crushing prior work), what are the behaviors that will be anomalous enough that we can write a mitigation to protect against the JIT shellcode? I consulted a brief paper written by Piotr Bania which observed that the ActionScript and Javascript JIT compilers modify pages from RWX to R-E once the code has been translated to native executable opcodes. We also know that the current technique relies upon a long chain of XOR operators as well as a series of immediate values. Thus we have the following heuristic: 
+
+INSTRUMENT_PROGRAM
+Insert CALL to JIT_VALIDATE at prologue to VirtualProtect
+
+JIT_VALIDATE
+Disassemble BUFFER passed to VirtualProtect
+for each INSTRUCTION
+    if INSTRUCTION is MOV_REG_IMM32 
+        while NEXT_INSTRUCTION uses IMM32
+            increase COUNT
+            if COUNT > THRESHOLD 
+                exit with error 
+
+
+I invite you to check out the slides for further explanation and example code to take a look at how easy it is to implement these ideas. The real-world performance hit is something that may not be appropriate for all uses, however the time to develop is so trivially small and prototyping allows you to determine the soundness of the mitigation design prior to spending the effort to implement them on the kernel or compiler level. 
+
+
+
+
+Code and slides are available at: http://code.google.com/p/moflow-mitigations/
+
+
+
+
+
+References:
+
+Bruce Dang, Daniel Radu. Shellcode Analysis Using Dynamic Binary Instrumentation. 
+
+http://public.avast.com/caro2011/Daniel%20Radu%20and%20Bruce%20Dang%20-%20Shellcode%20analysis%20using%20dynamic%20binary%20instrumentation.pdf
+
+Dan Rosenberg. Defeating Windows 8 ROP Mitigation. 
+
+http://vulnfactory.org/blog/2011/09/21/defeating-windows-8-rop-mitigation/
+
+Piotr Bania. JIT spraying and mitigations. 
+
+http://www.piotrbania.com/all/articles/pbania-jit-mitigations2010.pdf
+
+Alexey Sintsov. Writing JIT Shellcode for fun and profit. 
+
+http://dsecrg.com/files/pub/pdf/Writing%20JIT-Spray%20Shellcode%20for%20fun%20and%20profit.pdf
+
+

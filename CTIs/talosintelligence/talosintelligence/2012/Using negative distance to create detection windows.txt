@@ -1,0 +1,41 @@
+
+
+A common method for delivering malicious pages to clients is with the use of hidden iframes. Before I get started I want to say that I have seen hidden iframes used legitimately and the rule discussed will not be in any policies by default, due to the risk of false positives.
+
+The hidden iframe is typically created with something like this
+  
+<iframe width=1 height=1 style=visibility:hiddensrc=http://www.example.com/badthings</iframe>
+
+This creates an iframe that the user doesn't see and loads whatever the attacker wants in the victim browser. HTML doesn't require that the parameters of the iframe be in any order so the example below produces identical behavior.
+
+<iframe height=1 width=1 style=visibility:hidden
+src=http://www.example.com/badthings</iframe>
+
+A rule could be written for each possible combination of the parameters, or a single rule could use PCRE to detect each combination, or ... distance and within can be used to create "windows" for each content match.
+
+We know this will start with <iframe 
+
+file_data; content:"<iframe "; nocase;
+
+
+
+The remaining items can be in any order but the width, height and style parameters total up to 41 bytes. Next we look for the width parameter.
+
+content:"width=1"; nocase; distance:0; within:50;
+
+
+The next content match will look for height but we want to find it before or after width. The distance modifier can take a negative value to move the cursor back and within can be used to limit how far forward it searches.
+
+content:"height=1"; nocase; distance:-40; within:80;
+content:"style=visibility|3a|hidden"; nocase; distance:-40; within:80;
+
+This combination of distance and within will find the height parameter 40 bytes before or after the width parameter. Then it will find the style parameter 40 bytes before or after the height. Since our entire string was 41 bytes this will detect the height, width and style parameters in any order. This is much less expensive than entering the PCRE engine, particularly since you'd need to check for all possible permutations of the three elements each time you entered. Worse yet, a PCRE rule to detect this would enter very often since there is not a unique string for fast_pattern to use.
+
+The full rule looks like this:
+
+ alert tcp $EXTERNAL_NET $HTTP_PORTS -> $HOME_NET any (msg:"INDICATOR-OBFUSCATION hidden iframe - potential include of malicious content"; flow:to_client, established; file_data; content:"<iframe "; nocase; content:"width=1"; nocase; distance:0; within:50; content:"height=1"; nocase; distance:-40; within:80; content:"style=visibility|3a|hidden"; nocase; distance:-40; within:80; classtype:bad-unknown;)
+
+Like I said at the beginning of the post, I have seen hidden iframes used for legitimate things so this runs a risk of false-positive. It makes an excellent example of negative distance to create detection "windows".
+
+Another, very important, note: if the negative distance moves the cursor further back than the beginning of the current buffer, Snort will stop evaluating the rule and there will be no alert. Using the above example, if the width parameter is only 10 bytes into the buffer the negative distance applied to the height parameter would move the cursor 30 bytes before the beginning of the buffer. Snort will stop evaluating the rule and no alert will be generated. While this is not a concern for this particular piece of detection - which is in today's SEU as SID 24168 - since standard HTML tags to start a page will ensure that an iframe will not fall within the first 40 bytes of any given page, it's worth keeping in mind if you're developing your own rules using this technique.
+

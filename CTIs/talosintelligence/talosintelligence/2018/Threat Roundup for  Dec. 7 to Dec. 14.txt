@@ -1,0 +1,865 @@
+
+
+
+
+
+
+
+
+
+
+Today, Talos is publishing a glimpse into the most
+    prevalent threats we've observed between Dec. 07 and
+    Dec. 14. As with previous roundups, this post isn't meant to
+    be an in-depth analysis. Instead, this post will summarize the threats
+    we've observed by highlighting key behavioral characteristics,
+    indicators of compromise, and discussing how our customers are automatically
+    protected from these threats.
+
+As a reminder, the information provided for the following threats
+    in this post is non-exhaustive and current as of the date of
+    publication. Additionally, please keep in mind that IOC searching
+    is only one part of threat hunting. Spotting a single IOC does not
+    necessarily indicate maliciousness. Detection and coverage for the
+    following threats is subject to updates, pending additional threat
+    or vulnerability analysis. For the most current information, please
+    refer to your Firepower Management Center, Snort.org, or ClamAV.net.
+
+You can find an additional JSON file here that
+    includes the IOCs in this post, as well as all hashes associated with
+    the cluster. That list is limited to 25 hashes in this blog post. As
+    always, please remember that all IOCs contained in this document are
+    indicators, and one single IOC does not indicated maliciousness.
+
+The most prevalent threats highlighted in this roundup are:
+
+
+Doc.Malware.Dkvn-6781497-0
+        Malware
+        This is a trojan that drops a malicious executable and executes PowerShell commands. It can be used as a downloader or a dropper for Emotet. 
+Txt.Malware.Nemucod-6780827-0
+        Malware
+        Nemucod is a trojan that executes ransomware on a victim's computer. 
+Win.Virus.Parite-6780568-0
+        Virus
+        Parite is a polymorphic file infector. It infects executable files on the local machine and network drives. 
+Xls.Downloader.Jums-6779285-0
+        Downloader
+        Jums is a trojan that spawns a PowerShell and creates and executes a malicious executable. It collects a large of amount of system information and reaches out to a remote server after installation. 
+Win.Virus.Sality-6780277-0
+        Virus
+        Sality is a file infector that establishes a peer-to-peer botnet. Although it's been prevalent for more than a decade, we continue to see new samples that require marginal attention in order to remain consistent with detection. Once a Sality client bypasses perimeter security, its goal is to execute a downloader component capable of executing additional malware. 
+Doc.Malware.Powload-6775735-0
+        Malware
+        Powload is a malicious document that uses PowerShell to download malware. This campaign is currently distributing the Emotet malware. 
+PUA.Win.Trojan.Hupigon-6776762-0
+        Trojan
+        Hupigon is a trojan that installs itself as a backdoor on a victim's machine. 
+
+
+
+Threats
+
+Doc.Malware.Dkvn-6781497-0
+
+
+Indicators of Compromise
+
+Registry Keys
+
+<HKLM>\SOFTWARE\MICROSOFT\WINDOWS NT\CURRENTVERSION\PRINT\PRINTERS\Canon PIXMA MG2520\PrinterDriverData
+                
+            
+
+Mutexes
+
+Local\10MU_ACB10_S-1-5-5-0-57527
+Local\10MU_ACBPIDS_S-1-5-5-0-57527
+Local\WinSpl64To32Mutex_e162_0_3000
+
+IP Addresses contacted by malware. Does not indicate maliciousness
+
+45[.]40[.]183[.]1
+66[.]198[.]240[.]4
+103[.]18[.]109[.]178
+192[.]169[.]140[.]162
+209[.]151[.]241[.]184
+
+Domain Names contacted by malware. Does not indicate maliciousness
+
+enthos[.]net
+shofar[.]com
+shawktech[.]com
+thecreativeshop[.]com[.]au
+burlingtonadvertising[.]com
+
+Files and or directories created
+
+%UserProfile%\Documents\20181212
+%LocalAppData%\Temp\109.exe
+%SystemDrive%\~$6889120.doc
+%LocalAppData%\Temp\2vuqj0ws.zbs.ps1
+%LocalAppData%\Temp\4ezh4c4j.esn.psm1
+%LocalAppData%\Temp\CVR95F8.tmp
+%LocalAppData%\Temp\~DF78CDE2D9B1588659.TMP
+
+File Hashes
+
+0421be0b17b64e14118e01ec412f1721bb9079630a004ff7e846f954c2355538
+18bf25020d301b1b22e316d2a6909a40c8dcea59fb04057d58346bdb58a7503c
+24ee6e8bd38b5bef0c3db97c8cfdf03a38e442b624a1f7f731fb6e7c2989d6ea
+2d50cc5a4ac493e5578038e8f892f9df5e134114ed6e9840089d9f32b8f28440
+2ed82969c7fb23e18f1f9b0ab519124438129dc7f2530ee24604397b9c1250de
+3e662508b29b2ef40092655a69073c220770a8306c0b17773059e07fe1a712b3
+5ed274afe729b6b92cbb4446fa3f4f6130c8e20b3a903b13d7691d2006d2e72d
+6d34270f0aeb0fbdb270e47866413a299a1deb54e7c4dd6b785a0ca7f2e0c73a
+727afa31d97e874e3d2a3c11870a5b1b65ecda8905e3c97cbddb31a9fbfaf543
+74201328ff459bf6412c7dbbcc0866f06f7ccc2b2dc7a1c4bc429518a85fee89
+827c0012de03d21f84442e7dd0ea1d0a25f40b0e2982fab1695f935aaf471bd0
+91da45beb83ea575f50ff8d9d6dcad7d9efa437b7e337006b2cc8ed2f6d4faf2
+ac280877daecf65f6570233d76c249caa8eaa52cb5ba31fc3e1611d45c8d0454
+aeef6e04c09d5f051f94a5c6545cf4228670954274ab97f1c85e7c78f1e6f116
+af8a10416ae6e32a6250cf03d8c3ba37933903accf649e9feb4f636c17ae2b54
+c26e6b57799f13d5d8353834bd721b304a15a7bbbb238995dbf98c4a26b71be3
+d77fdb097fb549034a72f67236bf4c744012ff71e43f37cd89e373645fc26288
+da7ac63e1a221dba1fb4d1ee743537b985fde34ad9bbc372fcc07a184ce683a7
+db37c4693eebc0f518bbd7e5707ec3abd4c2633e86b2ca92b9e34b21864a310b
+dd57c3ea2596874a51b13fe84d3dc328365af06bd0f50eb328819bc970766fde
+de2c3b81106ab89e0dd2c7d654b0a161e2227bbaafcd1b1860c387c7b67be69d
+e2ae044f486dba0d5005295ffa9100411a6225fff6c061da69225b6c50834a69
+e4269fcfda0fe8ef8872dbf51aec6dc9cbb18ad4eae281700be24f563164026d
+e71d9efea3a62cc265938bac1c53aa96f8729609cabfc6df4c66d5c5e9c016fe
+eb2bb764fb66c7c5509c7ce50ee3e0c61a675867f85ecdae78ad547b0ac72760
+
+
+
+Coverage
+
+
+        
+
+
+Screenshots of Detection
+AMP
+
+
+
+
+
+
+ThreatGrid
+
+
+
+
+
+Umbrella
+
+
+
+
+
+Malware
+
+
+
+
+
+
+
+Txt.Malware.Nemucod-6780827-0
+
+
+Indicators of Compromise
+
+Registry Keys
+
+N/A
+
+Mutexes
+
+N/A
+
+IP Addresses contacted by malware. Does not indicate maliciousness
+
+144[.]217[.]147[.]190
+201[.]187[.]101[.]156
+185[.]104[.]28[.]132
+
+Domain Names contacted by malware. Does not indicate maliciousness
+
+www[.]w3[.]org
+api[.]w[.]org
+gmpg[.]org
+ikincielesyaevi[.]com
+www[.]ikincielesyaevi[.]com
+www[.]gulfshorecooling[.]com
+elemaroregon[.]com
+gpconstructie[.]be
+cvcpdx[.]com
+www[.]chaffinww[.]com
+workwithcore[.]com
+phoenixconstruction[.]com
+www[.]laneexteriorsllc[.]com
+autosorno[.]cl
+cleanairtx[.]com
+www[.]ohiostatestucco[.]com
+www[.]teknikinc[.]com
+GOESTOM[.]COM
+CLARAMUSICA[.]COM
+claramusica[.]com
+goestom[.]com
+
+Files and or directories created
+
+\ROUTER
+\DAV RPC SERVICE
+\Device\Null
+\Win32Pipes.00000370.00000001
+\Win32Pipes.00000370.00000002
+
+File Hashes
+
+029cfbcb0e44965e253979458652858b3eabfff38be5e7648c8b82f475233345
+0cb706b11174c5a7fd08e70308d1ff84447d6e65a487b146846d5150931a8970
+17304c0d1c57c83a58b5b1df2e6fe5b0b2a58634d1cebbd83ce8bd5533fea584
+215953913e52f0e071dd8244d598a7c34367d03558599f7b9c824d916f60186a
+2c93a65ec63e429b8e8a971dbaea069829763235daeb26a5f24adc69debbff71
+38848aedc1194c09d6eeb88ef04ba56aee22e0f579284a63b12d896fdb0d4831
+3bf5629a35700582d0abbdf8aa1c97c34c4f2fd933de6f70569d2b3103f6379e
+4d85b12eddc09b1cfdfd8d580ecca6d724dd66b91d8866f707aa91cb50c7fbd7
+5247f2722b8623e95f8d10cd79d0fbe3e96fe8f0527d3b9be480d2640f02b160
+52cecc5d101a881b137c07143268217dacf145dab73d50e0e8da318000f5b5e0
+59109d8c01b76ebe171dc28cbe37ceb393846d0ed240f54a14eb9014588c748d
+5c2d33368a931651ea426f3ed037185d99c7c3bb28d5430413a2c93b4f525428
+66b09b100ecc40609965a74c90e9553457d730bc8b4c5ee95b2f2089dd0aba3b
+7d9fcffa70fec088cda7c4095740599a45a710ce38a66fa9e13f0dfb7bc43b3b
+8afdadaa66d58e386411755871ff91858bb99016e22e67de3ce3cc63ea35c4a8
+918312a6b9b634f27089520d15dc15966a25bd719627962d756f370949adb152
+af0ab34d44410fab4cfb8c24dfc0240e508de5e31a0eb567c0533344eb9c92fe
+de5e00e84554eb352985d85146eb696be474c1f5b97a764052fc0575fec8ad13
+e29d601569f5197e631275c5391a273058ab2aca0473dedf148177516de1e7c5
+f40f059bad77bf7297b3783af078e8febf11650709294e69a9c198c711a87386
+
+
+
+Coverage
+
+
+        
+
+
+Screenshots of Detection
+AMP
+
+
+
+
+
+
+ThreatGrid
+
+
+
+
+
+Umbrella
+
+
+
+
+
+Malware
+
+
+
+
+
+
+Win.Virus.Parite-6780568-0
+
+
+Indicators of Compromise
+
+Registry Keys
+
+N/A
+
+Mutexes
+
+InstallLauncher_4541454E-9FFA-4246-835D-3F49EFA91F6C
+\BaseNamedObjects\InstallLauncher_4541454E-9FFA-4246-835D-3F49EFA91F6C
+
+IP Addresses contacted by malware. Does not indicate maliciousness
+
+N/A
+
+Domain Names contacted by malware. Does not indicate maliciousness
+
+N/A
+
+Files and or directories created
+
+%LocalAppData%\Temp\ejp5C31.tmp
+
+File Hashes
+
+03b06a1f568e2985a763c155c14c2a9c4b7b18471d91bf2164ad44350d4353d6
+0478b98235d5c49bc7facddce8f912a4ec2b58c33b4947922927e139b9efba1f
+11ec64be12c389f32640d9803deffa8f93b9457572c71f36df3fe0df4e1f6a8b
+17527e946bbac0ed6c69fe1b97d4d16a8d2ea20811898ee471bf0f9e4377d3e7
+250e929dc833074872defd3ca65b2ccf6cf9b32ed6f6cfca07a66767e48db6d4
+2a4b55983c456e9ea14115378397e67df37d89a28818cb3f557b8afbb3e086e3
+2f6a2d0728cad1403d52a3dfc6db10011fa215f6f5b8272e5c4699e1a68afaf2
+318722e8243edf25c73800569cc1d78c8a6f62aa382f484116c0197d3cfc6578
+3858721e1297e627247f17ebf44ff0502981481af3c04ebb6c76bafda0db2c6d
+3aea0bd31f0d86f9c5a5035828dea6e42cb0646c204bb866c71528bd1f714e7f
+55e263c3206ceed9776d0d0b6015cc5e7c444bed6c68a66766d34998fb744ff1
+5b6e1419168ecd9ead5800273b1c63fa6420455b1ac2c85be430d5e976f4a104
+69528927f100ff5c7b92e6898f33e94768953fceed5ffb71fce02dc6acb9ca56
+6efd875b023b1289020e7d2acd02526d61592f4dd5e1b35e2ca04eeae162507b
+78af109d92ce244c02b1530f7ae65f2c9958e34e239788caf3ee94115ad36d47
+8240517c639812a704d439035b22fe685b3b905bb376776c4adcc264862675e7
+8e170f44cd0e49ad850ffbd244ad755d1b0b7b91051308ed18c049a5e6068acc
+8f6c73d10c4c5f1ee2758f80bbee0e2700978b34ec74b83296ec9e3a403e81db
+94aad46d563c9f5a46bc1e1316d638f7e96ab4ac07b7925510644768504c9d1d
+9d818507ca3222b5f1f471ae1c4338de9227e95b12ac838eed1d68550019aa22
+c1b87392cafff0a07c0dedfa59da2936a371bf2e40855c9b1a1d6bf66903ef12
+c56b47185d4176e620a12ba8f752a67d4e264919127970f0f8bb567f5f778511
+d9cc0b9443f5ec4f84070165ddd08d3def72662df47b52795b793725547816b3
+dafa195b9f7cf1b3d249ccc6e40bbc181aa54878faf3411b78ccea85e4e4f255
+e77216030291a46d69d4bdf5725dc052d16e6ed7d6485b85cfcc8c4b88bc4313
+
+
+
+Coverage
+
+
+        
+
+
+Screenshots of Detection
+AMP
+
+
+
+
+
+
+ThreatGrid
+
+
+
+
+
+Malware
+
+
+
+
+
+
+Xls.Downloader.Jums-6779285-0
+
+
+Indicators of Compromise
+
+Registry Keys
+
+N/A
+
+Mutexes
+
+Global\552FFA80-3393-423d-8671-7BA046BB5906
+Local\ZonesCacheCounterMutex
+KYIMEShareCachedData.MutexObject.Administrator
+KYTransactionServer.MutexObject.Administrator
+
+IP Addresses contacted by malware. Does not indicate maliciousness
+
+192[.]185[.]16[.]22
+192[.]254[.]237[.]11
+
+Domain Names contacted by malware. Does not indicate maliciousness
+
+www[.]aaaplating[.]com
+weighcase[.]co[.]uk
+
+Files and or directories created
+
+%LocalAppData%\Temp\VBE\MSForms.exd
+%AppData%\Microsoft\Excel\XLSTART
+%UserProfile%\Documents\20181119
+%TEMP%mp907.bat
+%LocalAppData%\Tempmp016.exe
+%LocalAppData%\Temp\CVR4F0E.tmp
+%LocalAppData%\Tempwaibr0n.00s.ps1
+
+File Hashes
+
+199f1eec8413168be6418ace60cfe760d858350ebef3605aa91d47338b881e0c
+1f444338e19212dfe5f597ceb3b55f06a8b927a342ce50d0c5ae4452d4999e80
+49fbb593eb1418ecbbefd3ac0529ccf1ed2ef64e20927a5e0379f99ec9fd0c9b
+5ac6fb69b5c55ec6419b89e22ce7fd873d11d263ae2eda9ff85e8eda10b20444
+644f8f3822eb0c5435ffbec711a0b2821e1fa050ca10c837a62c02a9df814d9d
+77f27841d4263d1ed6ba59267d78a454c9a2a3383ee3f1a2a5ddbed4e835dd06
+83cf5c7623bc92966e02b594bb41ab3896b1ffaae748d7cc9b4331f3f435f171
+9a422430a9443b77b5959847657ec411736e180b30563b5066d1ea0c7b22633e
+9bfd539bb55f7a7a5a8df5a0e3ecd87157ecd87675915ac01ca6ce62a3402872
+9dbd2fc30b9c22fb03df72eb46ea83af41449bb6054cdf8cd83e5520de633641
+a46e400bbf7b921a5b2e131ac3c8bf10506569466ad3fff99381c411e585192d
+a6043595251b41b336ca8bc2ccc05bc2bf2781274c1893d6943141a4bd3cf637
+a6d95c0eac0c0b584faa37c1e21ee5baad74e227685275899a9d8c5ac2806b9d
+be6ac030af25e2044cf8889d747fa170bcbb10a325a3f05f67194379f86375ca
+c7c3ded9554e8ca38031ab080c1ed9d775a20ac928eaded8d24fb325d7c6be1f
+cba2b5d0949ff517c40f74cf166b7c363dbf54bda30d4e8432f31da674a78b9c
+e4fcc415e1f7cec20991a6e5612c7706c1187e23ecea5115fbeea824c9b06c14
+efd04977ffd67e71dc9730268a7cee0b85ca128c0e0e3962b073494e5e9f2081
+f495fc57c7bd8311cee17ea6dc15c953d21c5fd97147e632a509b07217855501
+
+
+
+Coverage
+
+
+        
+
+
+Screenshots of Detection
+AMP
+
+
+
+
+
+
+ThreatGrid
+
+
+
+
+
+
+Umbrella
+
+
+
+
+
+
+Malware
+
+
+
+
+
+
+Win.Virus.Sality-6780277-0
+
+
+Indicators of Compromise
+
+Registry Keys
+
+N/A
+
+Mutexes
+
+uxJLpe1m
+wininit.exeM_320_
+winlogon.exeM_356_
+wudfhost.exeM_1644_
+\BaseNamedObjects\uxJLpe1m
+\BaseNamedObjects\csrss.exeM_528_
+\BaseNamedObjects\services.exeM_664_
+\BaseNamedObjects\lsass.exeM_676_
+\BaseNamedObjects\svchost.exeM_1008_
+\BaseNamedObjects\smss.exeM_364_
+\BaseNamedObjects\spoolsv.exeM_1560_
+\BaseNamedObjects\winlogon.exeM_552_
+\BaseNamedObjects\ctfmon.exeM_204_
+\BaseNamedObjects\svchost.exeM_912_
+\BaseNamedObjects\userinit.exeM_1372_
+\BaseNamedObjects\svchost.exeM_832_
+\BaseNamedObjects\jqs.exeM_1736_
+\BaseNamedObjects\rundll32.exeM_948_
+\BaseNamedObjects\explorer.exeM_1456_
+\BaseNamedObjects\svchost.exeM_1116_
+\BaseNamedObjects\wmiprvse.exeM_440_
+wmiprvse.exeM_776_
+\BaseNamedObjects\wmiadap.exeM_3280_
+\BaseNamedObjects\356677150.exeM_1408_
+\BaseNamedObjects\wmiprvse.exeM_1688_
+
+IP Addresses contacted by malware. Does not indicate maliciousness
+
+N/A
+
+Domain Names contacted by malware. Does not indicate maliciousness
+
+N/A
+
+Files and or directories created
+
+\??\E:\autorun.inf
+%System32%rivers\lhlnn.sys
+%SystemDrive%\Documents and Settings\Administrator\Cookies\administrator@cargocrystal[1].txt
+%SystemDrive%\Documents and Settings\Administrator\Cookies\administrator@cargocrystal[2].txt
+%SystemDrive%\Documents and Settings\Administrator\Cookies\administrator@samayer[1].txt
+%LocalAppData%\Temp\wingqijig.exe
+%SystemDrive%\okieu.exe
+\??\E:\mshy.pif
+%SystemDrive%\DOCUME~1\ADMINI~1\LOCALS~1\Temp\augx.exe
+%SystemDrive%\DOCUME~1\ADMINI~1\LOCALS~1\Temp\bvwf.exe
+%SystemDrive%\DOCUME~1\ADMINI~1\LOCALS~1\Temp\ceohbt.exe
+%SystemDrive%\DOCUME~1\ADMINI~1\LOCALS~1\Temp\cevjx.exe
+%SystemDrive%\DOCUME~1\ADMINI~1\LOCALS~1\Tempkgn.exe
+%SystemDrive%\DOCUME~1\ADMINI~1\LOCALS~1\Temp\easrrv.exe
+%SystemDrive%\DOCUME~1\ADMINI~1\LOCALS~1\Temp\gekhk.exe
+%SystemDrive%\DOCUME~1\ADMINI~1\LOCALS~1\Temp\glya.exe
+%SystemDrive%\DOCUME~1\ADMINI~1\LOCALS~1\Temp\hpqd.exe
+%SystemDrive%\DOCUME~1\ADMINI~1\LOCALS~1\Temp\ixway.exe
+%SystemDrive%\DOCUME~1\ADMINI~1\LOCALS~1\Temp\jbccl.exe
+%SystemDrive%\DOCUME~1\ADMINI~1\LOCALS~1\Temp\jhrim.exe
+%SystemDrive%\DOCUME~1\ADMINI~1\LOCALS~1\Temp\jvuj.exe
+%SystemDrive%\DOCUME~1\ADMINI~1\LOCALS~1\Temp\kdpw.exe
+%SystemDrive%\DOCUME~1\ADMINI~1\LOCALS~1\Temp\kwih.exe
+%SystemDrive%\DOCUME~1\ADMINI~1\LOCALS~1\Temp\lmbonl.exe
+%SystemDrive%\DOCUME~1\ADMINI~1\LOCALS~1\Temp\lpig.exe
+%SystemDrive%\DOCUME~1\ADMINI~1\LOCALS~1\Temp\ltyyd.exe
+%SystemDrive%\DOCUME~1\ADMINI~1\LOCALS~1\Temp\mqsr.exe
+%SystemDrive%\DOCUME~1\ADMINI~1\LOCALS~1\Temp\mskjgp.exe
+%SystemDrive%\DOCUME~1\ADMINI~1\LOCALS~1\Temp\mslmw.exe
+%SystemDrive%\DOCUME~1\ADMINI~1\LOCALS~1\Tempdcdl.exe
+%SystemDrive%\DOCUME~1\ADMINI~1\LOCALS~1\Tempiut.exe
+%SystemDrive%\DOCUME~1\ADMINI~1\LOCALS~1\Tempixbf.exe
+%SystemDrive%\DOCUME~1\ADMINI~1\LOCALS~1\Tempygs.exe
+%SystemDrive%\DOCUME~1\ADMINI~1\LOCALS~1\Temp\olsit.exe
+%SystemDrive%\DOCUME~1\ADMINI~1\LOCALS~1\Temp\ospd.exe
+%SystemDrive%\DOCUME~1\ADMINI~1\LOCALS~1\Temp\pffcy.exe
+%SystemDrive%\DOCUME~1\ADMINI~1\LOCALS~1\Temp\rfioy.exe
+%SystemDrive%\DOCUME~1\ADMINI~1\LOCALS~1\Temp\rxoqk.exe
+%SystemDrive%\DOCUME~1\ADMINI~1\LOCALS~1\Tempguha.exe
+%SystemDrive%\DOCUME~1\ADMINI~1\LOCALS~1\Tempvuin.exe
+%SystemDrive%\DOCUME~1\ADMINI~1\LOCALS~1\Temp\uspe.exe
+%SystemDrive%\DOCUME~1\ADMINI~1\LOCALS~1\Temp\vkecy.exe
+%SystemDrive%\DOCUME~1\ADMINI~1\LOCALS~1\Temp\vtba.exe
+%SystemDrive%\DOCUME~1\ADMINI~1\LOCALS~1\Temp\vxqq.exe
+%SystemDrive%\DOCUME~1\ADMINI~1\LOCALS~1\Temp\vylwe.exe
+%SystemDrive%\DOCUME~1\ADMINI~1\LOCALS~1\Temp\whtfo.exe
+%SystemDrive%\DOCUME~1\ADMINI~1\LOCALS~1\Temp\winadpngm.exe
+%SystemDrive%\DOCUME~1\ADMINI~1\LOCALS~1\Temp\winasew.exe
+%SystemDrive%\DOCUME~1\ADMINI~1\LOCALS~1\Temp\winauunwn.exe
+%SystemDrive%\DOCUME~1\ADMINI~1\LOCALS~1\Temp\winbkjyy.exe
+%SystemDrive%\DOCUME~1\ADMINI~1\LOCALS~1\Temp\winbpcf.exe
+%SystemDrive%\DOCUME~1\ADMINI~1\LOCALS~1\Temp\winbusg.exe
+%SystemDrive%\DOCUME~1\ADMINI~1\LOCALS~1\Temp\windlwd.exe
+%SystemDrive%\DOCUME~1\ADMINI~1\LOCALS~1\Temp\windpbi.exe
+%SystemDrive%\DOCUME~1\ADMINI~1\LOCALS~1\Temp\wineeyux.exe
+%SystemDrive%\DOCUME~1\ADMINI~1\LOCALS~1\Temp\winesrg.exe
+%SystemDrive%\DOCUME~1\ADMINI~1\LOCALS~1\Temp\winfjvcgs.exe
+%SystemDrive%\DOCUME~1\ADMINI~1\LOCALS~1\Temp\winfpmye.exe
+%SystemDrive%\DOCUME~1\ADMINI~1\LOCALS~1\Temp\winiuak.exe
+%SystemDrive%\DOCUME~1\ADMINI~1\LOCALS~1\Temp\winjenpka.exe
+%SystemDrive%\DOCUME~1\ADMINI~1\LOCALS~1\Temp\winjkyn.exe
+%SystemDrive%\DOCUME~1\ADMINI~1\LOCALS~1\Temp\winkqxb.exe
+%SystemDrive%\DOCUME~1\ADMINI~1\LOCALS~1\Temp\winkrepqp.exe
+%SystemDrive%\DOCUME~1\ADMINI~1\LOCALS~1\Temp\winktee.exe
+%SystemDrive%\DOCUME~1\ADMINI~1\LOCALS~1\Temp\winlbehwb.exe
+%SystemDrive%\DOCUME~1\ADMINI~1\LOCALS~1\Temp\winlihxj.exe
+%SystemDrive%\DOCUME~1\ADMINI~1\LOCALS~1\Temp\winlsbpg.exe
+%SystemDrive%\DOCUME~1\ADMINI~1\LOCALS~1\Temp\winlxanm.exe
+%SystemDrive%\DOCUME~1\ADMINI~1\LOCALS~1\Temp\winlywa.exe
+%SystemDrive%\DOCUME~1\ADMINI~1\LOCALS~1\Temp\winmtfju.exe
+%SystemDrive%\DOCUME~1\ADMINI~1\LOCALS~1\Temp\winneng.exe
+%SystemDrive%\DOCUME~1\ADMINI~1\LOCALS~1\Temp\winnjxa.exe
+%SystemDrive%\DOCUME~1\ADMINI~1\LOCALS~1\Temp\winnurxrn.exe
+%SystemDrive%\DOCUME~1\ADMINI~1\LOCALS~1\Temp\winodpm.exe
+%SystemDrive%\DOCUME~1\ADMINI~1\LOCALS~1\Temp\winohuuif.exe
+%SystemDrive%\DOCUME~1\ADMINI~1\LOCALS~1\Temp\winolmyt.exe
+%SystemDrive%\DOCUME~1\ADMINI~1\LOCALS~1\Temp\winonwqwp.exe
+%SystemDrive%\DOCUME~1\ADMINI~1\LOCALS~1\Temp\winpcpvjx.exe
+%SystemDrive%\DOCUME~1\ADMINI~1\LOCALS~1\Temp\winpdae.exe
+%SystemDrive%\DOCUME~1\ADMINI~1\LOCALS~1\Temp\winpdgmo.exe
+%SystemDrive%\DOCUME~1\ADMINI~1\LOCALS~1\Temp\winpgqpu.exe
+%SystemDrive%\DOCUME~1\ADMINI~1\LOCALS~1\Temp\winpmlm.exe
+%SystemDrive%\DOCUME~1\ADMINI~1\LOCALS~1\Temp\winpnsv.exe
+%SystemDrive%\DOCUME~1\ADMINI~1\LOCALS~1\Temp\winpuybd.exe
+%SystemDrive%\DOCUME~1\ADMINI~1\LOCALS~1\Temp\wintqckmy.exe
+%SystemDrive%\DOCUME~1\ADMINI~1\LOCALS~1\Temp\winudusnh.exe
+%SystemDrive%\DOCUME~1\ADMINI~1\LOCALS~1\Temp\winuixn.exe
+%SystemDrive%\DOCUME~1\ADMINI~1\LOCALS~1\Temp\winvcwb.exe
+%SystemDrive%\DOCUME~1\ADMINI~1\LOCALS~1\Temp\winvxxb.exe
+%SystemDrive%\DOCUME~1\ADMINI~1\LOCALS~1\Temp\winwbnx.exe
+%SystemDrive%\DOCUME~1\ADMINI~1\LOCALS~1\Temp\winwbppmo.exe
+%SystemDrive%\DOCUME~1\ADMINI~1\LOCALS~1\Temp\winydntxg.exe
+%SystemDrive%\DOCUME~1\ADMINI~1\LOCALS~1\Temp\winyksvqi.exe
+%SystemDrive%\DOCUME~1\ADMINI~1\LOCALS~1\Temp\winyqksg.exe
+%SystemDrive%\DOCUME~1\ADMINI~1\LOCALS~1\Temp\xfkklk.exe
+%SystemDrive%\DOCUME~1\ADMINI~1\LOCALS~1\Temp\xgvmsf.exe
+%SystemDrive%\DOCUME~1\ADMINI~1\LOCALS~1\Temp\xmjmf.exe
+%SystemDrive%\DOCUME~1\ADMINI~1\LOCALS~1\Temp\xwota.exe
+%SystemDrive%\DOCUME~1\ADMINI~1\LOCALS~1\Temp\yxjkrt.exe
+%SystemDrive%\eetdut.exe
+
+File Hashes
+
+02e3ca0b78494efa9c54f41856fbf50478673329ea238c7786bdeb30542e5ed5
+034336a710468f49c1eed9d375a85d4d7f48ecc271dde830f60b428d52a94c2b
+0a9a606be52079bc06d34ee969313e58809c8bf4978e31101ce329b7651f564e
+2055ba5f6fa09c201359729adc6c0e20ad97346d698b5801b601d29a85e78c52
+34b3a1c08a185f7755b8fe3f741e13a6452b46766b2b564cd329c45bd45e1c76
+38764b867874a08bd44e8a4b78b670e7445f93af546fba0443c99f56d469a951
+3bd14203a0587eea25421d679fc5d7c598464e5fde6f39cf7e6a506fa86aaf5c
+40d8f51d911e4f4d3fa29fcd39adc9e826557727dc1ec411404d6bd09c7f8c35
+518b8b1dea7caf5f1c2d9b6f6ef32ba70effc2f74ebd7a902434fc66e179700e
+609dcb6f088836745f24a24d71b49e092196b08a9924f42e8b63b92f4c0ebe24
+6f8fec09c16a0f5bb60e3ec4cd1a41cb34a2eaa59d0351f5f875a83dd7ec8411
+76cb38ecf5c3b925e946b6da3cc78e25e0df6db48c66073a6dc33bb8bc03cb5c
+78784ee614b06d505879ec8454a80843416aa89869ecfb7eb059aadb14027178
+7d5787833d365d5a2d84c0e6135106bd6d5a49de4da86857995cf0222491c028
+8089f6db67efb482755dfc06ee4efe7271e685136e46a231b06bff87aca4393b
+9af10868ac775ec789e3b9e7475015c3ba66f9ed35aabcfe8ea323b9b1a8d7a5
+9fadad87f4763f5a062c0c12677b3b549f9df261484ad89cf58bb60809751e9c
+a543f5d10445af1ce7710cc596b2b6ab0532cef51e9041b8f8c58bd36b218dd9
+ac9ee5d47307f578e1a19a96dfb509a5063045a339ffcf1dc79f6a559f6385c3
+c3a88516553f23807115597f99f0b8f9e8a62c68bf7ee321bf1ff6c599c3c8f1
+c96d2cd51eff903958ccc279fa48e392e858403aead3add4b00e6e9b031d5754
+d2da9a2988364a576679489265765e8bd5419ea66e8aea48e666a5300f2c5e6f
+e080790b62f025fedc93b161dc061421ae47cf4785ecb1744d6da1be44f8667a
+e1a951d34a0c35cc5a011242189ed82707d3fc40289b37470169703f269d88f4
+e1d9701b9af405e448e57714ee762722c3ddc6306d271038c350b0cfc138cebc
+
+
+
+Coverage
+
+
+        
+
+
+Screenshots of Detection
+AMP
+
+
+
+
+
+
+ThreatGrid
+
+
+
+
+
+Umbrella
+
+
+
+
+
+Malware
+
+
+
+
+
+
+Doc.Malware.Powload-6775735-0
+
+
+Indicators of Compromise
+
+Registry Keys
+
+N/A
+
+Mutexes
+
+Global\552FFA80-3393-423d-8671-7BA046BB5906
+Local\ZonesCacheCounterMutex
+Local\ZonesLockedCacheCounterMutex
+RasPbFile
+Global\PowerShell_CommandAnalysis_Lock_S-1-5-21-2580483871-590521980-3826313501-500
+Global\MTX_MSO_AdHoc1_S-1-5-21-2580483871-590521980-3826313501-500
+Global\MTX_MSO_Formal1_S-1-5-21-2580483871-590521980-3826313501-500
+Local\10MU_ACB10_S-1-5-5-0-57527
+Local\10MU_ACBPIDS_S-1-5-5-0-57527
+Local\WinSpl64To32Mutex_e162_0_3000
+\BaseNamedObjects\Global\.net clr networking
+
+IP Addresses contacted by malware. Does not indicate maliciousness
+
+199[.]188[.]200[.]110
+185[.]72[.]59[.]32
+185[.]87[.]51[.]118
+185[.]2[.]4[.]116
+177[.]185[.]194[.]161
+
+Domain Names contacted by malware. Does not indicate maliciousness
+
+www[.]w3[.]org
+tecleweb[.]com[.]br
+chiporestaurante[.]com
+www[.]onecubeideas[.]com
+onecubeideas[.]com
+dc[.]amegt[.]com
+fortools[.]ru
+
+Files and or directories created
+
+%WinDir%\ServiceProfiles\LocalService\AppData\Local\lastalive0.dat
+%WinDir%\ServiceProfiles\LocalService\AppData\Local\lastalive1.dat
+%LocalAppData%\Microsoft\Windows\Temporary Internet Files\Content.Word\~WRS{257D7FC1-A1F1-4741-80E5-4CCDA3324B78}.tmp
+%AppData%\Microsoft\Templates\~$Normal.dotm
+%AppData%\Microsoft\Word\STARTUP
+%AppData%\Microsoft\Office\Recent\index.dat
+\EVENTLOG
+\ROUTER
+%UserProfile%\Documents\20181207
+%LocalAppData%\Temp\705.exe
+%LocalAppData%\Temp\CVR8C5B.tmp
+%AppData%\Microsoft\Office\Recent\355848530.doc.LNK
+%SystemDrive%\~$5848530.doc
+%LocalAppData%\Temp\fjzx2n2i.cc2.ps1
+%LocalAppData%\Temp\qfrje44a.wpp.psm1
+%LocalAppData%\Temp\~DF25D3033E1B874DBC.TMP
+%AppData%\Microsoft\Office\Recent\37c08bc14f578f0b19f992648c113e46dc49e0ad1ddc9cd2e63dfb9242fe151c.LNK
+
+File Hashes
+
+02c58585c45ba7f87a94eb10fda2ad3d1216dae821536c77bd1f53b5b48730cf
+0aac7ab733c51437873bf791b28557b12e027bf9bf1b3eafcde05388010af655
+0cc53d287e5df9017989526addc988b49fcd76894032458720acad7c265df9de
+14ab7c3501e5ea1482687558d1544698b85cd9b24b3580245a85ce0b781c03e7
+1af67c800700954695d42c3e124753750016b7c598c6fa2f9bcd9f85723dd1c6
+1bfc31debc05dc83864b01ddf300552ec6496cc0d1c25b5846fcd2a4c5da93df
+1e0c90f629beae558c6af53c3def9cda4bc77d06cd42131b8f969ff0da9afe25
+1ff1729697c956aa4270731f63686d2f6aa1e86a47d219f32058fa67be31817f
+21982965fc5661c509d1833f8fe9caf02d7649619b7b542d7a735abd7936a9cd
+21e781747a69ebeda636616b47fdd4ff871b9c672aad10f3cf95cbd55eb8b169
+239fea895e2a4a3bd3c3339ce48b2f330bd611d8120e0937aca1c8581e977849
+2759147c5b948b705943cc4dfe7932aaeb14bda833ed00a850d1ee5543bac6c3
+2b3064f31f52b8d33a9a7f73c1624252f4a2b615df0c99b4c70b4c617eed87fa
+2c97f2997575df803d28dd38636856fd0efb9fa7efaea22c526b8dc71daa9aee
+370c83daaa8ad3c9e1f684ac93a5c7436e86bab917f8511544792f083fd8d127
+37c08bc14f578f0b19f992648c113e46dc49e0ad1ddc9cd2e63dfb9242fe151c
+3ac2d948a193f03d6d6bbd288ab9ae2b58588567e459aecae80a66e00a291847
+3b958df2dedb42704c2baf7b9dff89112db8e8297a594ebe98303f9913004e9b
+54bf05efacb556c7ed106a9b802619b2f038d1e6b8adbcf4c8d632f8531e68be
+56de2fad613807e46613e7159681a962cc8c54fc6ed20c7c3e90e104cdbfeaff
+590cb8e2648bc9566d2709a22d33369309e32ddfcf6cf725dfce6b0efb2b51b3
+5a2763ea3481568a73456a2e784b6b31b32845ec08df99b3394533ecdb0f973a
+5f47e689fb44578d43e4c7590ce10c275f7f533c894387086bf5e0bb3a68e46d
+626ead7063f00752432c54dcb61975b060e306f2712fa2fb1e6f3aa4cc406e1a
+6714f37afcbe1d0685770f9558c40d0856e7c337f8d4c4beb7e312672adda950
+
+
+
+Coverage
+
+
+        
+
+
+Screenshots of Detection
+AMP
+
+
+
+
+
+
+ThreatGrid
+
+
+
+
+
+Umbrella
+
+
+
+
+
+
+Malware
+
+
+
+
+
+
+PUA.Win.Trojan.Hupigon-6776762-0
+
+
+Indicators of Compromise
+
+Registry Keys
+
+N/A
+
+Mutexes
+
+Local\MSCTF.Asm.MutexDefault1
+\BaseNamedObjects\ISPWizard Mutex
+ISPWizard Mutex
+
+IP Addresses contacted by malware. Does not indicate maliciousness
+
+N/A
+
+Domain Names contacted by malware. Does not indicate maliciousness
+
+N/A
+
+Files and or directories created
+
+%WinDir%\ServiceProfiles\LocalService\AppData\Local\lastalive0.dat
+%WinDir%\ServiceProfiles\LocalService\AppData\Local\lastalive1.dat
+%SystemDrive%\DOCUME~1\ADMINI~1\LOCALS~1\Tempmpsetup.exe
+%System32%\rnaph.dll
+%LocalAppData%\Tempmpsetup.exe
+
+File Hashes
+
+0d72d9ee3de3e8ac191444390ba097b471e72fe6ff951b8d77f2107486f1310d
+174751136660fe996a57657e8ec2205ad9a5e9efe8eaa5078b714f5fb51cf9a2
+1edcf0b7e78dd603aaf2900a06bb8f52c38e5648df696caf14f6c39d2d23c4e9
+4d2719868251d27b80b746161fcb2eb78e5ce1927b10c4da5f782ccc51b619e5
+835a2e9ef6349c641ac1e786aae48338c88e76315a2ce4fd4c43903304984093
+a1a60ca213175febdcc3ff1bc578053c563a6d33c40312f46f3118464e2c9b34
+c6f5fcd39af9fe1a342d5b55b09c74c5cc29c666becdc583098e0a09883491c5
+d84e292c72cd96b1d4755881bb7c05bc7f013910f5671c606fe66a1c56a85411
+e1d008fcb364fa01413eb0710ec049f74e791b17ae25d8f27fe857a7ff9aa8f9
+f094e7eea20b73e4513ed141d82eeb96c8f4ba44373483154719ef9bdef07de4
+
+
+
+Coverage
+
+
+        
+
+
+Screenshots of Detection
+AMP
+
+
+
+
+
+
+ThreatGrid
+
+
+
+
+
+Malware
+
+
+
+
+
+

@@ -1,0 +1,83 @@
+
+		
+Scripts are becoming the weapon of choice of sophisticated activity groups responsible for targeted attacks as well as malware authors who indiscriminately deploy commodity threats.
+Scripting engines such as JavaScript, VBScript, and PowerShell offer tremendous benefits to attackers. They run through legitimate processes and are perfect tools for “living off the land”—staying away from the disk and using common tools to run code directly in memory. Often part of the operating system, scripting engines can evaluate and execute content from the internet on-the-fly. Furthermore, integration with popular apps make them effective vehicles for delivering malicious implants through social engineering as evidenced by the increasing use of scripts in spam campaigns.
+Malicious scripts are not only used as delivery mechanisms. We see them in various stages of the kill chain, including during lateral movement and while establishing persistence. During these latter stages, the scripting engine of choice is clearly PowerShell—the de facto scripting standard for administrative tasks on Windows—with the ability to invoke system APIs and access a variety of system classes and objects.
+While the availability of powerful scripting engines makes scripts convenient tools, the dynamic nature of scripts allows attackers to easily evade analysis and detection by antimalware and similar endpoint protection products. Scripts are easily obfuscated and can be loaded on-demand from a remote site or a key in the registry, posing detection challenges that are far from trivial.
+Windows 10 provides optics into script behavior through Antimalware Scan Interface (AMSI), a generic, open interface that enables Windows Defender Antivirus to look at script contents the same way script interpreters do—in a form that is both unencrypted and unobfuscated. In Windows 10 Fall Creators Update, with knowledge from years analyzing script-based malware, we’ve added deep behavioral instrumentation to the Windows script interpreter itself, enabling it to capture system interactions originating from scripts. AMSI makes this detailed interaction information available to registered AMSI providers, such as Windows Defender Antivirus, enabling these providers to perform further inspection and vetting of runtime script execution content.
+This unparalleled visibility into script behavior is capitalized further through other Windows 10 Fall Creators Update enhancements in both Windows Defender Antivirus and Windows Defender Advanced Threat Protection (Windows Defender ATP). Both solutions make use of powerful machine learning algorithms that process the improved optics, with Windows Defender Antivirus delivering enhanced blocking of malicious scripts pre-breach and Windows Defender ATP providing effective behavior-based alerting for malicious post-breach script activity.
+In this blog, we explore how Windows Defender ATP, in particular, makes use of AMSI inspection data to surface complex and evasive script-based attacks. We look at advanced attacks perpetrated by the highly skilled KRYPTON activity group and explore how commodity malware like Kovter abuses PowerShell to leave little to no trace of malicious activity on disk. From there, we look at how Windows Defender ATP machine learning systems make use of enhanced insight about script characteristics and behaviors to deliver vastly improved detection capabilities. To test Windows Defender ATP, sign up for a free trial.
+KRYPTON: Highlighting the resilience of script-based attacks
+Traditional approaches for detecting potential breaches are quite file-centric. Incident responders often triage autostart entries, sorting out suspicious files by prevalence or unusual name-folder combinations. With modern attacks moving closer towards being completely fileless, it is crucial to have additional sensors at relevant choke points.
+Apart from not having files on disk, modern script-based attacks often store encrypted malicious content separately from the decryption key. In addition, the final key often undergoes multiple processes before it is used to decode the actual payload, making it is impossible to make a determination based on a single file without tracking the actual invocation of the script. Even a perfect script emulator would fail this task.
+For example, the activity group KRYPTON has been observed hijacking or creating scheduled tasks—they often target system tasks found in exclusion lists of popular forensic tools like Autoruns for Windows. KRYPTON stores the unique decryption key within the parameters of the scheduled task, leaving the actual payload content encrypted.
+To illustrate KRYPTON attacks, we look at a tainted Microsoft Word document identified by John Lambert and the Office 365 Advanced Threat Protection team.
+
+Figure 1. KRYPTON lure document
+To live off the land, KRYPTON doesn’t drop or carry over any traditional malicious binaries that typically trigger antimalware alerts. Instead, the lure document contains macros and uses the Windows Scripting Host (wscript.exe) to execute a JavaScript payload. This script payload executes only with the right RC4 decryption key, which is, as expected, stored as an argument in a scheduled task. Because it can only be triggered with the correct key introduced in the right order, the script payload is resilient against automated sandbox detonations and even manual inspection.
+
+Figure 2. KRYPTON script execution chain through wscript.exe
+Exposing actual script behavior with AMSI
+AMSI overcomes KRYPTON’s evasion mechanisms by capturing JavaScript API calls after they have been decrypted and ready to be executed by the script interpreter. The screenshot below shows part of the exposed content from the KRYPTON attack as captured by AMSI.
+
+Figure 3. Part of the KRYPTON script payload captured by AMSI and sent to the cloud for analysis
+By checking the captured script behavior against indicators of attack (IoAs) built up by human experts as well as machine learning algorithms, Windows Defender ATP effortlessly flags the KRYPTON scripts as malicious. At the same time, Windows Defender ATP provides meaningful contextual information, including how the script is triggered by a malicious Word document.
+
+Figure 4. Windows Defender ATP machine learning detection of KRYPTON script captured by AMSI
+PowerShell use by Kovter and other commodity malware
+Not only advanced activity groups like KRYPTON are shifting from binary executables to evasive scripts. In the commodity space, Kovter malware uses several processes to eventually execute its malicious payload. This payload resides in a PowerShell script decoded by a JavaScript (executed by wscript.exe) and passed to powershell.exe as an environment variable.
+
+Figure 5. Windows Defender ATP machine learning alert for the execution of the Kovter script-based payload
+By looking at the PowerShell payload content captured by AMSI, experienced analysts can easily spot similarities to PowerSploit, a publicly available set of penetration testing modules. While such attack techniques involve file-based components, they remain extremely hard to detect using traditional methods because malicious activities occur only in memory. Such behavior, however, is effortlessly detected by Windows Defender ATP using machine learning that combines detailed AMSI signals with signals generated by PowerShell activity in general.
+
+Figure 6. Part of the Kovter script payload captured by AMSI and sent to the cloud for analysis
+Fresh machine learning insight with AMSI
+While AMSI provides rich information from captured script content, the highly variant nature of malicious scripts continues to make them challenging targets for detection. To efficiently extract and identify new traits differentiating malicious scripts from benign ones, Windows Defender ATP employs advanced machine learning methods.
+As outlined in our previous blog, we employ a supervised machine learning classifier to identify breach activity. We build training sets based on malicious behaviors observed in the wild and normal activities on typical machines, augmenting that with data from controlled detonations of malicious artifacts. The diagram below conceptually shows how we capture malicious behaviors in the form of process trees.
+
+Figure 7. Process tree augmented by instrumentation for AMSI data
+As shown in the process tree, the kill chain begins with a malicious document that causes Microsoft Word (winword.exe) to launch PowerShell (powershell.exe). In turn, PowerShell executes a heavily obfuscated script that drops and executes the malware fhjUQ72.tmp, which then obtains persistence by adding a run key to the registry. From the process tree, our machine learning systems can extract a variety of features to build expert classifiers for areas like registry modification and file creation, which are then converted into numeric scores that are used to decide whether to raise alerts.
+With the instrumentation of AMSI signals added as part of the Windows 10 Fall Creators Update (version 1709), Windows Defender ATP machine learning algorithms can now make use of insight into the unobfuscated script content while continually referencing machine state changes associated with process activity. We’ve also built a variety of script-based models that inspect the nature of executed scripts, such as the count of obfuscation layers, entropy, obfuscation features, ngrams, and specific API invocations, to name a few.
+As AMSI peels off the obfuscation layers, Windows Defender ATP benefits from growing visibility and insight into API calls, variable names, and patterns in the general structure of malicious scripts. And while AMSI data helps improve human expert knowledge and their ability to train learning systems, our deep neural networks automatically learn features that are often hidden from human analysts.
+
+Figure 8. Machine learning detections of JavaScript and PowerShell scripts
+While these new script-based machine learning models augment our expert classifiers, we also correlate new results with other behavioral information. For example, Windows Defender ATP correlates the detection of suspicious script contents from AMSI with other proximate behaviors, such as network connections. This contextual information is provided to SecOps personnel, helping them respond to incidents efficiently.
+
+Figure 9. Machine learning combines VBScript content from AMSI and tracked network activity
+Detection of AMSI bypass attempts
+With AMSI providing powerful insight into malicious script activity, attacks are more likely to incorporate AMSI bypass mechanisms that we group into three categories:
+
+Bypasses that are part of the script content and can be inspected and alerted on
+Tampering with the AMSI sensor infrastructure, which might involve the replacement of system files or manipulation of the load order of relevant DLLs
+Patching of AMSI instrumentation in memory
+
+The Windows Defender ATP research team proactively develops anti-tampering mechanisms for all our sensors. We have devised heuristic alerts for possible manipulation of our optics, designing these alerts so that they are triggered in the cloud before the bypass can suppress them.
+During actual attacks involving CVE-2017-8759, Windows Defender ATP not only detected malicious post-exploitation scripting activity but also detected attempts to bypass AMSI using code similar to one identified by Matt Graeber.
+
+Figure 10. Windows Defender ATP alert based on AMSI bypass pattern
+AMSI itself captured the following bypass code for analysis in the Windows Defender ATP cloud.
+
+Figure 11. AMSI bypass code sent to the cloud for analysis
+Conclusion: Windows Defender ATP machine learning and AMSI provide revolutionary defense against highly evasive script-based attacks
+Provided as an open interface on Windows 10, Antimalware Scan Interface delivers powerful optics into malicious activity hidden in encrypted and obfuscated scripts that are oftentimes never written to disk. Such evasive use of scripts is becoming commonplace and is being employed by both highly skilled activity groups and authors of commodity malware.
+AMSI captures malicious script behavior by looking at script content as it is interpreted, without having to check physical files or being hindered by obfuscation, encryption, or polymorphism. At the endpoint, AMSI benefits local scanners, providing the necessary optics so that even obfuscated and encrypted scripts can be inspected for malicious content. Windows Defender Antivirus, specifically, utilizes AMSI to dynamically inspect and block scripts responsible for dropping all kinds of malicious payloads, including ransomware and banking trojans.
+With Windows 10 Fall Creators Update (1709), newly added script runtime instrumentation provides unparalleled visibility into script behaviors despite obfuscation. Windows Defender Antivirus uses this treasure trove of behavioral information about malicious scripts to deliver pre-breach protection at runtime. To deliver post-breach defense, Windows Defender ATP uses advanced machine learning systems to draw deeper insight from this data.
+Apart from looking at specific activities and patterns of activities, new machine learning algorithms in Windows Defender ATP look at script obfuscation layers, API invocation patterns, and other features that can be used to efficiently identify malicious scripts heuristically. Windows Defender ATP also correlates script-based indicators with other proximate activities, so it can deliver even richer contextual information about suspected breaches.
+To benefit from the new script runtime instrumentation and other powerful security enhancements like Windows Defender Exploit Guard, customers are encourage to install Windows 10 Fall Creators Update.
+To test how Windows Defender ATP can help your organization detect, investigate, and respond to advanced attacks, sign up for a free trial.
+Stefan Sellmer, Windows Defender ATP Research
+with
+Shay Kels, Windows Defender ATP Research 
+Karthik Selvaraj, Windows Defender Research
+
+Additional readings
+
+Defend against PowerShell attacks, by Lee Holmes and the PowerShell team
+Windows Defender ATP machine learning: Detecting new and unusual breach activity
+
+
+
+Talk to us
+Questions, concerns, or insights on this story? Join discussions at the Microsoft community and Windows Defender Security Intelligence.
+Follow us on Twitter @WDSecurity and Facebook Windows Defender Security Intelligence.
+	

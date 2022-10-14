@@ -1,0 +1,69 @@
+
+		Advanced cyberattacks emphasize stealth and persistence: the longer they stay under the radar, the more they can move laterally, exfiltrate data, and cause damage. To avoid detection, attackers are increasingly turning to cross-process injection.
+Cross-process injection gives attackers the ability to run malicious code that masquerades as legitimate programs. With code injection, attackers don’t have to use custom processes that can quickly be detected. Instead, they insert malicious code into common processes (e.g., explorer.exe, regsvr32.exe, svchost.exe, etc.), giving their operations an increased level of stealth and persistence.
+Windows Defender Advanced Threat Protection (Windows Defender ATP) uncovers this type of stealth attack, including ones that use newer forms of injection. In Windows 10 Creators Update, we enhanced Windows Defender ATP’s instrumentation and detection of in-memory injection methods like process hollowing and atom bombing.
+Windows Defender ATP is a post-breach solution that alerts security operations (SecOps) teams about hostile activity. As the nature of attacks evolve, Windows Defender ATP continues to advance to help SecOps personnel detect and respond effectively to attacks.
+To test how Windows Defender ATP can help your organization detect, investigate, and respond to advanced attacks, sign up for a free trial.
+This blog post is part of a series of blogs about how Windows Defender ATP detects code injection techniques. We tackle process hollowing and atom bombing attacks to illustrate how Windows Defender ATP detects a broad spectrum of nefarious activity, from commodity malware that attempts to hide from plain sight, to sophisticated activity groups that engage in targeted attacks.
+Process hollowing: Hiding code in legitimate processes
+Process hollowing is a code injection technique that involves spawning a new instance of a legitimate process and then “hollowing it out”, i.e., replacing the legitimate code with malware. Unlike most injection techniques that add a malicious feature to an otherwise normally running process, the result of hollowing is a process that looks legitimate on the outside but is primarily malicious on the inside.
+While there are few known techniques that achieve process hollowing, the most common variant typically follows four steps to achieve stealthy execution of malicious code:
+
+The malware spawns a new instance of a legitimate process (e.g., explorer.exe, lsass.exe, etc.), and places it in a suspended state.
+The malware then hollows out the memory section in the new (and still suspended) process that holds the base address of the legitimate code. To do this, the malware uses the NtUnmapViewOfSection routine.
+It allocates read-write-execute (RWX) memory in the suspended process to prepare for the replacement malicious code.
+The malware then copies malicious code into the allocated memory. It changes the target address of the first thread to the malicious program’s entry point.
+
+When the thread resumes, the malicious code starts running, now disguised as a legitimate process. The malware is then free to delete remnants of itself from disk to avoid detection.
+Atom bombing: New cloak of disguise
+Atom bombing is one of the most recent code injection techniques observed in attacks. It is a method that can be used by an attacker who has already compromised a machine and who can execute code to perform stealthy code injection into other processes using lesser known APIs.
+In this technique, the malware writes malicious code to the global atom table, which can be accessed by all applications. The malware then dispatches an asynchronous procedure call (APC) to the APC queue of a target process thread using the native NtQueueApcThread API. When executed, this APC forces the target process to call the GlobalGetAtomName function, which retrieves the malicious code from the global atom table and inserts the code into the memory of the target process.
+Writing malicious code into the memory space of another process without use of WriteProcessMemory is a clever trick, but the malicious code, when transferred via atom table, is not ready to be executed. An extra step is required to achieve the final goal: one more APC call is used to invoke return-oriented-programming (ROP) and convert the code memory region into RWX. Only then does the malicious code run.
+Detecting process hollowing and atom bombing with enhanced Windows Defender ATP capabilities
+In Windows Defender ATP Creators Update, we have instrumented function calls and built statistical models to detect a broad range of malicious injection techniques used in attacks.
+We tested these capabilities against real-world examples of malware that use process hollowing, atom bombing, and other injection methods. In the following sections, we illustrate how Windows Defender ATP uncovers attacks that use code injection to gain stealth and persistence in target networks.
+Kovter: Classic process hollowing in action
+Kovter is a family of click-fraud Trojans that have been around since 2013 but have recently been observed to associate with ransomware families like Locky. In 2016, we discovered Kovter variants that achieved an almost file-less persistence.
+This malware is primarily delivered as attachment in phishing emails. When executed, Kovter hides most of its malicious JavaScript, PowerShell, and shellcode components (all typically obfuscated) across several registry keys. It then uses native applications to combine, decrypt, and execute the code stored in the registry and perform its injection routine.
+Kovter achieves persistence by adding shortcuts (.lnk files) to the startup folder or adding entries to the registry key HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Run. Both methods open a component file with a random file name extension.
+It adds two registry entries to the HKEY_USERS hive so that the component file is opened by the legitimate program mshta.exe, which extracts an obfuscated payload from a third registry key.
+When the payload is decrypted, a PowerShell script is extracted and added as a new environmental variable. The PowerShell then executes a script referred to in the environmental variable, which injects shellcode into a target process.
+Using the shellcode, Kovter employs the process hollowing technique to inject malicious code into legitimate processes. Through process hollowing, this nearly file-less malware can achieve and maintain a stealthy presence, presenting a challenge to traditional AV solutions.
+Windows Defender ATP, using enhanced instrumentation and detection capabilities, exposes the function calls used in this technique. Furthermore, through statistical models, Windows Defender ATP zeroes in on malicious functions required to execute process hollowing.
+The screenshot below shows the Windows Defender ATP alert for the process injection routine. It shows mshta.exe being used to launch and execute a malicious PowerShell script (1, 2), as well as the hollowed-out process regsvr32.exe that contain malicious code (3, 4).
+
+Figure 1: Windows Defender ATP detection of Kovter performing process hollowing on regsvr32.exe using mshta.exe
+Dridex: Early adopter of atom bombing
+Since its release in 2014, Dridex has been a very prolific and nasty banking Trojan. Delivered primarily by phishing emails, Dridex pilfers banking credentials and sensitive information, disables security products, and gives attackers remote access to victim computers.
+Over the years, Dridex’s code has gone through several revisions. With its most recent version, Dridex became one of the earliest adopters of the atom bombing injection technique. It maintains stealth and persistence by avoiding the common API calls that are associated with code injection techniques.
+When executed, Dridex looks for an alertable thread for a target process. It then ensures that user32.dll is loaded by the target process. It needs user32.dll to access the required atom table functions. Once this requirement is met, Dridex writes its shellcode to the global atom table.
+It then forces the target process to copy the malicious code into memory by adding a series of NtQueueApcThread calls for GlobalGetAtomNameW to the APC queue of the target process thread.
+
+Figure 2: NtQueueApcThread calls to GlobalGetAtomNameW added to the APC queue of the target process.
+Finally, Dridex calls NtProtectVirtualMemory to transform the memory location (where the malicious code now resides) into executable memory. At this point, Dridex can freely execute its code in the context of the legitimate process.
+Windows Defender ATP uncovers the use of the atom bombing technique. The screenshot below shows a Windows Defender ATP alert on Dridex that used atom bombing to inject malicious code into the legitimate process svchost.exe.
+
+Figure 3: Windows Defender ATP detection of Dridex performing atom bombing on svchost.exe
+Conclusion: Windows Defender ATP Creators Update exposes covert cyberattacks
+Windows 10 continues to elevate defense capabilities against the full range of modern threats. Attackers respond to this by launching more complex attacks that are increasingly sneakier and more persistent. Kovter and Dridex are examples of prominent malware families that evolved to evade detection using code injection techniques. Inevitably, process hollowing, atom bombing, and other advanced techniques will be used by existing and new malware families.
+Windows Defender ATP uses rich security data, advanced behavioral analytics, and machine learning to detect the invariant techniques used in attacks. Windows Defender ATP Creators Update has enhanced instrumentation and detection capabilities to better expose covert attacks.
+Windows Defender ATP also provides detailed event timelines and other contextual information that SecOps teams can use to understand attacks and quickly respond. The improved functionality in Windows Defender ATP enables them to isolate the victim machine and protect the rest of the network.
+For more information about Windows Defender ATP, check out its features and capabilities and read about why a post-breach detection approach is a key component of any enterprise security strategy.
+Windows Defender ATP is built into the core of Windows 10 Enterprise and can be evaluated free of charge.
+ 
+John Lundgren
+Windows Defender ATP Research Team
+ 
+Related blog posts
+Detecting reflective DLL loading with Windows Defender ATP
+Uncovering cross-process injection with Windows Defender ATP
+ 
+ 
+ 
+
+
+Talk to us
+Questions, concerns, or insights on this story? Join discussions at the Microsoft community and Windows Defender Security Intelligence.
+Follow us on Twitter @WDSecurity and Facebook Windows Defender Security Intelligence.
+ 
+	

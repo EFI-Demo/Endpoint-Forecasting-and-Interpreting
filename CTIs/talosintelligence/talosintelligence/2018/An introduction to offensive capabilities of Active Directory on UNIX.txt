@@ -1,0 +1,38 @@
+
+Tim Wadhwa-Brown of Portcullis Labs authored this post.
+
+In preparation for our talk at Black Hat Europe, Security Advisory EMEAR  would like to share the background on our recent research into some common Active Directory integration solutions. Just as with Windows, these solutions can be utilized to join UNIX infrastructure to enterprises' Active Directory forests.
+
+
+
+
+Background to active directory integration solutions
+
+Having seen an uptick in unique UNIX infrastructures that are integrated into customers' existing Active Directory forests, the question becomes, "Does this present any concerns that may not be well understood?" This quickly became "What if an adversary could get into a UNIX box and then breach your domain?"
+
+Within a typical Active Directory integration solution (in this case SSSD), the solution shares a striking similarity to what a user might see on Windows. Notably, you have:
+
+
+
+DNS – Used for name resolution
+
+LDAP – Used for "one-time identification" and assertion of identity
+
+Kerberos – Used for ongoing authentication
+
+SSSD – Like LSASS
+
+ PAM – Like msgina.dll or the more modern credential providers
+
+
+
+You can see a breakdown of this process here. Unlike Windows, there is no Group Policy for the most part (with some exceptions), so policies for sudo et al. are typically pushed as flat files to hosts.
+
+
+Our research
+
+Realistically, the threat models associated with each part of the implementation should be quite familiar to anyone securing a heterogeneous Windows network. Having worked with a variety of customers, it becomes apparent that the typical UNIX administrator who does not have a strong background in Windows and Active Directory will be ill-equipped to handle this threat. While we've been talking about successful attacks against components such as LSASS and Kerberos for quite some time, Mimikatz dates back to at least April 2014, and dumping hashes has been around even longer. Pwdump, which dumped local Windows hashes, was published by Jeremy Allison in 1997). However, no one has really taken a concerted look at whether these attacks are possible on UNIX infrastructure, nor how a blue team might spot an adversary performing them.
+
+As a result of this research, we were able to develop tactics, tools, and procedures that might further assist an attacker in breaching an enterprise, and we began documenting and developing appropriate strategies to allow blue teams to appropriately detect and respond to such incursions. The presentation and tactics, tools, and procedures for this talk will be available after our Blackhat EU talk. They will also be available here, and at our GitHub repo.
+
+

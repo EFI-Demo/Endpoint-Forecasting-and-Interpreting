@@ -1,0 +1,38 @@
+Internet of Things (IoT) devices for the home continue to be popular, and many people may be considering buying more smart home gadgets this Christmas. It seems that every device now has a smart version that can be integrated into the home network, from microwaves to showers, from heating to smoke detectors.
+
+Symantec constantly analyzes the risks associated with IoT devices and their various possible attack vectors. Recently, while looking at new threats to IoT devices, we came across some security issues in a remote-controlled, full-color LED light bulb. It’s a low-priced brand that can be bought at many online stores and is easy to use and integrate with popular voice-activated smart assistants. In order to set up and use the light bulb to its full extent, the user has to install a smartphone app and create a free account. The light bulb will then be added to the local Wi-Fi network and can be controlled remotely through the internet.
+.Leaking the login
+
+The first thing we noticed while analyzing the network traffic was that the smartphone application was mostly using plain HTTP requests to interact with the backend in the cloud. Only a few requests, for example to register a new user or to log in, were sent encrypted over HTTPS.
+
+Unfortunately, some of the unencrypted requests contained a lot of private information. For example, when the user decides to change the internal name of a light bulb, an unencrypted POST request is sent with the user’s email address in cleartext and the MD5 hash of the unsalted password. This means that anyone with access to the network could potentially sniff this traffic and brute-force the password hash. If the password is not very complex, there is a very good chance for the attacker to crack it. To make matters worse, the application does not provide an option to change the password; once the user has chosen one, it is fixed. Equipped with this data, an attacker could log into the account and take over all of the user’s light bulbs. 
+.This is not the only device where we have seen information being sent in cleartext. Unfortunately, the use of unencrypted traffic is still very common with many devices and applications.
+.Finding other users
+
+The API on the backend allows a user to find the user account that is associated with a specific light bulb by sending the MAC address of that device. There is no verification to determine whether the user account used to query a device is actually associated with that device. Therefore, an attacker only needs an active session that has already been authenticated, and can then guess or brute-force the MAC address of a target device.
+
+This method allows an attacker to enumerate all possible MAC addresses for the vendor in question and find any light bulb that is activated and remotely controllable. For each device that is found, the attacker receives the unique ID and the user’s email address in cleartext. The request is a simple GET request over plain HTTP. An attacker could use this trick to gather valid email addresses and use them in further attacks, such as spam, or use the gathered information to attack the light bulb itself.
+.Turning off the lights
+
+Once a remote-controllable device is found, an attacker can interact with the device. This action does not require knowledge of the password. Similar to the enumeration weakness, all that is required is an authenticated session and the MAC address of the device. Each light bulb can be controlled by multiple users and can therefore also be linked to multiple accounts. Once the connection is established, the attacker can turn the lights off or on, change the color, or rename it. The attacker gains full control over the lights, just like it was their own home.
+
+The vendor did previously upgrade the applications to use a more secure API function that requires a security token. Unfortunately, for legacy reasons, the old API is still accepting the unsecure requests.
+.Conclusion
+
+This is just one example showcasing that there are still a lot of simple security gaps within IoT devices that need to be fixed. Fancy exploits are not always required to take over such devices. Sometimes, as demonstrated in this case, simple design mistakes can be enough to expose users’ private data and devices to the public internet. Anyone could have taken over these smart light bulbs and controlled them. As of this writing, we do not have any indication that these devices have been exploited in the wild.
+
+We have reported all findings to the manufacturer. Other researchers have also found related issues with similar products. And of course, there are more possible attack vectors, even with these light bulbs, that we have not covered in this blog.
+
+Mitigation
+
+Buyers of such IoT devices need to be aware of the potential risks they expose themselves to. As attacks go, having your smart light bulbs remotely controlled by an attacker might not be so severe, but it could be unsettling nonetheless, and it could be only the first step in a bigger attack scenario. Thus, make sure to follow some of these basic guidelines when installing smart devices over the holiday season, so attackers will not be able to turn off your Christmas lights:
+
+
+	Change any default passwords during installation.
+	Use a dedicated account with a strong password to set up the devices.
+	Update the firmware and the smartphone apps whenever there is a new version released.
+	Consider whether the device needs internet connection or the local network is sufficient.
+	Verify if the configuration of the device matches your needs.
+	Turn off unused or unwanted features and services, like remote control.
+	If you reside in the United States or Australia, consider using a secure router like Norton Core, which can help secure your home network, and all the devices on it, against attacks..
+

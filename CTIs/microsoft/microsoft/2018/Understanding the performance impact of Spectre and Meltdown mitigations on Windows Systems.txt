@@ -1,0 +1,72 @@
+
+		Last week the technology industry and many of our customers learned of new vulnerabilities in the hardware chips that power phones, PCs and servers. We (and others in the industry) had learned of this vulnerability under nondisclosure agreement several months ago and immediately began developing engineering mitigations and updating our cloud infrastructure. In this blog, I’ll describe the discovered vulnerabilities as clearly as I can, discuss what customers can do to help keep themselves safe, and share what we’ve learned so far about performance impacts.
+What Are the New Vulnerabilities?
+On Wednesday, Jan. 3, security researchers publicly detailed three potential vulnerabilities named “Meltdown” and “Spectre.” Several blogs have tried to explain these vulnerabilities further — a clear description can be found via Stratechery.
+On a phone or a PC, this means malicious software could exploit the silicon vulnerability to access information in one software program from another. These attacks extend into browsers where malicious JavaScript deployed through a webpage or advertisement could access information (such as a legal document or financial information) across the system in another running software program or browser tab. In an environment where multiple servers are sharing capabilities (such as exists in some cloud services configurations), these vulnerabilities could mean it is possible for someone to access information in one virtual machine from another.
+What Steps Should I Take to Help Protect My System?
+Currently three exploits have been demonstrated as technically possible. In partnership with our silicon partners, we have mitigated those through changes to Windows and silicon microcode.
+
+
+
+Exploited Vulnerability
+CVE
+Exploit
+Name
+Public Vulnerability Name
+Windows Changes
+Silicon Microcode Update ALSO Required on Host
+
+
+Spectre
+2017-5753
+Variant 1
+Bounds Check Bypass
+Compiler change; recompiled binaries now part of Windows Updates
+Edge & IE11 hardened to prevent exploit from JavaScript
+No
+
+
+Spectre
+2017-5715
+Variant 2
+Branch Target Injection
+Calling new CPU instructions to eliminate branch speculation in risky situations
+Yes
+
+
+Meltdown
+2017-5754
+Variant 3
+Rogue Data Cache Load
+Isolate kernel and user mode page tables
+No
+
+
+
+ 
+Because Windows clients interact with untrusted code in many ways, including browsing webpages with advertisements and downloading apps, our recommendation is to protect all systems with Windows Updates and silicon microcode updates.
+For Windows Server, administrators should ensure they have mitigations in place at the physical server level to ensure they can isolate virtualized workloads running on the server. For on-premises servers, this can be done by applying the appropriate microcode update to the physical server, and if you are running using Hyper-V updating it using our recent Windows Update release. If you are running on Azure, you do not need to take any steps to achieve virtualized isolation as we have already applied infrastructure updates to all servers in Azure that ensure your workloads are isolated from other customers running in our cloud. This means that other customers running on Azure cannot attack your VMs or applications using these vulnerabilities.
+Windows Server customers, running either on-premises or in the cloud, also need to evaluate whether to apply additional security mitigations within each of their Windows Server VM guest or physical instances. These mitigations are needed when you are running untrusted code within your Windows Server instances (for example, you allow one of your customers to upload a binary or code snippet that you then run within your Windows Server instance) and you want to isolate the application binary or code to ensure it can’t access memory within the Windows Server instance that it should not have access to. You do not need to apply these mitigations to isolate your Windows Server VMs from other VMs on a virtualized server, as they are instead only needed to isolate untrusted code running within a specific Windows Server instance.
+We currently support 45 editions of Windows. Patches for 41 of them are available now through Windows Update. We expect the remaining editions to be patched soon. We are maintaining a table of editions and update schedule in our Windows customer guidance article.
+Silicon microcode is distributed by the silicon vendor to the system OEM, which then decides to release it to customers. Some system OEMs use Windows Update to distribute such microcode, others use their own update systems. We are maintaining a table of system microcode update information here. Surface will be updated through Windows Update starting today.
+ 
+Guidance on how to check and enable or disable these mitigations can be found here:
+
+Windows Client
+Windows Server
+Microsoft Azure
+
+Performance
+One of the questions for all these fixes is the impact they could have on the performance of both PCs and servers. It is important to note that many of the benchmarks published so far do not include both OS and silicon updates. We’re performing our own sets of benchmarks and will publish them when complete, but I also want to note that we are simultaneously working on further refining our work to tune performance. In general, our experience is that Variant 1 and Variant 3 mitigations have minimal performance impact, while Variant 2 remediation, including OS and microcode, has a performance impact.
+Here is the summary of what we have found so far:
+
+With Windows 10 on newer silicon (2016-era PCs with Skylake, Kabylake or newer CPU), benchmarks show single-digit slowdowns, but we don’t expect most users to notice a change because these percentages are reflected in milliseconds.
+With Windows 10 on older silicon (2015-era PCs with Haswell or older CPU), some benchmarks show more significant slowdowns, and we expect that some users will notice a decrease in system performance.
+With Windows 8 and Windows 7 on older silicon (2015-era PCs with Haswell or older CPU), we expect most users to notice a decrease in system performance.
+Windows Server on any silicon, especially in any IO-intensive application, shows a more significant performance impact when you enable the mitigations to isolate untrusted code within a Windows Server instance. This is why you want to be careful to evaluate the risk of untrusted code for each Windows Server instance, and balance the security versus performance tradeoff for your environment.
+
+For context, on newer CPUs such as on Skylake and beyond, Intel has refined the instructions used to disable branch speculation to be more specific to indirect branches, reducing the overall performance penalty of the Spectre mitigation. Older versions of Windows have a larger performance impact because Windows 7 and Windows 8 have more user-kernel transitions because of legacy design decisions, such as all font rendering taking place in the kernel. We will publish data on benchmark performance in the weeks ahead.
+Conclusion
+As you can tell, there is a lot to this topic of side-channel attack methods. A new exploit like this requires our entire industry to work together to find the best possible solutions for our customers. The security of the systems our customers depend upon and enjoy is a top priority for us. We’re also committed to being as transparent and factual as possible to help our customers make the best possible decisions for their devices and the systems that run organizations around the world. That’s why we’ve chosen to provide more context and information today and why we released updates and remediations as quickly as we could on Jan. 3. Our commitment to delivering the technology you depend upon, and in optimizing performance where we can, continues around the clock and we will continue to communicate as we learn more.
+-Terry
+	

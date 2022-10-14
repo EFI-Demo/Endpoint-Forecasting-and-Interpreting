@@ -1,0 +1,63 @@
+
+		
+(Note: Read our latest comprehensive report on ransomware: Ransomware 1H 2017 review: Global outbreaks reinforce the value of security hygiene.)
+ 
+We’ve seen how ransomware managed to become a threat category that sends consumers and enterprise reeling when it hits them. It has become a high-commodity malware that is used as payload to spam email, macro malware, and exploit kit campaigns. It also digs onto victims’ pockets in exchange for recovering files from their encrypted form. This is where Crowti, Tescrypt, Teerac, and Locky have been very active at.
+We’ve also observed some malware authors providing a different method of distribution in the black market called ransom-as-a-service (RaaS). Malicious actors use RaaS to download the ransomware app builder and customize them accordingly. We’ve seen two threats, Sarento and Enrume, built through this type of service and deployed to infect machines during the second half of 2015.
+How is Samas different from other ransomware?
+Ransom:MSIL/Samas, which surfaced in the past quarter, has a different way of getting into the system – it has a more targeted approach of getting installed. We have observed that this threat requires other tools or components to aid its deployment:
+
+
+ 
+Figure 1: Ransom:MSIL/Samas infection chain 
+Samas ransomware’s tools of trade
+The Samas infection chain diagram illustrates how Ransom:MSIL/Samas gets into the system. It starts with a pen-testing/attack server searching for potential vulnerable networks to exploit with the help of a publicly-available tool named reGeorg, which is used for tunnelling.
+Java-based vulnerabilities were also observed to have been utilized, such as CVE-2010-0738 related to outdated JBOSS server applications.
+It can use other information-stealing malware (Derusbi/Bladabindi) to gather login credentials as well. When it has done so, it will list the stolen credentials into a text file, for example, list.txt, and use this to deploy the malware and its components through a third party tool named psexec.exe through batch files that we detect as Trojan:BAT/Samas.B and Trojan:BAT/Samas.C.
+One of the batch files that we detect as Trojan:Bat/Samas.B also deletes the shadow files through the vssadmin.exe tool.
+Trojan:MSIL/Samas.A usually takes the name of delfiletype.exe or sqlsrvtmg1.exe and does the following:
+
+Look for certain file extensions that are related to backup files in the system.
+Make sure they are not being locked up by other processes, otherwise, the trojan terminates such processes.
+Delete the backup files.
+
+Ransom:MSIL/Samas demonstrates typical ransomware behavior by encrypting files in the system using AES algorithm and renaming the encrypted file with extension encrypted.RSA. It displays the ransom note when it has encrypted the files and will delete itself with the help of a binary in its resource named del.exe.
+So far, we’ve seen a new Ransom:MSIL/Samas variant that shows signs of changing its code from the simple ASCII strings to more hex encoded characters possibly to better evade detection from security vendors. An example below shows that the files extension names to encrypt has been converted to hex strings:
+
+Figure 3: Version 1 – Ransom:MSIL/Samas.A
+
+Figure 4: Version 2 – Ransom:MSIL/Samas.B
+It has also changed from using WordPress as its decryption service site, hxxps://lordsecure4u.wordpress.com, and moved on to a more obscure Tor site to help anonymize itself, hxxp://wzrw3hmj3pveaaqh.onion/diana.
+
+ 
+Figure 5: Majority of the Ransom:MSIL/Samas infections are detected in North America, and a few instances in Europe
+Mitigation and prevention
+But yes, you can say no mas (translation from Spanish: no more) to Samas ransomware. 
+To help prevent yourself from falling prey to Samas or other ransomware attacks, use  Windows Defender for Windows 10 as your antimalware scanner, and  ensure that MAPS has been enabled.
+Though ransomware and macro-based malware are on the rise, there’s still something that you or your administrators can proactively do: 
+
+
+Ensure that a strong  password policy is implemented throughout the enterprise.
+Disable the loading of macros in Office programs.
+Disable macro loading through the Group Policy settings.
+Keep your software  up-to-date to mitigate possible software exploits.
+
+See Redhat’s resolution for details.
+
+
+Protect derived domain credentials with  Credential Guard for Windows 10 Enterprise.
+Secure your code integrity with  Device Guard for Windows 10 Enterprise.
+Secure the lateral account movement in your enterprise.
+Use two-factor authentication with  Microsoft Passport and Windows Hello.
+
+
+ 
+Marianne Mallen
+ 
+ 
+
+Talk to us
+Questions, concerns, or insights on this story? Join discussions at the Microsoft community and Windows Defender Security Intelligence.
+Follow us on Twitter @WDSecurity and Facebook Windows Defender Security Intelligence.
+ 
+	

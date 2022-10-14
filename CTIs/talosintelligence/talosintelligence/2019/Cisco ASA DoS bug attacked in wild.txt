@@ -1,0 +1,53 @@
+
+
+p.p1 {margin: 0.0px 0.0px 0.0px 0.0px; font: 10.0px Monaco; color: #161616; background-color: #ffffff}
+p.p2 {margin: 0.0px 0.0px 0.0px 0.0px; font: 10.0px Monaco; color: #161616; background-color: #ffffff; min-height: 14.0px}
+span.s1 {font-variant-ligatures: no-common-ligatures}
+
+
+
+
+
+By Nick Biasini.
+
+  
+
+Cisco Talos has recently noticed a sudden spike in exploitation attempts against a specific vulnerability in our Cisco Adaptive Security Appliance (ASA) and Firepower Appliance. The vulnerability, CVE-2018-0296, is a denial-of-service and information disclosure directory traversal bug found in the web framework of the appliance. The attacker can use a specially crafted URL to cause the ASA appliance to reboot or disclose unauthenticated information.
+
+
+
+This vulnerability was first noticed being exploited publicly back in June 2018, but it appeared to increase in frequency in the past several days and weeks. As such, we are advising all customers to ensure they are running a non-affected version of code. Additionally, we want to highlight that there is a Snort signature in place to detect this specific attack (46897). Concerned customers should ensure it is enabled in applicable policies that could detect this exploitation attempt.
+
+
+
+
+
+
+Am I vulnerable?
+
+
+Since this vulnerability lies in the web framework of the ASA/Firepower, not all appliances are affected. If an administrator wants to determine if they are vulnerable, there are a couple of commands that can be run to determine your risk. First, run the following command:
+
+show asp table socket | include SSL|DTLS
+
+
+
+
+If the command shows any listening sockets, then the potential for exploitation exists. The next step is to determine if the vulnerable process is running. That can be achieved by running the following command:
+
+show processes | include Unicorn
+
+
+
+
+If the process is shown as running, the likelihood of a vulnerability existing is elevated and the administrator should validate the running version of code on the appliance to determine if it is one of the affected versions listed in the advisory. If it is listed, then updating to a non-affected version is the most effective mitigation.
+
+
+
+Conclusion
+
+
+
+This isn't a new vulnerability, but as exploitation continues to increase, customers need to be aware of the risk of both a denial-of-service or unauthenticated information disclosure. Additionally, as we head into the holidays, people take time off, but adversaries do not. Customers should validate if they are vulnerable as soon as possible and plan the appropriate patching/mitigations strategies as necessary to minimize both risk and impact to the organization.
+
+

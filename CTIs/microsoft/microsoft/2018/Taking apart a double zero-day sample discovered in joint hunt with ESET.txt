@@ -1,0 +1,129 @@
+
+		In late March 2018, I analyzed an interesting PDF sample found by ESET senior malware researcher Anton Cherepanov. The sample was initially reported to Microsoft as a potential exploit for an unknown Windows kernel vulnerability. During my investigation in parallel with ESET researchers, I was surprised to discover two new zero-day exploits in the same PDF. One exploit affected Adobe Acrobat and Reader, while the other exploit affected older platforms, Windows 7 and Windows Server 2008. Microsoft and Adobe have since released corresponding security updates:
+
+CVE-2018-4990 | Security updates available for Adobe Acrobat and Reader | APSB18-09 
+CVE-2018-8120 | Win32k Elevation of Privilege Vulnerability
+
+The first exploit attacks the Adobe JavaScript engine to run shellcode in the context of that module. The second exploit, which does not affect modern platforms like Windows 10, allows the shellcode to escape Adobe Reader sandbox and run with elevated privileges from Windows kernel memory. ESET provided an analysis of the exploitation routines in the sample PDF.
+Although the PDF sample was found in VirusTotal, we have not observed actual attacks perpetrated using these exploits. The exploit was in early development stage, given the fact that the PDF itself did not deliver a malicious payload and appeared to be proof-of-concept (PoC) code.
+Finding and neutralizing a double zero-day exploit before an attacker had a chance to use it was an amazing result of the great collaboration between ESET, Microsoft, and Adobe security researchers.
+Here’s some more information about the exploit process. This analysis is based on a sample we found after additional hunting (SHA-256: 4b672deae5c1231ea20ea70b0bf091164ef0b939e2cf4d142d31916a169e8e01).
+Exploit overview
+The Adobe Acrobat and Reader exploit is incorporated in a PDF document as a malicious JPEG 2000 stream containing the JavaScript exploit code. The following diagram provides an overview of the exploit process.
+
+Figure 1. Overview of the exploit process
+As shown in the diagram, the exploit process takes place in several stages:
+
+JavaScript lays out heap spray memory.
+Malicious JPEG 2000 stream triggers an out-of-bounds access operation.
+The access operation is called upon out-of-bounds memory laid out by the heap spray.
+The access operation corrupts the virtual function table (vftable).
+The corrupted vftable transfers execution to a return-oriented programming (ROP) chain.
+The ROP chain transfers execution to the main shellcode.
+The main elevation-of-privilege (EoP) module loads through reflective DLL loading.
+The main PE module launches the loaded Win32k EoP exploit.
+When the EoP exploit succeeds, it drops a .vbs file in the Startup folder. The .vbs file appears to be proof-of-concept malware designed to download additional payloads.
+
+Malicious JPEG 2000 stream
+The malicious JPEG 2000 stream is embedded with the following malicious tags.
+
+Figure 2. Malicious JPEG 2000 stream
+The following image shows the CMAP and PCLR tags with malicious values. The length of CMAP array (0xfd) is smaller than the index value (0xff) referenced in PCLR tags—this results in the exploitation of the out-of-bounds memory free vulnerability.
+
+Figure 3. Out-of-bounds index of CMAP array
+Combined with heap-spray technique used in the JavaScript, the out-of-bounds exploit leads to corruption of the vftable.
+
+Figure 4. vftable corruption with ROP chain to code execution
+The shellcode and portable executable (PE) module is encoded in JavaScript.
+
+Figure 5 Shellcode in JavaScript
+Reflective DLL loading
+The shellcode (pseudocode shown below) loads the main PE module through reflective DLL loading, a common technique seen in advanced attacks to attempt staying undetected in memory. On Windows 10, the reflective DLL loading technique is exposed by Windows Defender Advanced Threat Protection (Windows Defender ATP).
+The shellcode searches for the start of the PE record and parses PE sections, copying them to the newly allocated memory area. It then passes control to an entry point in the PE module.
+
+Figure 6. Copying PE sections to allocated memory
+
+Figure 7. Passing control to an entry point in the loaded DLL
+Main Win32k EoP exploit
+The main Win32k elevation-of-privilege (EoP) exploit runs from the loaded PE module. It appears to target machines running Windows 7 SP1 and takes advantage of the previously unreported CVE-2018-8120 vulnerability, which is not present on Windows 10 and newer products. The exploit uses a NULL page to pass malicious records and copy arbitrary data to an arbitrary kernel location. The NULL page dereference exploitation technique is also mitigated by default for x64 platforms running Windows 8 or later.
+
+Figure 8. EoP exploit flow
+Here’s how the main exploit proceeds:
+
+The exploit calls NtAllocateVirtualMemory following sgdt instructions to allocate a fake data structure at the NULL page.
+It passes a malformed MEINFOEX structure to the SetImeInfoEx Win32k kernel function.
+SetImeInfoEx picks up the fake data structure allocated at the NULL page.
+The exploit uses the fake data structure to copy malicious instructions to +0x1a0 on the Global Descriptor Table (GDT).
+It calls an FWORD instruction to call into the fake GDT entry instructions.
+The exploit successfully calls instructions in the fake GDT entry.
+The instructions run shellcode allocated in user mode from kernel mode memory space.
+The exploit modifies the EPROCESS.Token of the shellcode process to grant SYSTEM privileges.
+
+On Windows 10, the EPROCESS.Token modification behavior would be surfaced by Windows Defender ATP.
+The malformed IMEINFOEX structure in combination with fake data at the NULL page triggers corruption of the GDT entry as shown below.
+
+Figure 9. Corrupted GDT entry
+The corrupted GDT has actual instructions that run through call gate through a call FWORD instruction.
+
+Figure 10. Patched GDT entry instructions
+After returning from these instructions, the extended instruction pointer (EIP) returns to the caller code in user space with kernel privileges. The succeeding code elevates privileges of the current process by modifying the process token to SYSTEM.
+
+Figure 11. Replacing process token pointer
+Persistence
+After privilege escalation, the exploit code drops the .vbs, a proof-of-concept malware, into the local Startup folder.
+
+Figure 12. Code that drops the .vbs file to the Startup folder
+Recommended defenses
+To protect against attacks leveraging the exploits found in the PDF:
+
+Deploy relevant updates as soon as possible:
+
+CVE-2018-4990 | Security updates available for Adobe Acrobat and Reader | APSB18-09
+CVE-2018-8120 | Win32k Elevation of Privilege Vulnerability
+
+
+Disable JavaScript on Adobe Acrobat and Acrobat Reader if it isn’t needed in your organization
+Reinforce end-user awareness about spear-phishing and other social engineering attempts that use PDF attachments
+
+While we have not seen attacks distributing the PDF, Office 365 Advanced Threat Protection (Office 365 ATP) would block emails that carry malformed PDF and other malicious attachments. Office 365 ATP uses a robust detonation platform, heuristics, and machine learning to inspect attachments and links for malicious content in real-time.
+Windows 10 users are not impacted by the dual exploits, thanks to platform hardening and exploit mitigations. For attacks against Windows 10, Windows Defender Advanced Threat Protection (Windows Defender ATP) would surface kernel attacks with similar exploitation techniques that use process token modification to elevate privileges, as shown below (sample process privilege escalation alert).
+
+Figure 13. Sample Windows Defender ATP alert for process token modification 
+With Advanced hunting in Windows Defender ATP, customers can hunt for related exploit activity using the following query we added to the Github repository:
+
+Figure 14. Advanced hunting query
+Windows Defender ATP provides complete endpoint protection platform (EPP) and endpoint detection response (EDR) solutions for Windows 10, Windows Server 2012, Windows Server 2012 R2, and Windows Server 2016. Additional support for devices running Windows 7 and Windows 8.1 is currently in preview. Additionally, Windows Defender ATP can surface threats on macOS, Linux, and Android devices via security partners.
+Windows Defender ATP integrates with other technologies in Windows, Office 365, and Enterprise Mobility + Security platforms to automatically update protection and detection and orchestrate remediation across Microsoft 365.
+To experience the power of Windows Defender ATP for yourself, sign up for a free trial now.
+Indicators of compromise
+SHA-256: dd4e4492fecb2f3fe2553e2bcedd44d17ba9bfbd6b8182369f615ae0bd520933
+SHA-1: 297aef049b8c6255f4461affdcfc70e2177a71a9
+File type: PE
+Description: Win32k exploit
+SHA-256: 4b672deae5c1231ea20ea70b0bf091164ef0b939e2cf4d142d31916a169e8e01
+SHA-1: 0d3f335ccca4575593054446f5f219eba6cd93fe
+File type: PDF
+Description: Test exploit
+SHA-256: 0608c0d26bdf38e064ab3a4c5c66ff94e4907ccaf98281a104fd99175cdf54a8
+SHA-1: c82cfead292eeca601d3cf82c8c5340cb579d1c6
+File type: PDF
+Description: PDF exploit testing sample (Win32k part missing)
+SHA-256: d2b7065f7604039d70ec393b4c84751b48902fe33d021886a3a96805cede6475
+SHA-1: edeb1de93dce5bb84752276074a57937d86f2cf7
+File type: JavaScript
+Description: JavaScript embedded in 0608c0d26bdf38e064ab3a4c5c66ff94e4907ccaf98281a104fd99175cdf54a8
+ 
+ 
+Matt Oh
+Windows Defender ATP Research
+ 
+ 
+ 
+ 
+
+
+Talk to us
+Questions, concerns, or insights on this story? Join discussions at the Microsoft community and Windows Defender Security Intelligence.
+Follow us on Twitter @WDSecurity and Facebook Windows Defender Security Intelligence.
+ 
+	

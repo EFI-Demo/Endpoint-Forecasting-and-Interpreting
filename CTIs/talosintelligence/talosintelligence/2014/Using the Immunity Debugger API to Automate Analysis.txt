@@ -1,0 +1,520 @@
+
+
+While analyzing malware samples I came across many simple but annoying problems that should be solved through automation. This post will cover how to automate a solution to a common problem that comes up when analyzing malware. 
+
+
+
+The application uses GetProcAddress() to get the address to a function located within a library. That address is stored in a variable and saved for later use. This becomes an issue while analyzing the application and coming across a call instruction that references a generic memory address. There is barely any information to indicate which function is being called. Although I could make some intelligent guesses about what is being called, it would be better to know the exact function.
+
+
+
+The tool that I am going to use to automate this problem is Immunity Debugger. This debugger, like a lot of others, provides the capability to automate analysis through scripting.
+
+
+
+Solving GetProcAddress()
+
+
+
+
+To restate the problem, there are a number of functions being called that cannot be traced back to an actual function. To set this up, a call is made to GetProcAddress() with both the library and the function name are passed as parameters. The return value is the address of the provided function, and it is stored in a variable. Figures 1, 2, and 3 will are pulled directly from the disassembly in IDA.
+
+
+
+
+  
+
+
+
+
+ 
+Figure 1: Unknown Function Call
+
+Figure 1 is the unknown function call. As the reader can tell, there is currently no way to know what is being called. Some details surrounding the function can be pulled together to help explain the purpose of the function call. However, that isn’t reliable. 
+
+
+
+ Figure 2: 4266FC Memory Address
+
+Before going to Immunity, first I want to locate  the memory address in IDA. I accomplished this by double clicking the “dword_4266FC” XREF link in IDA to show the memory address where the function address is stored. Figure 2, shows us the details at .data:004266FC.
+
+
+
+
+
+
+Okay, now I need to  track down where this variable is set. There are a multitude of ways to get the answer. I just opened up the XREFS to in IDA and found the function where the variable is set after a GetProcAddress() call. The function, sub_410610, is the culprit. This function contains multiple GetProcAddress() calls. Each call has a return value that is stored in a separate variable.
+
+
+
+
+
+
+
+
+
+
+ Figure 3: GetProcAddress()
+
+
+
+
+
+In Figure 3, there are two of several calls that are made to GetProcAddress(). The return value of GetProcAddress() is the memory address of the specified function, and it is stored in the EAX register. Looking at the first instruction in Figure 3, the address for GetProcAddress() is moved into EDI. A few instructions below that is the call to GetProcAddress() (CALL EDI). The next thing to figure out is what happens to EAX after the function call. Within five instructions EAX is moved into dword_4266FC.
+
+
+Since the function name is a parameter to GetProcAddress(), why can’t I just grab the name of the function from another spot in memory? Well, the malware author has come up with a method to obfuscate the function names.
+ 
+
+Take a look at Figure 4. This is the beginning of a very long series of moving bytes around to construct a hex string that is an encoded form of the function name. Once everything is in order, these hex strings are ran through a decoding routine (sub_401610). Once the decoding is complete, the name is stored in a variable that is used for the GetProcAddress() call. In figure 3, that variable part of the ‘lea edx, [esp+0E4h+var_74’ instruction.
+
+
+
+
+
+
+
+
+
+
+Figure 4: Obfuscated Function Names
+
+
+
+
+
+
+
+
+To get the decoded strings, initially I started with the manual process of stepping through the debugger and recording the decoded strings. As soon as I started stepping, I stopped, and decided to write a script to complete this process.
+
+
+
+Since it’s always a good idea to have a list of what needs to be accomplished:
+
+
+
+
+ 
+
+
+
+
+
+Hook the function that does the GetProcAddress() calls
+
+
+Get a list of where the GetProcAddress() calls are being made
+
+
+Look for where EAX is being stored in a variable
+
+
+Record  the address of the variable
+
+
+Record  the function name  
+
+
+Dump this info into a file
+
+
+Use IDA Python to read the file and load the data into IDA
+
+
+
+
+
+I used this list as a guideline for creating the script. One more thing I wanted to make sure doesn’t happen: I don’t want the script to slowly step through application while reading each instruction.
+
+
+
+I created a PyCommand to solve this problem. PyCommands are plugins for Immunity Debugger that help automate various tasks. These commands are launched using the debuggers provided command box at the bottom of the window (Figure 5). PyCommands are saved in the Immunity Debugger\PyCommands path located in the application’s install directory. These commands are called using an “!” followed by the name of the file.
+
+
+
+
+
+
+  Figure 5: Command Box
+
+One last thing. The documentation isn’t the best. Anybody using the API will need to use the following sources: the source code, current pyCommands deployed with the application, or one of several resources on the web. I’ve added reference links at the end of this post.
+
+
+Hooking the Function
+
+
+
+
+To start, I decided to use one of the hook classes provided by Immunity. These can be found in the libhook.py file. I went with the LobBpHook() class. This will hook a function of my choice, and pause execution inside the function.
+
+
+
+To set up a hook, I need to create a main method, and a hook class with an init and run methods. Here is a skeleton of the hook I created.
+
+
+
+class HookFunc(LogBpHook):
+
+
+
+
+ def __init__(self):
+
+
+
+
+  LogBpHook.__init__(self)
+
+
+
+  return
+
+
+  def run(self,regs):
+
+  <left blank for now>
+
+
+
+def main(args):
+
+     if not args:
+
+ return "No arguments provided."
+
+
+
+    imm = immlib.Debugger()
+
+    hookAddr = int(args[0],16)
+
+   funcName = imm.getFunction(hookAddr).getName()
+
+   hook = HookFunc()
+
+   hook.add(funcName,hookAddr)
+
+   return funcName + " Hooked."
+
+
+
+The HookFunc class isn’t a provided class, but one that I created. It is inheriting from the LogBpHook class. The init and run methods are required. The run method is what is going to happen once the hook is triggered.
+
+The main method accepts an address as an argument. This is the address of the function I am going to hook. After the args are checked, the first thing that needs to be done is instantiate a Debugger object. This is stored in imm. Next, is the code used to add the hook.
+
+The string argument needs to be converted  to a hex address. This is accomplished with the int() method. Next, I got the name of the function. After the HookFunc object was created the hook needs to be added. The hook.add(funcName,hookAddr) call adds the hook at the appropriate address.
+
+Figure 6 shows us where execution pauses after the hook is triggered. The execution is paused inside the function that I wanted to hook.
+
+
+
+
+
+
+
+Figure 6: Hook Breakpoint in Function
+
+
+
+Other than adding code to the run() method, that is all it takes to create a hook. 
+
+
+
+
+
+
+Getting a List of the Calls Made Inside of the Function
+
+
+
+
+ Because of the similarity between all of the calls to GetProcAddress(), scripting a solution to get the address of the calls was easily accomplished. It doesn’t do much for making the script work for multiple situations, but it solves this problem. Figure 3 shows  the CALL EDI instruction. This is used for every GetProcAddress() call within this function. It is also only used for the GetProcAddress() call. In addition, this function is just one long basic block. Based on this, I felt the easiest way to grab what I needed was to parse a list of the call instructions being executed and then grabbing the instructions following those calls.
+
+
+
+funcAddr = imm.getCurrentAddress()
+
+
+
+
+curFunc = imm.getFunction(funcAddr)
+
+
+
+
+basicBlocks = curFunc.getBasicBlocks()
+
+
+
+calls = basicBlocks[0].getCalls()
+
+
+It’s not the best solution, but I use the first two lines to grab a function object of the current function. The function object contains all of the function data and is explained in the libanalyze.py file in the lib directory. Functions are typically split up into several basic blocks. Since this function is just one long basic block, I decided to just grab all of the function’s basic blocks with getBasicBlocks(). Once I get that data, I can grab a list of call instruction addresses.
+
+The getCalls() method returns a list of call instructions over which I can iterate.
+
+Before starting the next section, there is a problem that is easily overlooked (I know I did). The program execution is paused at the start of the function. If I attempt to read the memory addresses where the function addresses are stored, they will not contain the correct value. The instructions to populate those memory addresses have not been executed. In order to continue execution until the end of the function, I use the following method:
+
+ imm.runTillRet()
+
+Figure 7 shows that the execution has stopped at the end of the function. I also had Immunity log the results of the above four method calls (Figure 8).
+
+
+
+Figure 7: Breakpoint at End of Function
+
+
+
+
+
+Figure 8: Current Address, Basic Blocks, Call Instructions
+
+
+
+
+
+
+
+
+
+
+ Now that the variables will be populated when the script reads the memory address, I can proceed.
+
+
+
+Getting Address where EAX is Stored and Saving it to a File
+
+
+
+
+Once again, Figure 3, shows that the value in EAX is stored within at most seven instructions of the initial CALL ESI. In order to get the disassembly, I’ll need to iterate over the list of calls.
+
+
+
+
+ for c in calls:
+
+
+
+
+       oc = imm.disasm(c)
+
+
+
+      call = oc.getDisasm()
+
+
+Each call will be disassembled and checked to see if EDI is in the instruction.
+
+ if 'EDI' in call:
+
+      flag = 7
+
+      i = 0
+
+  while i <= flag:
+
+       instr = imm.disasmForward(c,i).getDisasm()
+
+       if ',EAX' in instr:
+
+     <add code>
+
+      i++
+
+If the instruction is found, then I’ll need to set up a loop to iterate over the next several instructions to locate an ‘,EAX’ instruction. Once located, I know that I have found the MOVinstruction. This is accomplished with a while loop and using the imm.disasmForward(address,number of lines) method. This method is described in the immlib.py file. I’ve attached the .getDisasm() to the end of the disasmForward(c,i) call to get the disassembly of that line. See Figure 9.
+
+  funcStrSaveAddr = '0x' + instr[instr.index('[')+1:instr.index(']')]
+
+  funcSaveAddr = int(funcStrSaveAddr,16)
+
+  calledFuncName = imm.getFunction(imm.readLong(funcSaveAddr)).getName()
+
+  imm.log("* " + funcStrSaveAddr + "," + calledFuncName + "")
+
+  f.write(funcStrSaveAddr + "," + calledFuncName+"")
+
+  break
+
+The first instruction grabs the address that is described in the string. This can be can be accomplished  with Python string manipulation. Since the getDisas() method returns a string, this address needs to be converted to hexadecimal. Once again, the int(<string>,16) method converts it to hexadecimal.
+
+
+
+Figure 9: CALL EDI and MOV Instructions
+
+The third line pulls the function name that was called by GetProcAddress(). On the first run through, I used the following code to get the name of the function:
+
+
+
+ calledFuncName = imm.getFunction(funcSaveAddr).getName()
+
+
+
+This returned the following values:
+
+
+
+
+
+
+
+
+
+
+Figure 10: Function Name Return Values
+
+
+
+
+
+
+
+
+Figure 10 shows the stored address along with the supposed name of the function at that address. That is obviously not the value that I need. Virus-20.00426718 is just a reference to the memory address where the function address I am looking for is stored.
+
+
+
+Because funcSaveAddr() is just the address of the variable and not the value, I need to read the value  stored at that memory location. This is accomplished using the imm.readLong(funcSaveAddr) method:
+
+
+
+ calledFuncName = imm.getFunction(imm.readLong(funcSaveAddr)).getName()
+
+
+
+This is a simple problem with a simple solution. I was tired and spent a little too long troubleshooting the issue.
+
+
+
+The next two lines write both the address of the variable and the function name to both Immunity’s log window (imm.log()) and to a file. Figure 10 shows us the output to the log window. The file follows the following CSV format: address, function name.
+
+
+
+
+
+
+
+
+Figure 11: Memory Address and Function Name
+
+Figure 11 is a series of calls to set up network functionality later on in the application. Now it is ready to to be read into IDA.
+
+
+
+Using IDA Script to Rename Variables
+
+The IDC script is going to read in the lines of the file. On each read, it is going to split up the CSV data, and use that to rename the variable in IDA. Here is the script:
+
+
+
+#include <idc.idc>
+
+static main() {
+
+
+
+auto fh,line, addr, name, actAddr;
+
+
+
+//Open file
+
+fh = fopen("getprocaddr.txt","r");
+
+
+
+//Loop through file using readstr() 
+
+while ((line = readstr(fh)) != -1) {
+
+
+
+        // Split CSV values
+
+ addr = line[0:strstr(line,',')];
+
+ name = line[strstr(line,',')+1:];
+
+
+
+//Convert hex string to long 
+
+actAddr = xtol(addr);
+
+
+
+       //Change the name of the variable
+
+ MakeNameEx(actAddr,name,0);
+
+}
+
+               fclose(fh);
+
+}
+
+
+
+The script itself should be self explanatory. I've commented the relevant sections. It's fairly simple. 
+
+
+
+
+Figures 12, 13, and 14 shows the renamed sections and calls in IDA. Compare these with figures 1, 2, and 3. The code is now much easier to understand.
+
+   
+
+
+Figure 13: Location of Function Call
+
+
+  
+Figure 14: Location of Memory Address
+
+
+
+Figure 15: EAX being Stored at Memory Address
+
+
+
+ From here I can continue to analyze the application without wasting time on manually stepping through with Immunity to identify the functions being called. 
+
+
+
+
+Conclusion
+
+There are multiple ways to solve the problem outlined in this blog post. I went with what was easiest for me. The Immunity script is nothing fancy. Hopefully, this blog helps others out there looking for ways to automate various mundane tasks.
+
+
+
+Additional Resources:
+
+
+
+
+ 
+
+
+
+
+
+https://www.corelan.be/index.php/2010/01/26/starting-to-write-immunity-debugger-pycommands-my-cheatsheet/
+
+
+https://www.defcon.org/images/defcon-15/dc15-presentations/dc-15-gomez.pdf
+
+
+Malware Analysts Cookbook
+
+
+Gray Hat Python
+
+
+The IDA Pro Book
+
+
+
+
+

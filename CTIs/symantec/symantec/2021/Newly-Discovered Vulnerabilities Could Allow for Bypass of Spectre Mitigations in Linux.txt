@@ -1,0 +1,97 @@
+Two new vulnerabilities have been patched in the Linux kernel which, if exploited, could bypass existing mitigations for the Spectre vulnerabilities. The vulnerabilities were discovered by Piotr Krysiuk, a researcher on Symantec’s Threat Hunter team, who reported them to the Linux kernel security team. If left unpatched, the vulnerabilities mean that existing Spectre protections will not be sufficient to prevent some exploitation techniques.
+
+The vulnerabilities in question are:
+
+
+	CVE-2020-27170 – Can reveal contents from the entire memory of an affected computer
+	CVE-2020-27171 – Can reveal contents from 4 GB range of kernel memory
+
+
+These bugs affect all Linux machines, but would be particularly impactful on shared resources, as it would allow one malicious user to access data belonging to other users.
+
+The patches for these bugs were first published on March 17, 2021, and are included with the Linux kernels released on March 20.
+
+What are Meltdown and Spectre?
+
+Meltdown and Spectre were two chip vulnerabilities discovered in January 2018 that affected nearly all modern processors and could only be mitigated through operating system patches. A successful exploit of the vulnerabilities could allow attackers to gain unauthorized access to a computer’s memory, including sensitive information, such as passwords. However, the vulnerabilities were only exploitable if the attacker already had access to the machines – if they were a local user or had gained access with an additional step, such as deploying a remote access Trojan (RAT) on the machine.
+
+Spectre exploited flaws in processor designs to reveal contents of memory that should not be normally accessible. It works by observing side effects left by speculative execution, such as when a processor incorrectly predicts results of bounds checks. Variants of Spectre affect virtually all modern processors, including chips from Intel, ARM, and AMD.
+
+Meltdown exploited different flaws in processors in order to bypass memory isolation in the operating system. Operating systems are designed in a way to block one application from accessing memory being used by another. If memory isolation fails to work, a malicious application could steal information from memory being used by other applications or users.
+
+Because they are chip vulnerabilities, any operating system patches were essentially mitigations designed to make it impossible for an attacker to exploit the vulnerabilities, rather than to address the underlying issue.
+
+It is mitigations for Spectre that can be bypassed in Linux using the vulnerabilities outlined in this blog.
+
+How do these new vulnerabilities work?
+
+Both vulnerabilities are related to the Linux kernel support for "extended Berkeley Packet Filters" (BPF). BPF allows users to execute user-provided programs directly in the Linux kernel. When loading these programs, the Linux kernel analyzes the program code to ensure they are safe. However, part of this analysis, intended to mitigate Spectre, was not sufficient to protect against some exploitation techniques.
+
+Piotr was able to demonstrate two different methods to bypass this protection. These methods are independent as they abuse different issues, and each allows unprivileged local users to extract the contents of the kernel memory. This may include any secrets – passwords, clipboard contents, etc. - from other users on an affected system.
+
+The most serious issue is CVE-2020-27170, which can be abused to reveal content from any location within the kernel memory, all of the machine’s RAM, in other words. Unprivileged BPF programs running on affected systems could bypass the Spectre mitigations and execute speculatively out-of-bounds loads with no restrictions. This could then be abused to reveal contents of the memory via side-channels. The identified security gap was that unprivileged BPF programs were allowed to perform pointer arithmetic on particular pointer types, where the ptr_limit was not defined. The Linux kernel did not include any protection against out-of-bounds speculation when performing pointer arithmetic on such pointer types.
+
+The second reported issue, CVE-2020-27171, can reveal content from a 4 GB range of kernel memory around some of the structures that are protected. This issue is caused by a numeric error in the Spectre mitigations when protecting pointer arithmetic against out-of-bounds speculations. Unprivileged BPF programs running on affected systems can exploit this error to execute speculatively out-of-bounds loads from a 4 GB range of kernel memory below the protected structure. Like CVE-2020-27170, this can also be abused to reveal contents of kernel memory via side-channels.
+
+A detailed technical description of these issues can be found in the following announcements:
+
+
+	CVE-2020-27170
+	CVE-2020-27171
+
+
+How could these vulnerabilities be exploited?
+
+The most likely scenario where these vulnerabilities could be exploited is in a situation where multiple users have access to a single affected computer – as could be the case in workplace situations etc. In this scenario, any of the unprivileged users could abuse one of the identified vulnerabilities to extract contents of the kernel memory to locate secrets from other users.
+
+The bugs could also potentially be exploited if a malicious actor was able to gain access to an exploitable machine via a prior step – such as downloading malware onto the machine to achieve remote access – this could then allow them to exploit these vulnerabilities to gain access to all user profiles on the machine.
+
+Mitigation
+
+The patches for these bugs were first published on March 17, 2021 and are included in the following Linux kernel releases:
+
+
+	Stable 5.11.8 (released March 20, 2021)
+	Longterm 5.10.25 (released March 20, 2021)
+	Longterm 5.4.107 (released March 20, 2021)
+	Longterm 4.19.182 (released March 20, 2021)
+	Longterm 4.14.227 (released March 24, 2021)
+
+
+The following Linux distributions have deployed fixes for the vulnerabilities outlined. Find more information at the links below:
+
+Debian
+
+
+	https://salsa.debian.org/kernel-team/linux/-/commit/6f9d6c3b36aa0eaebcc6a4d9867002fbe7f3385f
+	https://salsa.debian.org/kernel-team/linux/-/commit/32ecff90fdb4be6326facc957e15ab7a6b673642
+
+
+Version 10.9 (released on March 27, 2021)
+
+
+	https://salsa.debian.org/kernel-team/linux/-/commit/86d793b5ca9d2a7cf0da165c3ce84d26ea9d383d
+	https://salsa.debian.org/kernel-team/linux/-/commit/1cb70f1dd40da6c3280b64c27804a065b39150f2
+
+
+Ubuntu
+
+
+	https://ubuntu.com/security/notices/USN-4887-1 
+
+
+Red Hat
+
+
+	  https://access.redhat.com/security/cve/cve-2020-27170
+	  https://access.redhat.com/security/cve/cve-2020-27171
+
+
+Bugzilla
+
+
+	   bugzilla.redhat.com/CVE-2020-27170
+	   bugzilla.redhat.com/CVE-2020-27171
+
+
+All users of Linux distributions should check with their vendor to ensure patches have been applied for these vulnerabilities. 

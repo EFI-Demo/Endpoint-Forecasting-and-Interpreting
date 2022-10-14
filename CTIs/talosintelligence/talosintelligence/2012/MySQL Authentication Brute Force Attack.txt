@@ -1,0 +1,31 @@
+
+Before you read this, go and make sure your MySQL servers are patched and up-to-date. This is serious, nasty 0-day, and while there is some mitigation in terms of impacted platforms, the newest MySQL bug is so trivial to exploit that it's worth a couple of minutes just to check that your box is secure before you do, well, anything else on the Internet today. We'll be here, we promise.
+
+Assuming that you're current or on a safe platform, let's continue on with one of the more obscure authentication bugs the VRT has seen in some time.
+
+According to a post on the oss-sec mailing list on Saturday, if you're using MySQL on a platform where memcmp(3) can return values outside of the standard range of -128 to 127 (such as Ubuntu 64-bit), MySQL will sipmly authenticate you even if your password was invalid...approximately 1 in every 256 times you attempt to log in. Simply put, you can have a conversation with a MySQL server that goes something like this:
+
+Attacker: "Knock knock, it's me, root!"
+MySQL Server: "No it's not, your password's not right. Go away."
+Attacker: "Knock knock, it's me, root!"
+MySQL Server: "No it's not, your password's not right. Go away."
+
+< ... above repeated some ~300 times... >
+
+Attacker: "Knock knock, it's me, root!"
+MySQL Server: "Come on in!"
+
+Exploitation is, as HD Moore put it, "tragically comedic" - you can do it with a simple one-line shell script if you have any standard MySQL client installed:
+
+for i in `seq 1 1000`; do mysql -u root --password=bad -h < remote host > 2>/dev/null ; done
+
+Even the most ridiculously unskilled of script kiddies can copy and paste a script like that and get into your database server as root. It's a horrifying vulnerability, when you sit down and think about it.
+
+The good news is that the vast majority of builds of MySQL out there are not impacted. Many flavors of Debian-based Linux, RedHat, Gentoo, etc. have been confirmed as not vulnerable; official builds from MySQL and MariaDB (which is implicated as well) are in good shape, too. Well-respected security researcher Joshua Drake (jduck) has even provided a simple application to check whether your systems are vulnerable. Official patches from MySQL are available as well, and many impacted operating systems are issuing official patches.
+
+The VRT has you covered as well. SID 23115, released in today's SEU, provides detection for bursts of login attempts - 100 or more in 5 seconds, to differentiate between a brute-force attack and legitimate traffic. Users may wish to consider tuning the rule's detection_filter to be more stringent, based upon the traffic that they see on their particular network. For example, if you have a low volume of legitimate MySQL login attempts, you might consider:
+
+detection_filter: track by_src, count 20, seconds 5;
+
+Be sure not to make changes like that in drop mode without testing on your network first - nobody wants to be the security guy that broke the production network. You can, however, be the security guy that's got everything under control, if you make sure to take care of your boxes with the information from this post. 
+

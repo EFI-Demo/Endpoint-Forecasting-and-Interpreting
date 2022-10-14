@@ -1,0 +1,4234 @@
+
+
+
+
+    
+
+
+
+Today, Talos is publishing a glimpse into the most
+prevalent threats we've observed between Aug. 27 and
+Sept. 3. As with previous roundups, this post isn't meant to
+be an in-depth analysis. Instead, this post will summarize the threats
+we've observed by highlighting key behavioral characteristics,
+indicators of compromise, and discussing how our customers are automatically
+protected from these threats.
+
+
+As a reminder, the information provided for the following threats
+in this post is non-exhaustive and current as of the date of
+publication. Additionally, please keep in mind that IOC searching
+is only one part of threat hunting. Spotting a single IOC does not
+necessarily indicate maliciousness. Detection and coverage for the
+following threats is subject to updates, pending additional threat
+or vulnerability analysis. For the most current information, please
+refer to your Firepower Management Center,
+Snort.org, or
+ClamAV.net.
+
+
+
+For each threat described below, this blog post only lists 25 of the
+associated file hashes and up to 25 IOCs for each category. An
+accompanying JSON file can be found here
+that includes the complete list of file hashes, as well as all other IOCs
+from this post. A visual depiction of the MITRE ATT&CK techniques
+associated with each threat is also shown. In these images, the brightness
+of the technique indicates how prevalent it is across all threat files where
+dynamic analysis was conducted.  There are five distinct shades that are used,
+with the darkest indicating that no files exhibited technique behavior and the
+brightest indicating that technique behavior was observed from 75 percent or
+more of the files.
+
+
+The most prevalent threats highlighted in this roundup are:
+
+
+
+
+
+    Threat Name
+    Type
+    Description
+
+
+
+
+
+
+  Win.Packed.Dridex-9888915-1
+
+
+    Packed
+
+
+    Dridex is a well-known banking trojan that aims to steal credentials and other sensitive information from an infected machine.
+
+
+
+
+
+  Win.Trojan.Gamarue-9888629-0
+
+
+    Trojan
+
+
+    Gamarue, also known as Andromeda, is a botnet used to spread malware, steal information and perform activities such as click fraud.
+
+
+
+
+
+  Win.Packed.Remcos-9888684-1
+
+
+    Packed
+
+
+    Remcos is a remote access trojan (RAT) that allows attackers to execute commands on the infected host, log keystrokes, interact with a webcam and capture screenshots. This malware is commonly delivered through Microsoft Office documents with macros sent as attachments on malicious emails.
+
+
+
+
+
+  Win.Trojan.Razy-9889404-0
+
+
+    Trojan
+
+
+    Razy is oftentimes a generic detection name for a Windows trojan. It collects sensitive information from the infected host and encrypts the data, eventually sending it to a command and control (C2) server. Information collected may include screenshots. The samples modify auto-execute functionality by setting and creating a value in the registry for persistence.
+
+
+
+
+
+  Win.Downloader.Autoit-9888699-0
+
+
+    Downloader
+
+
+    This signature covers malware leveraging the well-known AutoIT automation tool, widely used by system administrators. AutoIT exposes a rich scripting language that allows to write fully functional malicious software. This family will install itself on the system and contact a C2 server to receive additional instructions or download follow-on payloads.
+
+
+
+
+
+  Win.Dropper.NetWire-9888802-1
+
+
+    Dropper
+
+
+    NetWire is a remote access trojan (RAT) that allows attackers to execute commands on the infected host, log keystrokes, interact with a webcam, remote desktop, and read data from connected USB devices. NetWire is commonly delivered through Microsoft Office documents with macros, sent as attachments on malicious emails.
+
+
+
+
+
+  Win.Dropper.Lokibot-9888803-1
+
+
+    Dropper
+
+
+    Lokibot is an information-stealing malware designed to siphon off sensitive information stored on an infected device. It is modular in nature, supporting the ability to steal sensitive information from a number of popular applications. It is commonly pushed via malicious documents delivered via spam emails.
+
+
+
+
+
+  Win.Dropper.Barys-9889597-0
+
+
+    Dropper
+
+
+    This is a trojan and downloader that allows malicious actors to upload files to a victim's computer.
+
+
+
+
+
+  Win.Packed.Tofsee-9889956-0
+
+
+    Packed
+
+
+    Tofsee is multi-purpose malware that features several modules to carry out various activities such as sending spam messages, conducting click fraud, mining cryptocurrency, and more. Infected systems become part of the Tofsee spam botnet and send large volumes of spam messages to infect additional systems and increase the size of the botnet under the operator's control.
+
+
+
+
+
+
+
+
+Threat Breakdown
+
+
+  
+    Win.Packed.Dridex-9888915-1
+
+    Indicators of Compromise
+    IOCs collected from dynamic analysis of 15 samples
+
+    
+        
+        
+        
+            Registry Keys
+            Occurrences
+        
+        
+        
+        
+        
+        <HKLM>\SOFTWARE\MICROSOFT\WINDOWS\CURRENTVERSION\RUNONCE
+            
+            
+            Value Name: trkcore
+            
+        
+        15
+        
+        
+        
+        <HKLM>\SOFTWARE\MICROSOFT\WINDOWS\CURRENTVERSION\POLICIES\SYSTEM
+            
+            
+            Value Name: DisableTaskMgr
+            
+        
+        15
+        
+        
+        
+        <HKCU>\SOFTWARE\MICROSOFT\WINDOWS\CURRENTVERSION\ACTION CENTER\CHECKS\{C8E6F269-B90A-4053-A3BE-499AFCEC98C4}.CHECK.0
+            
+            
+            Value Name: CheckSetting
+            
+        
+        15
+        
+        
+        
+        
+    
+
+
+    
+        
+        
+        
+            Mutexes
+            Occurrences
+        
+        
+        
+        
+            
+            <random, matching [A-Z0-9]{10}>
+            15
+            
+        
+        
+        
+        
+    
+
+
+    
+        
+        
+        
+            IP Addresses contacted by malware. Does not indicate maliciousness
+            Occurrences
+        
+        
+        
+        
+            
+            142[.]250[.]80[.]110
+            15
+            
+        
+            
+            104[.]23[.]98[.]190
+            9
+            
+        
+            
+            104[.]23[.]99[.]190
+            6
+            
+        
+            
+            172[.]217[.]222[.]138/31
+            5
+            
+        
+            
+            23[.]46[.]238[.]194
+            3
+            
+        
+            
+            172[.]217[.]222[.]100/31
+            3
+            
+        
+            
+            72[.]21[.]81[.]240
+            2
+            
+        
+            
+            172[.]217[.]222[.]102
+            2
+            
+        
+            
+            172[.]217[.]222[.]113
+            2
+            
+        
+            
+            67[.]8[.]213[.]156
+            1
+            
+        
+            
+            67[.]8[.]70[.]106
+            1
+            
+        
+            
+            67[.]8[.]79[.]243
+            1
+            
+        
+            
+            67[.]8[.]6[.]206
+            1
+            
+        
+            
+            67[.]8[.]205[.]190
+            1
+            
+        
+            
+            67[.]8[.]136[.]173
+            1
+            
+        
+            
+            67[.]8[.]68[.]4
+            1
+            
+        
+            
+            67[.]8[.]146[.]64
+            1
+            
+        
+            
+            67[.]8[.]244[.]12
+            1
+            
+        
+            
+            67[.]8[.]199[.]111
+            1
+            
+        
+            
+            67[.]8[.]24[.]101
+            1
+            
+        
+        
+        
+
+        
+    
+
+
+    
+        
+        
+        
+            Domain Names contacted by malware. Does not indicate maliciousness
+            Occurrences
+        
+        
+        
+        
+            
+            pastebin[.]com
+            15
+            
+        
+            
+            w[.]google[.]com
+            15
+            
+        
+            
+            www3[.]l[.]google[.]com
+            11
+            
+        
+            
+            cs11[.]wpc[.]v0cdn[.]net
+            2
+            
+        
+            
+            www[.]s9x2w836fs[.]com
+            1
+            
+        
+            
+            www[.]pb68sqom7m[.]com
+            1
+            
+        
+            
+            www[.]4u9gngct8a[.]com
+            1
+            
+        
+            
+            www[.]gbzs0m1vpb[.]com
+            1
+            
+        
+            
+            www[.]woxoadkeyf[.]com
+            1
+            
+        
+            
+            www[.]ye88iq8try[.]com
+            1
+            
+        
+            
+            www[.]uoa1mkjcco[.]com
+            1
+            
+        
+            
+            www[.]1apjpkvdfh[.]com
+            1
+            
+        
+            
+            www[.]v51g5oz5tq[.]com
+            1
+            
+        
+            
+            www[.]h73kxkmd5v[.]com
+            1
+            
+        
+            
+            www[.]ohsiu9bln7[.]com
+            1
+            
+        
+            
+            www[.]xlymg41sgf[.]com
+            1
+            
+        
+            
+            www[.]vajgjiwzlp[.]com
+            1
+            
+        
+            
+            www[.]4bb0d4leel[.]com
+            1
+            
+        
+            
+            www[.]4dpxcvvoow[.]com
+            1
+            
+        
+            
+            www[.]fk3hzwpaw0[.]com
+            1
+            
+        
+            
+            www[.]fpcbrchimr[.]com
+            1
+            
+        
+            
+            www[.]i7e0xxigrg[.]com
+            1
+            
+        
+            
+            www[.]5p4bmyofjd[.]com
+            1
+            
+        
+            
+            www[.]az47ewcpye[.]com
+            1
+            
+        
+            
+            www[.]omaobdqzv1[.]com
+            1
+            
+        
+        
+        
+
+        
+            *See JSON for more IOCs
+        
+    
+
+
+    
+        
+        
+        
+            Files and or directories created
+            Occurrences
+        
+        
+        
+        
+            
+            <malware cwd>\old_<malware exe name> (copy)
+            15
+            
+        
+        
+        
+
+        
+    
+
+
+    File Hashes
+    
+    
+    
+        0821dad1e78d3d8e76dc6c1710b41323c44b86063f4793062da086d471fe8477
+    
+        0d1ed66d533923eb0e6ba95703f563fbe7b0b64a6d54d2fd09c57ddf6ceff2f0
+    
+        24afd0996324b7388b42b3d153b5267d1c384274ee4d5d3746f86b652281497f
+    
+        44cb011fdf1c1a97fe41af9d01dae048d67fd3613f89fdbdfce641b6d3dfde1d
+    
+        9b39271bb19ff78600ebcebc5ffec556f9ce70306693ea130b48d4e009272758
+    
+        a9d8e1017c76aede9323744ab52699127e159301d3c5a7c1cb7d4b0e893cb694
+    
+        adc5d1ae56bd7355e049fcfeacb8641f086d2e01e2f7ef6f4e8c0dc6054f1a99
+    
+        add4b1a30bed7b0dc4478dcc154e3017be6a39a2f7c074252bddf4fc30d6b23a
+    
+        b8f5bfe6808fba526c8e9b04c7f8b77a4a14d339f9fda75b1cc7d73fd98bba1b
+    
+        c5f1fa119828bd878001d99e4b0830e7eae913efe714928a00c4cd75305a9739
+    
+        d8fe2129224df5388f132335673327068ad86a64787e0dd71c644777f280ed5c
+    
+        e36b5f6f6bf082521979ab497cca5f44283273d0e81764ee78f1266efa7849d8
+    
+        e87acee5e4688e6e721b4ee69eb86022fb640fbec70220c10cbfd511df32d01a
+    
+        ebc66dd53029a66cc7d1c00ac0f8340f1fe2c655f1e57141ff176dced79f2069
+    
+        ee77e22860f88b624e41bb751c88218e8bff70fef0121e2af7e9fed0e3422343
+    
+    
+    
+    
+
+
+    Coverage
+
+    
+    
+        
+            Product
+            Protection
+        
+    
+    
+        
+        
+            AMP
+            
+                
+                    
+                    
+                    
+                
+            
+        
+        
+        
+            Cloudlock
+            
+                
+                    
+                    N/A
+                    
+                
+            
+        
+        
+        
+            CWS
+            
+                
+                    
+                    
+                    
+                
+            
+        
+        
+        
+            Email Security
+            
+                
+                    
+                    
+                    
+                
+            
+        
+        
+        
+            Network Security
+            
+                
+                    
+                    
+                    
+                
+            
+        
+        
+        
+            Stealthwatch
+            
+                
+                    
+                    N/A
+                    
+                
+            
+        
+        
+        
+            Stealthwatch Cloud
+            
+                
+                    
+                    N/A
+                    
+                
+            
+        
+        
+        
+            Threat Grid
+            
+                
+                    
+                    
+                    
+                
+            
+        
+        
+        
+            Umbrella
+            
+                
+                    
+                    N/A
+                    
+                
+            
+        
+        
+        
+            WSA
+            
+                
+                    
+                    N/A
+                    
+                
+            
+        
+        
+    
+    
+
+
+    
+        Screenshots of Detection
+
+
+            AMP
+
+            ThreatGrid
+
+            MITRE ATT&CK
+
+    
+    
+
+  
+    Win.Trojan.Gamarue-9888629-0
+
+    Indicators of Compromise
+    IOCs collected from dynamic analysis of 11 samples
+
+    
+
+
+    
+
+
+    
+        
+        
+        
+            IP Addresses contacted by malware. Does not indicate maliciousness
+            Occurrences
+        
+        
+        
+        
+            
+            52[.]137[.]90[.]34
+            7
+            
+        
+            
+            172[.]67[.]161[.]225
+            1
+            
+        
+            
+            104[.]21[.]54[.]132
+            1
+            
+        
+        
+        
+
+        
+    
+
+
+    
+        
+        
+        
+            Domain Names contacted by malware. Does not indicate maliciousness
+            Occurrences
+        
+        
+        
+        
+            
+            redir[.]update[.]microsoft[.]com[.]nsatc[.]net
+            7
+            
+        
+            
+            imaginyourselfuafe[.]com
+            7
+            
+        
+            
+            ltdcommprovvetverify[.]com
+            7
+            
+        
+            
+            checkandupprooveupdates[.]com
+            7
+            
+        
+            
+            mplusworldofficeupdates[.]com
+            7
+            
+        
+        
+        
+
+        
+    
+
+
+    
+        
+        
+        
+            Files and or directories created
+            Occurrences
+        
+        
+        
+        
+            
+            %LOCALAPPDATA%\Microsoft\Windows\ActionCenterCache\{A7D4A2F9-11DD-4692-96CA-544A1A983B34}.png
+            1
+            
+        
+            
+            %LOCALAPPDATA%\Microsoft\Windows\ActionCenterCache\{2ECAB043-D26E-40E9-9363-49B355CC56D4}.png
+            1
+            
+        
+            
+            %LOCALAPPDATA%\Microsoft\Windows\ActionCenterCache\{6B950F83-4D62-479A-AD86-D9268CBF063A}.png
+            1
+            
+        
+            
+            %LOCALAPPDATA%\Microsoft\Windows\ActionCenterCache\{E72134C3-3E7A-4707-A420-9D6635E92F46}.png
+            1
+            
+        
+            
+            %LOCALAPPDATA%\Microsoft\Windows\ActionCenterCache\{B94197A7-5650-4125-BF78-3F3C413B54BE}.png
+            1
+            
+        
+            
+            %LOCALAPPDATA%\Microsoft\Windows\ActionCenterCache\{EF1998CC-C469-4A49-9C9E-B6EFC865C2A0}.png
+            1
+            
+        
+            
+            %LOCALAPPDATA%\Microsoft\Windows\ActionCenterCache\{B52F4785-C4D3-4C1C-BB21-C5A136130F5A}.png
+            1
+            
+        
+            
+            %LOCALAPPDATA%\Microsoft\Windows\ActionCenterCache\{C9947422-A6CE-41AE-B367-0CDD0299F8B5}.png
+            1
+            
+        
+            
+            %LOCALAPPDATA%\Microsoft\Windows\ActionCenterCache\{A33690E7-BE41-4B40-BE43-FCA8BE6B9755}.png
+            1
+            
+        
+            
+            %LOCALAPPDATA%\Microsoft\Windows\ActionCenterCache\{E8AD4F33-08A7-4D29-AFCF-BBC93CE8F997}.png
+            1
+            
+        
+        
+        
+
+        
+    
+
+
+    File Hashes
+    
+    
+    
+        15398da3803c3a0afacab60e2d4eec43cbf754cebf332d117a2d9015728b2a28
+    
+        2be0b660624c2ae214807db137291b59700ac48ddc95d93250b1d358721c5732
+    
+        35dc93a8007d9421df830be2f7aa9b215680b34d851a526572f0695afe64a461
+    
+        37c039e1b6ca97dadab48ca1cf6195e55eeb236a24044fffb58598dbe73abd52
+    
+        513ae2f954bd8aaf3b420347978c33b3d68b2fcdedc8e9b880bd5ebed151f012
+    
+        6da1c1a2d97e605a58d203d225ea75716ab34f73e61009213835cec623c66000
+    
+        c287090de638a055c0d9e65a47b5c7fd3757d0bb835ffb6d8139a7cce370c804
+    
+        ec77d5294d7bd9aaf6064411fa3f3e5b69665f95b7ddb6404ccfa8c763dd7ed5
+    
+        f38c762485ef30d0eabe64214b399c23f304f529c9af478c07f134a5d9cce62f
+    
+        f6218b38b120dfd2c9c6203724943e4ade5b6687edf6c9ba4cc836032d5311b8
+    
+        f6aa470082e20fa84fdf727b4d92086ff8837d7087d200642470a49bbca801dc
+    
+    
+    
+    
+
+
+    Coverage
+
+    
+    
+        
+            Product
+            Protection
+        
+    
+    
+        
+        
+            AMP
+            
+                
+                    
+                    
+                    
+                
+            
+        
+        
+        
+            Cloudlock
+            
+                
+                    
+                    N/A
+                    
+                
+            
+        
+        
+        
+            CWS
+            
+                
+                    
+                    
+                    
+                
+            
+        
+        
+        
+            Email Security
+            
+                
+                    
+                    
+                    
+                
+            
+        
+        
+        
+            Network Security
+            
+                
+                    
+                    
+                    
+                
+            
+        
+        
+        
+            Stealthwatch
+            
+                
+                    
+                    N/A
+                    
+                
+            
+        
+        
+        
+            Stealthwatch Cloud
+            
+                
+                    
+                    N/A
+                    
+                
+            
+        
+        
+        
+            Threat Grid
+            
+                
+                    
+                    
+                    
+                
+            
+        
+        
+        
+            Umbrella
+            
+                
+                    
+                    
+                    
+                
+            
+        
+        
+        
+            WSA
+            
+                
+                    
+                    
+                    
+                
+            
+        
+        
+    
+    
+
+
+    
+        Screenshots of Detection
+
+            AMP
+
+            ThreatGrid
+
+            MITRE ATT&CK
+
+    
+    
+
+  
+    Win.Packed.Remcos-9888684-1
+
+    Indicators of Compromise
+    IOCs collected from dynamic analysis of 31 samples
+
+    
+        
+        
+        
+            Registry Keys
+            Occurrences
+        
+        
+        
+        
+        
+        <HKCU>\SOFTWARE\MICROSOFT\WINDOWS\CURRENTVERSION\RUN
+            
+            
+            Value Name: remoteaccess
+            
+        
+        26
+        
+        
+        
+        <HKCU>\SOFTWARE\REMOTEACCESS-K0BEK4
+            
+        
+        26
+        
+        
+        
+        <HKCU>\SOFTWARE\REMOTEACCESS-K0BEK4
+            
+            
+            Value Name: exepath
+            
+        
+        26
+        
+        
+        
+        <HKCU>\SOFTWARE\REMOTEACCESS-K0BEK4
+            
+            
+            Value Name: licence
+            
+        
+        26
+        
+        
+        
+        <HKCR>\LOCAL SETTINGS\SOFTWARE\MICROSOFT\WINDOWS\SHELL\BAGS\159
+            
+        
+        10
+        
+        
+        
+        
+    
+
+
+    
+        
+        
+        
+            Mutexes
+            Occurrences
+        
+        
+        
+        
+            
+            Remcos_Mutex_Inj
+            26
+            
+        
+            
+            remoteaccess-K0BEK4
+            26
+            
+        
+        
+        
+        
+    
+
+
+    
+        
+        
+        
+            IP Addresses contacted by malware. Does not indicate maliciousness
+            Occurrences
+        
+        
+        
+        
+            
+            72[.]21[.]81[.]240
+            1
+            
+        
+            
+            20[.]42[.]73[.]27
+            1
+            
+        
+        
+        
+
+        
+    
+
+
+    
+        
+        
+        
+            Domain Names contacted by malware. Does not indicate maliciousness
+            Occurrences
+        
+        
+        
+        
+            
+            magiobi[.]myq-see[.]com
+            26
+            
+        
+        
+        
+
+        
+    
+
+
+    
+        
+        
+        
+            Files and or directories created
+            Occurrences
+        
+        
+        
+        
+            
+            %TEMP%\install.vbs
+            26
+            
+        
+            
+            %APPDATA%\app
+            26
+            
+        
+            
+            %APPDATA%\vlc
+            26
+            
+        
+            
+            %APPDATA%\app\logs.dat
+            26
+            
+        
+            
+            %APPDATA%\vlc\remcos.exe
+            26
+            
+        
+            
+            \TEMPest.exe
+            26
+            
+        
+            
+            est.exe
+            24
+            
+        
+        
+        
+
+        
+    
+
+
+    File Hashes
+    
+    
+    
+        0e302df6e159c7d217b7d018f19c9823432d9ad8007ef0ed85c263d554c1e30e
+    
+        1a0f7403c3ecf8f0ba0190dda284701330a7d6d40cfced9457eeee056935bfee
+    
+        1f4918be2cf303a764595480f17aa73b4aa91c6b3f8d9449424d9c7e879b7ad4
+    
+        21de60ebda573cddf6cb05c9f8c960b8a2443f52d98140f5236f6501f19410ee
+    
+        21ef6e8f20890914cf56c8d8592eb989c0d906e06f4636ba894413515027cc62
+    
+        25b6762f360783d63450ba04db9d387f7d19c63c641d21b881f88b356ada3421
+    
+        2c900a1f9eb263d204f0128dbf6d32556b754d2e605becad273be7556bc77310
+    
+        2fd1cd85c6a08b15bb36631b93073747ce3b91586d67307c61e4da84184308d5
+    
+        36d868390dd8e44882d8508877a446fef0bd4867ab999aa3b735931769a92796
+    
+        3bb89c5a6a3c4a16c479431f6ffedbb219604282c5e6559d2c10edcfa38b51e3
+    
+        3ec76a0ecd432e726de8884098cfa694f2d11abdfeb36f2a249b50d6dfb3cc3d
+    
+        429726825e696a268594e6cde25c0c1ef85b6edaf22dcbf3f8a902e08ad8a4e3
+    
+        49d817760af4edae6e7010ba5300448cbed6c03614eb5796da56c4e6998463c2
+    
+        5033b3ec914d2348d266adf131d18e7d4b14d25e1f7ecffd011a4b5fd92e8c69
+    
+        5651600e0878105b716c0021269caf6c417a69936ba9028f57f9ec749e761597
+    
+        641ec504e3c8147c2c9fa5486ee4105887ba8f08602ed2dc63062b0f6dee4ce1
+    
+        6d4faebd81239988c959efeb751782fcb1340704b64d3396ac474e4e465c2532
+    
+        77bb1c16cd16725e1d6b47710690eb0521422eb13b6b97e4ae9d0010c8dfd628
+    
+        8482688334fbfbcc3a4240f1d634ba1c794b6eb7874b84827cfb99858c98325f
+    
+        8acd9afc443e580e536b8d8122bdd7c22e0d3f2e27fdc98ddd350005c5c1d748
+    
+        8c3195ad7c514dc0011b12cfdab658e61ab273a12d07cfb05962f7ad2122e816
+    
+        90104e4aad9bbe6e6ec9cca48f4339222bc6d2da8f926db3c5cc2b23df9359b2
+    
+        9427335831a7d141af9e4e498ac534bb730169e30095d4d82487cd6b64a72702
+    
+        9ba368912490f6ad01b28020a2a5f66b73738f0a2cdd4404149b75be0c0b1e4a
+    
+        9f49bdbc65415452aa3b41ee52c745f66c2807a56a8052aff51aaee26e0fed21
+    
+    
+    
+    
+        *See JSON for more IOCs
+    
+
+
+    Coverage
+
+    
+    
+        
+            Product
+            Protection
+        
+    
+    
+        
+        
+            AMP
+            
+                
+                    
+                    
+                    
+                
+            
+        
+        
+        
+            Cloudlock
+            
+                
+                    
+                    N/A
+                    
+                
+            
+        
+        
+        
+            CWS
+            
+                
+                    
+                    
+                    
+                
+            
+        
+        
+        
+            Email Security
+            
+                
+                    
+                    
+                    
+                
+            
+        
+        
+        
+            Network Security
+            
+                
+                    
+                    
+                    
+                
+            
+        
+        
+        
+            Stealthwatch
+            
+                
+                    
+                    N/A
+                    
+                
+            
+        
+        
+        
+            Stealthwatch Cloud
+            
+                
+                    
+                    N/A
+                    
+                
+            
+        
+        
+        
+            Threat Grid
+            
+                
+                    
+                    
+                    
+                
+            
+        
+        
+        
+            Umbrella
+            
+                
+                    
+                    N/A
+                    
+                
+            
+        
+        
+        
+            WSA
+            
+                
+                    
+                    N/A
+                    
+                
+            
+        
+        
+    
+    
+
+
+    
+        Screenshots of Detection
+
+
+            AMP
+ 
+            ThreatGrid
+
+            MITRE ATT&CK
+
+    
+    
+
+  
+    Win.Trojan.Razy-9889404-0
+
+    Indicators of Compromise
+    IOCs collected from dynamic analysis of 14 samples
+
+    
+        
+        
+        
+            Registry Keys
+            Occurrences
+        
+        
+        
+        
+        
+        <HKCR>\LOCAL SETTINGS\SOFTWARE\MICROSOFT\WINDOWS\SHELL\BAGS\159
+            
+        
+        14
+        
+        
+        
+        
+    
+
+
+    
+        
+        
+        
+            Mutexes
+            Occurrences
+        
+        
+        
+        
+            
+            {049aa00a-1f44-4126-80d5-1ede0a834588}
+            14
+            
+        
+            
+            {df7fbbd2-8018-447d-bd73-e452780889d8}
+            14
+            
+        
+        
+        
+        
+    
+
+
+    
+        
+        
+        
+            IP Addresses contacted by malware. Does not indicate maliciousness
+            Occurrences
+        
+        
+        
+        
+            
+            172[.]83[.]155[.]231
+            14
+            
+        
+            
+            94[.]140[.]112[.]22
+            14
+            
+        
+            
+            104[.]215[.]148[.]63
+            4
+            
+        
+            
+            40[.]112[.]72[.]205
+            3
+            
+        
+            
+            40[.]113[.]200[.]201
+            3
+            
+        
+            
+            40[.]76[.]4[.]15
+            2
+            
+        
+        
+        
+
+        
+    
+
+
+    
+        
+        
+        
+            Domain Names contacted by malware. Does not indicate maliciousness
+            Occurrences
+        
+        
+        
+        
+            
+            microsoft[.]com
+            14
+            
+        
+        
+        
+
+        
+    
+
+
+    
+        
+        
+        
+            Files and or directories created
+            Occurrences
+        
+        
+        
+        
+            
+            %TEMP%\<random, matching [A-F0-9]{1,4}>.tmp
+            14
+            
+        
+        
+        
+
+        
+    
+
+
+    File Hashes
+    
+    
+    
+        0058795df61caf151cd3a03be45ac874367feaf5de75a7a182a6f9986d370a93
+    
+        0f47d1446c79dd84ca1c1672c00d062f3d5c192a50dae52a0e0c848f473284c2
+    
+        10792143507088f1315efba990c339cf9fba56bf3a5a2d666477637de192b93c
+    
+        568e44c0e71b20235036a46e4f4fd372b65e6305ed696c0361310087e68e6a87
+    
+        62e63cde4dc0cc946a28243e9166a7809708990fed8a2beff81903873f677eab
+    
+        6453ceabe384a96cf864d3699f39a18b33775dd1339524fe337b525da5727aa9
+    
+        a3f744f0b3fbbad5530f0549ccc06e77ab0af3e2a9a87895b16c1acc67aa7a2a
+    
+        ab3d1b496f7d6d7a20a78d9ed42bbbf1dc275465acd201e7bea1e39aa9155bf0
+    
+        af65002570358363591040d9a52a2ce05521ba84263367c7452d7dfad5233c1f
+    
+        b99da287f609df668308dee50057dfd45677d45eb15a0c2b51a1f428cd3b2ccd
+    
+        c015e457b725ba995337a7965a931a2455f3b9ac5a195495aee3b9eb164323c3
+    
+        cc27c7c159716192b33257b7941ef2a61af998a39c2da47c1c5fc8863971bb0b
+    
+        d648342f789006a5281893e0e921ef70bbc171a8f755a627c98fdc26fe414ec8
+    
+        f20fcfea7a4e873ccc9cb92cdbbf4a9b675f833a7ab356f3c1df377710396aaf
+    
+    
+    
+    
+
+
+    Coverage
+
+    
+    
+        
+            Product
+            Protection
+        
+    
+    
+        
+        
+            AMP
+            
+                
+                    
+                    
+                    
+                
+            
+        
+        
+        
+            Cloudlock
+            
+                
+                    
+                    N/A
+                    
+                
+            
+        
+        
+        
+            CWS
+            
+                
+                    
+                    
+                    
+                
+            
+        
+        
+        
+            Email Security
+            
+                
+                    
+                    
+                    
+                
+            
+        
+        
+        
+            Network Security
+            
+                
+                    
+                    
+                    
+                
+            
+        
+        
+        
+            Stealthwatch
+            
+                
+                    
+                    N/A
+                    
+                
+            
+        
+        
+        
+            Stealthwatch Cloud
+            
+                
+                    
+                    N/A
+                    
+                
+            
+        
+        
+        
+            Threat Grid
+            
+                
+                    
+                    
+                    
+                
+            
+        
+        
+        
+            Umbrella
+            
+                
+                    
+                    N/A
+                    
+                
+            
+        
+        
+        
+            WSA
+            
+                
+                    
+                    
+                    
+                
+            
+        
+        
+    
+    
+
+
+    
+        Screenshots of Detection
+
+            AMP
+
+            ThreatGrid
+
+            MITRE ATT&CK
+
+    
+    
+
+  
+    Win.Downloader.Autoit-9888699-0
+
+    Indicators of Compromise
+    IOCs collected from dynamic analysis of 10 samples
+
+    
+        
+        
+        
+            Registry Keys
+            Occurrences
+        
+        
+        
+        
+        
+        <HKCR>\LOCAL SETTINGS\SOFTWARE\MICROSOFT\WINDOWS\SHELL\BAGS\159
+            
+        
+        10
+        
+        
+        
+        <HKLM>\SOFTWARE\WOW6432NODE\GOOGLE\UPDATE\CLIENTSTATE\{8A69D345-D564-463C-AFF1-A69D9E530F96}
+            
+        
+        9
+        
+        
+        
+        <HKLM>\SOFTWARE\WOW6432NODE\GOOGLE\UPDATE\CLIENTSTATE\{8A69D345-D564-463C-AFF1-A69D9E530F96}
+            
+            
+            Value Name: ap
+            
+        
+        9
+        
+        
+        
+        <HKLM>\SOFTWARE\POLICIES\GOOGLE\UPDATE
+            
+            
+            Value Name: UpdateDefault
+            
+        
+        9
+        
+        
+        
+        <HKLM>\SOFTWARE\POLICIES\GOOGLE\UPDATE
+            
+            
+            Value Name: AutoUpdateCheckPeriodMinutes
+            
+        
+        9
+        
+        
+        
+        <HKLM>\SOFTWARE\POLICIES\GOOGLE\UPDATE
+            
+            
+            Value Name: DisableAutoUpdateChecksCheckboxValue
+            
+        
+        9
+        
+        
+        
+        <HKLM>\SOFTWARE\POLICIES\GOOGLE\UPDATE
+            
+            
+            Value Name: Update{8A69D345-D564-463C-AFF1-A69D9E530F96}
+            
+        
+        9
+        
+        
+        
+        <HKLM>\SOFTWARE\POLICIES\GOOGLE
+            
+        
+        9
+        
+        
+        
+        <HKLM>\SOFTWARE\POLICIES\GOOGLE\CHROME
+            
+        
+        9
+        
+        
+        
+        <HKLM>\SOFTWARE\POLICIES\GOOGLE\CHROME\EXTENSIONINSTALLFORCELIST
+            
+        
+        9
+        
+        
+        
+        <HKLM>\SOFTWARE\WOW6432NODE\GOOGLE
+            
+        
+        9
+        
+        
+        
+        <HKLM>\SOFTWARE\POLICIES\GOOGLE\UPDATE
+            
+        
+        9
+        
+        
+        
+        <HKLM>\SOFTWARE\GOOGLE
+            
+        
+        9
+        
+        
+        
+        <HKLM>\SOFTWARE\WOW6432NODE\GOOGLE\UPDATE
+            
+        
+        9
+        
+        
+        
+        <HKLM>\SOFTWARE\WOW6432NODE\GOOGLE\UPDATE\CLIENTSTATE
+            
+        
+        9
+        
+        
+        
+        <HKLM>\SOFTWARE\GOOGLE\UPDATE
+            
+        
+        9
+        
+        
+        
+        <HKLM>\SOFTWARE\GOOGLE\UPDATE\CLIENTSTATE
+            
+        
+        9
+        
+        
+        
+        <HKLM>\SOFTWARE\GOOGLE\UPDATE\CLIENTSTATE\{8A69D345-D564-463C-AFF1-A69D9E530F96}
+            
+        
+        9
+        
+        
+        
+        <HKLM>\SOFTWARE\WOW6432NODE\GOOGLE\UPDATE\CLIENTSTATE\{4DC8B4CA-1BDA-483E-B5FA-D3C12E15B62D}
+            
+        
+        9
+        
+        
+        
+        <HKLM>\SOFTWARE\GOOGLE\UPDATE\CLIENTSTATE\{4DC8B4CA-1BDA-483E-B5FA-D3C12E15B62D}
+            
+        
+        9
+        
+        
+        
+        <HKLM>\SOFTWARE\GOOGLE\UPDATE\CLIENTSTATE\{8A69D345-D564-463C-AFF1-A69D9E530F96}
+            
+            
+            Value Name: ap
+            
+        
+        9
+        
+        
+        
+        <HKLM>\SOFTWARE\WOW6432NODE\GOOGLE\UPDATE\CLIENTSTATE\{4DC8B4CA-1BDA-483E-B5FA-D3C12E15B62D}
+            
+            
+            Value Name: ap
+            
+        
+        9
+        
+        
+        
+        <HKLM>\SOFTWARE\POLICIES\GOOGLE\CHROME\EXTENSIONINSTALLFORCELIST
+            
+            
+            Value Name: 1
+            
+        
+        9
+        
+        
+        
+        <HKLM>\SOFTWARE\MICROSOFT\WINDOWS\CURRENTVERSION\POLICIES\SYSTEM
+            
+            
+            Value Name: ConsentPromptBehaviorAdmin
+            
+        
+        1
+        
+        
+        
+        
+    
+
+
+    
+
+
+    
+        
+        
+        
+            IP Addresses contacted by malware. Does not indicate maliciousness
+            Occurrences
+        
+        
+        
+        
+            
+            35[.]205[.]61[.]67
+            1
+            
+        
+        
+        
+
+        
+    
+
+
+    
+        
+        
+        
+            Domain Names contacted by malware. Does not indicate maliciousness
+            Occurrences
+        
+        
+        
+        
+            
+            videra[.]xyz
+            5
+            
+        
+            
+            videocod[.]xyz
+            5
+            
+        
+            
+            hebacanak[.]xyz
+            1
+            
+        
+        
+        
+
+        
+    
+
+
+    
+
+
+    File Hashes
+    
+    
+    
+        087f351e3c777bb09ca1a7e01fce7793995449e55a5b7ab8742bba9b65f5ad62
+    
+        167a3e97d2d3091292f06e535c03c42991e179e89fe4b1c5232c1c6154c775fe
+    
+        270b559332ba599af3e97f4b0f7290176be7f91b46ba2b60be95a2f4bc520cfb
+    
+        2802085d097dd2eaea6287d60d4b3751046dae6ab9ec3ceaec4e3b2b06a5c525
+    
+        32bfc9d07bbae8129b6a9bbab58228aef02f30579473a2c745463731f77c0a6e
+    
+        343532a6f56894992b956887d5f6ed9383c121a9f1df8a5c67163b33fab3a5dc
+    
+        37ad7b8efde5d2b733275385e70b96de4fe23aaee1dba4f0ff62900b2c2c101b
+    
+        455482acd066e9bfe74961985fb19a3f4ff9f70a3c78f3817594657a6df8c2b6
+    
+        546992db1bfb48bcae0c34cc04b6fc3ff7b919814a1e192203ffa38d5044003c
+    
+        643f3fbf753962fb27280dd55baa376af7c56f06a9faec5600b100a9641a6374
+    
+    
+    
+    
+
+
+    Coverage
+
+    
+    
+        
+            Product
+            Protection
+        
+    
+    
+        
+        
+            AMP
+            
+                
+                    
+                    
+                    
+                
+            
+        
+        
+        
+            Cloudlock
+            
+                
+                    
+                    N/A
+                    
+                
+            
+        
+        
+        
+            CWS
+            
+                
+                    
+                    
+                    
+                
+            
+        
+        
+        
+            Email Security
+            
+                
+                    
+                    
+                    
+                
+            
+        
+        
+        
+            Network Security
+            
+                
+                    
+                    N/A
+                    
+                
+            
+        
+        
+        
+            Stealthwatch
+            
+                
+                    
+                    N/A
+                    
+                
+            
+        
+        
+        
+            Stealthwatch Cloud
+            
+                
+                    
+                    N/A
+                    
+                
+            
+        
+        
+        
+            Threat Grid
+            
+                
+                    
+                    
+                    
+                
+            
+        
+        
+        
+            Umbrella
+            
+                
+                    
+                    N/A
+                    
+                
+            
+        
+        
+        
+            WSA
+            
+                
+                    
+                    N/A
+                    
+                
+            
+        
+        
+    
+    
+
+
+    
+        Screenshots of Detection
+
+
+            AMP
+
+            ThreatGrid
+
+            MITRE ATT&CK
+
+    
+    
+
+  
+    Win.Dropper.NetWire-9888802-1
+
+    Indicators of Compromise
+    IOCs collected from dynamic analysis of 15 samples
+
+    
+        
+        
+        
+            Registry Keys
+            Occurrences
+        
+        
+        
+        
+        
+        <HKCU>\SOFTWARE\MICROSOFT\WINDOWS\CURRENTVERSION\RUN
+            
+            
+            Value Name: NetWire
+            
+        
+        14
+        
+        
+        
+        <HKCU>\SOFTWARE\NETWIRE
+            
+        
+        14
+        
+        
+        
+        <HKCU>\SOFTWARE\NETWIRE
+            
+            
+            Value Name: HostId
+            
+        
+        14
+        
+        
+        
+        <HKCU>\SOFTWARE\NETWIRE
+            
+            
+            Value Name: Install Date
+            
+        
+        14
+        
+        
+        
+        
+    
+
+
+    
+        
+        
+        
+            Mutexes
+            Occurrences
+        
+        
+        
+        
+            
+            OqvAvPni
+            14
+            
+        
+        
+        
+        
+    
+
+
+    
+        
+        
+        
+            IP Addresses contacted by malware. Does not indicate maliciousness
+            Occurrences
+        
+        
+        
+        
+            
+            192[.]169[.]69[.]25
+            14
+            
+        
+        
+        
+
+        
+    
+
+
+    
+        
+        
+        
+            Domain Names contacted by malware. Does not indicate maliciousness
+            Occurrences
+        
+        
+        
+        
+            
+            love82[.]duckdns[.]org
+            14
+            
+        
+        
+        
+
+        
+    
+
+
+    
+        
+        
+        
+            Files and or directories created
+            Occurrences
+        
+        
+        
+        
+            
+            est.exe
+            14
+            
+        
+            
+            %APPDATA%\Install
+            14
+            
+        
+            
+            %APPDATA%\Install\Host.exe
+            14
+            
+        
+            
+            \TEMPest.exe
+            14
+            
+        
+        
+        
+
+        
+    
+
+
+    File Hashes
+    
+    
+    
+        14cab6f8a2de3940905e821769f420808c6f19e6e6211959d9b172e7c914f4e8
+    
+        26172d62fca04ef7736c14ee0cd20001e1af85bcd99d1d433d7dda379acae03d
+    
+        3398565227251aded87558b85a6fb7da6a4b2e319669d6c593e2f2117681b1e3
+    
+        3ebafcb83009adf0eefa982538fdf0a22b017689edc4f9e0687c9c5d6bf0348a
+    
+        54bfd0cccd2f26dbd45534ef862d34fe68354e2e07fdd55bc535c97f57e88803
+    
+        5624d834518c6665a17352f53e64c061ec2ef5e09962d101da8e3c17581784fb
+    
+        605957706540c7eee5cdda3042fe6af28d7c071338f4d6b3d047834a0633eaf0
+    
+        71d740d5c4dc1844829707decbb3b59ca8007acc770c5befd3478cf9ad6355fb
+    
+        7b416928807f2b4dbe1dc37ef6629b6ba09f9ffa17dcdf9c6f72760f6a7fc2b1
+    
+        b068df22558bde4cf49abf96718045dba5383541af15d2a6af3daefe79d0f414
+    
+        b917cd496bb57e0131ea0009e20ece70206ccb0871d8115b1a1919fce9c0d3f4
+    
+        c6776d69dd0b16291f9ed0c018457ca188896320391300efe0d4d383be7a6f1c
+    
+        d9741e207db91497f7b0ad054d5e1ab138126b9c5f2960ceee4f7b786919c609
+    
+        dc7fd90a0aff0c7ed1fc0dc045a9ea6ab3106e35bdd8d01f2fd57f0d109e522d
+    
+        fc6504c45b704eefabc1d6bc842c69f9337258529ad7f102988a58ba4c5f9859
+    
+    
+    
+    
+
+
+    Coverage
+
+    
+    
+        
+            Product
+            Protection
+        
+    
+    
+        
+        
+            AMP
+            
+                
+                    
+                    
+                    
+                
+            
+        
+        
+        
+            Cloudlock
+            
+                
+                    
+                    N/A
+                    
+                
+            
+        
+        
+        
+            CWS
+            
+                
+                    
+                    
+                    
+                
+            
+        
+        
+        
+            Email Security
+            
+                
+                    
+                    
+                    
+                
+            
+        
+        
+        
+            Network Security
+            
+                
+                    
+                    
+                    
+                
+            
+        
+        
+        
+            Stealthwatch
+            
+                
+                    
+                    N/A
+                    
+                
+            
+        
+        
+        
+            Stealthwatch Cloud
+            
+                
+                    
+                    N/A
+                    
+                
+            
+        
+        
+        
+            Threat Grid
+            
+                
+                    
+                    
+                    
+                
+            
+        
+        
+        
+            Umbrella
+            
+                
+                    
+                    N/A
+                    
+                
+            
+        
+        
+        
+            WSA
+            
+                
+                    
+                    
+                    
+                
+            
+        
+        
+    
+    
+
+
+    
+        Screenshots of Detection
+
+            AMP
+
+            ThreatGrid
+
+            MITRE ATT&CK
+
+
+    
+    
+    
+
+  
+    Win.Dropper.Lokibot-9888803-1
+
+    Indicators of Compromise
+    IOCs collected from dynamic analysis of 18 samples
+
+    
+        
+        
+        
+            Registry Keys
+            Occurrences
+        
+        
+        
+        
+        
+        <HKCR>\LOCAL SETTINGS\SOFTWARE\MICROSOFT\WINDOWS\SHELL\BAGS\159
+            
+        
+        18
+        
+        
+        
+        
+    
+
+
+    
+        
+        
+        
+            Mutexes
+            Occurrences
+        
+        
+        
+        
+            
+            3749282D282E1E80C56CAE5A
+            16
+            
+        
+            
+            9DAA44F7C7955D46445DC99B
+            16
+            
+        
+        
+        
+        
+    
+
+
+    
+        
+        
+        
+            IP Addresses contacted by malware. Does not indicate maliciousness
+            Occurrences
+        
+        
+        
+        
+            
+            185[.]94[.]191[.]80
+            16
+            
+        
+        
+        
+
+        
+    
+
+
+    
+
+
+    
+        
+        
+        
+            Files and or directories created
+            Occurrences
+        
+        
+        
+        
+            
+            est.exe
+            16
+            
+        
+            
+            %APPDATA%\D282E1
+            16
+            
+        
+            
+            %APPDATA%\D282E1\1E80C5.lck
+            16
+            
+        
+            
+            %APPDATA%\Microsoft\Crypto\RSA\S-1-5-21-2580483871-590521980-3826313501-500\a18ca4003deb042bbee7a40f15e1970b_d19ab989-a35f-4710-83df-7b2db7efe7c5
+            16
+            
+        
+            
+            %APPDATA%\7C7955\5D4644.lck
+            16
+            
+        
+            
+            %APPDATA%\Microsoft\Crypto\RSA\S-1-5-21-1160359183-2529320614-3255788068-500\a18ca4003deb042bbee7a40f15e1970b_24e2b309-1719-4436-b195-573e7cb0f5b1
+            16
+            
+        
+            
+            %APPDATA%\7C7955\5D4644.exe (copy)
+            16
+            
+        
+            
+            \TEMPest.exe
+            16
+            
+        
+        
+        
+
+        
+    
+
+
+    File Hashes
+    
+    
+    
+        265f7292e53b4a41c7cd065bd560d6e0de7f6a743e341131b3506956d125f01f
+    
+        2e7f2c37cf935b53e9ab894b0a5a4ff6108ebec7ec113b9d6c103c226b750a6e
+    
+        401910a9dfdf1900f1be377009d5e70393520ec7015d114549e538223c5183e9
+    
+        458b945275df32476a65db408eb32a323b6cc184d7da1ae69be4638132426d62
+    
+        4f0c48e921d3a71d96e4460aebd6abbd87640b54fb5287659c0873bcc7bfd059
+    
+        775677d40c4ca9b67ab6e7e752aa8feb19e1070a7c83efb8c8a4274e9fb62655
+    
+        7e1181c2f92a1db56c0052cf239f90da6087ab6925316b72d22d8b967438fec6
+    
+        89455c081d9baf57965ed2ada79f742b8ec91f5deedc8fdc512b0c2c28643fd4
+    
+        8d5d7c307d1cf05745714109a2ed7ebe01fcfd4cb2139435965c088a05ef67e4
+    
+        b86b82199660b2153a038ef0c2219fbd970a5e28df3c16b4f5ef4f0232757def
+    
+        b94dddf66500524362ebd504b96afeda69d47dc157fc96dcaee1a543109940ad
+    
+        bad9e330cbd33ddd9d499bfc7abce04874253fcfd0d85ea61a84cfed383389ab
+    
+        bd858bc8a1b238eafb107b5e8f0624279d31ca35fc8fb120f3019ae0b76b9adb
+    
+        cc081f2e04d7d19da8472ad4bb381676b0faee5cc6c2fc80cad728b07d01b2c0
+    
+        ce37853230e3c31906b943729a29ac2dac5b4eaba25dc5df32dde1f16a050937
+    
+        d46f4fdf1feff2dbeb4cbd99627a631adffbc0129f7ad85ebd28b9eacc0762b0
+    
+        d841c38e0b3b01a10e13eb2317f483d4ea941d584733921db572023786f9a8cd
+    
+        e956610f17d065cecb6aabbc5b60fb410bfcd1f2f0a1b1120f0fa93a4a129298
+    
+    
+    
+    
+
+
+    Coverage
+
+    
+    
+        
+            Product
+            Protection
+        
+    
+    
+        
+        
+            AMP
+            
+                
+                    
+                    
+                    
+                
+            
+        
+        
+        
+            Cloudlock
+            
+                
+                    
+                    N/A
+                    
+                
+            
+        
+        
+        
+            CWS
+            
+                
+                    
+                    
+                    
+                
+            
+        
+        
+        
+            Email Security
+            
+                
+                    
+                    
+                    
+                
+            
+        
+        
+        
+            Network Security
+            
+                
+                    
+                    N/A
+                    
+                
+            
+        
+        
+        
+            Stealthwatch
+            
+                
+                    
+                    N/A
+                    
+                
+            
+        
+        
+        
+            Stealthwatch Cloud
+            
+                
+                    
+                    N/A
+                    
+                
+            
+        
+        
+        
+            Threat Grid
+            
+                
+                    
+                    
+                    
+                
+            
+        
+        
+        
+            Umbrella
+            
+                
+                    
+                    N/A
+                    
+                
+            
+        
+        
+        
+            WSA
+            
+                
+                    
+                    N/A
+                    
+                
+            
+        
+        
+    
+    
+
+
+    
+        Screenshots of Detection
+
+
+            AMP
+
+            ThreatGrid
+
+            MITRE ATT&CK
+
+    
+    
+    
+
+  
+    Win.Dropper.Barys-9889597-0
+
+    Indicators of Compromise
+    IOCs collected from dynamic analysis of 18 samples
+
+    
+        
+        
+        
+            Registry Keys
+            Occurrences
+        
+        
+        
+        
+        
+        <HKCU>\SOFTWARE\MICROSOFT\WINDOWS\CURRENTVERSION\RUN
+            
+            
+            Value Name: winlogon
+            
+        
+        18
+        
+        
+        
+        <HKLM>\SOFTWARE\MICROSOFT\WINDOWS\CURRENTVERSION\POLICIES\EXPLORER\RUN
+            
+        
+        18
+        
+        
+        
+        <HKCR>\LOCAL SETTINGS\SOFTWARE\MICROSOFT\WINDOWS\SHELL\BAGS\159
+            
+        
+        18
+        
+        
+        
+        <HKLM>\SOFTWARE\MICROSOFT\WINDOWS\CURRENTVERSION\POLICIES\EXPLORER\RUN
+            
+            
+            Value Name: 36412
+            
+        
+        18
+        
+        
+        
+        
+    
+
+
+    
+        
+        
+        
+            Mutexes
+            Occurrences
+        
+        
+        
+        
+            
+            2562100796
+            18
+            
+        
+            
+            lol
+            18
+            
+        
+        
+        
+        
+    
+
+
+    
+        
+        
+        
+            IP Addresses contacted by malware. Does not indicate maliciousness
+            Occurrences
+        
+        
+        
+        
+            
+            52[.]137[.]90[.]34
+            10
+            
+        
+            
+            52[.]185[.]71[.]28
+            8
+            
+        
+            
+            104[.]18[.]11[.]39
+            1
+            
+        
+            
+            209[.]85[.]201[.]94
+            1
+            
+        
+            
+            209[.]85[.]144[.]106
+            1
+            
+        
+            
+            173[.]194[.]204[.]94
+            1
+            
+        
+            
+            173[.]194[.]207[.]132
+            1
+            
+        
+            
+            74[.]125[.]192[.]138
+            1
+            
+        
+            
+            172[.]217[.]222[.]138
+            1
+            
+        
+            
+            173[.]194[.]205[.]84
+            1
+            
+        
+        
+        
+
+        
+    
+
+
+    
+        
+        
+        
+            Domain Names contacted by malware. Does not indicate maliciousness
+            Occurrences
+        
+        
+        
+        
+            
+            skyband[.]in
+            18
+            
+        
+        
+        
+
+        
+    
+
+
+    
+        
+        
+        
+            Files and or directories created
+            Occurrences
+        
+        
+        
+        
+            
+            %ProgramData%\Local Settings
+            18
+            
+        
+            
+            %ProgramData%\Local Settings\Temp
+            18
+            
+        
+            
+            %APPDATA%\winlogonr
+            18
+            
+        
+            
+            %APPDATA%\winlogonr\winlogonr.exe
+            18
+            
+        
+            
+            %TEMP%\<random, matching '[A-Z]{5}'>.txt
+            18
+            
+        
+            
+            %TEMP%\<random, matching '[A-Z]{5}'>.bat
+            18
+            
+        
+            
+            \REGISTRY\USER\S-1-5-21-1160359183-2529320614-3255788068-500_CLASSES\TypeLib
+            2
+            
+        
+            
+            %ProgramData%\Local Settings\Temp\msgjhqc.scr
+            1
+            
+        
+            
+            %ProgramData%\Local Settings\Temp\mswqama.com
+            1
+            
+        
+            
+            %ProgramData%\Local Settings\Temp\msoaou.exe
+            1
+            
+        
+            
+            %ProgramData%\Local Settings\Temp\msycpyao.exe
+            1
+            
+        
+            
+            %ProgramData%\Local Settings\Temp\msyyooba.exe
+            1
+            
+        
+            
+            %ProgramData%\Local Settings\Temp\msnafp.bat
+            1
+            
+        
+            
+            %ProgramData%\Local Settings\Temp\msyann.bat
+            1
+            
+        
+            
+            %ProgramData%\Local Settings\Temp\msiolkt.scr
+            1
+            
+        
+            
+            %ProgramData%\Local Settings\Temp\msypuv.bat
+            1
+            
+        
+            
+            %ProgramData%\Local Settings\Temp\msgrpal.scr
+            1
+            
+        
+            
+            %ProgramData%\Local Settings\Temp\msnbee.cmd
+            1
+            
+        
+            
+            %ProgramData%\Local Settings\Temp\msvlab.cmd
+            1
+            
+        
+            
+            %ProgramData%\Local Settings\Temp\msrzivcrv.pif
+            1
+            
+        
+            
+            %ProgramData%\Local Settings\Temp\msiplm.exe
+            1
+            
+        
+            
+            %ProgramData%\Local Settings\Temp\mscsykw.com
+            1
+            
+        
+            
+            %ProgramData%\Local Settings\Temp\mswfayow.cmd
+            1
+            
+        
+            
+            %ProgramData%\Local Settings\Temp\msuoqnaa.exe
+            1
+            
+        
+            
+            %ProgramData%\Local Settings\Temp\msbwcvfd.exe
+            1
+            
+        
+        
+        
+
+        
+    
+
+
+    File Hashes
+    
+    
+    
+        1182c7144cd1fa2267d30a49cee7165bb00acc6875e8135d166eede8432683a3
+    
+        26261b13f4b27fb69685e7e90bf8502880f78366934d81bdba84c0667a268110
+    
+        36fc4778c35238ed8117bd34705a0f63f23f9cb40f3d54d27f5e9b139220930f
+    
+        3a3b49f46e8fd9a6f5e02d5e9cf7f6264d394c0fb76d12b0f4f272e9cd24ea6c
+    
+        4998598b8763dcf8aecbb8afc5963f96949b6b30911dfa533bc5819b5fa95cc7
+    
+        6112a55bdfa04961280e927faf5a2e9678955b6703d0e04952aa8834d00294d5
+    
+        69d8df551cec4f9f23dcfaf1e3985e976ce7102229e99ab47595c47283951df1
+    
+        6c17dcdc88ba843c4ec3f8ff4d380305d51b9b5e6f7fe55fbe6c50b0012b58cb
+    
+        7b878a606766aad380e88c9df2e71d58651084ad8f0a118125951e7643224552
+    
+        818d1e035d2e6619609235ec094086a8791fd624cf80f13cff37c35415669618
+    
+        8737827f4d6e6589def21b3e9192e72c45e99e4b73fef4f029536d765f5bac68
+    
+        9070ff62e3f1f57d426a880077074f67cceedd88d120a599248a050a9efc56f4
+    
+        a7bcef75990d73db320c66deecc5cd42b8a0e7dfe114c578ba7d970d86a3178b
+    
+        afd610f363c2d8b37326eadd9d21bc48aa36031afec43f65bbc06850868b8935
+    
+        bb6941f39dbc5ef540e327ba2ca114cb5fda2e4986f7d8cd7fb5b7dee3c0ffca
+    
+        c52e86acf9c3ee2cc2628275356905f53c85f6b83c0e2c670a3b3f57def3e148
+    
+        d3a5b78481e052248386088b115d13c5bf0d0c7f26ab88a98b1774a61ceb0b8a
+    
+        dd554da4dcbcfce5ecef9c1bbc2cd3f0579e80ff31bac7376d375c832b29be7f
+    
+    
+    
+    
+
+
+    Coverage
+
+    
+    
+        
+            Product
+            Protection
+        
+    
+    
+        
+        
+            AMP
+            
+                
+                    
+                    
+                    
+                
+            
+        
+        
+        
+            Cloudlock
+            
+                
+                    
+                    N/A
+                    
+                
+            
+        
+        
+        
+            CWS
+            
+                
+                    
+                    
+                    
+                
+            
+        
+        
+        
+            Email Security
+            
+                
+                    
+                    
+                    
+                
+            
+        
+        
+        
+            Network Security
+            
+                
+                    
+                    N/A
+                    
+                
+            
+        
+        
+        
+            Stealthwatch
+            
+                
+                    
+                    N/A
+                    
+                
+            
+        
+        
+        
+            Stealthwatch Cloud
+            
+                
+                    
+                    N/A
+                    
+                
+            
+        
+        
+        
+            Threat Grid
+            
+                
+                    
+                    
+                    
+                
+            
+        
+        
+        
+            Umbrella
+            
+                
+                    
+                    N/A
+                    
+                
+            
+        
+        
+        
+            WSA
+            
+                
+                    
+                    N/A
+                    
+                
+            
+        
+        
+    
+    
+
+
+    
+        Screenshots of Detection
+
+            AMPThreatGrid
+
+            MITRE ATT&CK
+
+    
+    
+
+  
+    Win.Packed.Tofsee-9889956-0
+
+    Indicators of Compromise
+    IOCs collected from dynamic analysis of 13 samples
+
+    
+        
+        
+        
+            Registry Keys
+            Occurrences
+        
+        
+        
+        
+        
+        <HKU>\.DEFAULT\CONTROL PANEL\BUSES
+            
+            
+            Value Name: Config3
+            
+        
+        13
+        
+        
+        
+        <HKU>\.DEFAULT\CONTROL PANEL\BUSES
+            
+        
+        13
+        
+        
+        
+        <HKCR>\LOCAL SETTINGS\SOFTWARE\MICROSOFT\WINDOWS\SHELL\BAGS\159
+            
+        
+        13
+        
+        
+        
+        <HKU>\.DEFAULT\CONTROL PANEL\BUSES
+            
+            
+            Value Name: Config0
+            
+        
+        13
+        
+        
+        
+        <HKU>\.DEFAULT\CONTROL PANEL\BUSES
+            
+            
+            Value Name: Config1
+            
+        
+        13
+        
+        
+        
+        <HKU>\.DEFAULT\CONTROL PANEL\BUSES
+            
+            
+            Value Name: Config2
+            
+        
+        13
+        
+        
+        
+        <HKLM>\SYSTEM\CONTROLSET001\SERVICES\<random, matching '[A-Z0-9]{8}'>
+            
+        
+        13
+        
+        
+        
+        <HKLM>\SYSTEM\CONTROLSET001\SERVICES\<random, matching '[A-Z0-9]{8}'>
+            
+            
+            Value Name: Type
+            
+        
+        13
+        
+        
+        
+        <HKLM>\SYSTEM\CONTROLSET001\SERVICES\<random, matching '[A-Z0-9]{8}'>
+            
+            
+            Value Name: Start
+            
+        
+        13
+        
+        
+        
+        <HKLM>\SYSTEM\CONTROLSET001\SERVICES\<random, matching '[A-Z0-9]{8}'>
+            
+            
+            Value Name: ErrorControl
+            
+        
+        13
+        
+        
+        
+        <HKLM>\SYSTEM\CONTROLSET001\SERVICES\<random, matching '[A-Z0-9]{8}'>
+            
+            
+            Value Name: DisplayName
+            
+        
+        13
+        
+        
+        
+        <HKLM>\SYSTEM\CONTROLSET001\SERVICES\<random, matching '[A-Z0-9]{8}'>
+            
+            
+            Value Name: WOW64
+            
+        
+        13
+        
+        
+        
+        <HKLM>\SYSTEM\CONTROLSET001\SERVICES\<random, matching '[A-Z0-9]{8}'>
+            
+            
+            Value Name: ObjectName
+            
+        
+        13
+        
+        
+        
+        <HKLM>\SYSTEM\CONTROLSET001\SERVICES\<random, matching '[A-Z0-9]{8}'>
+            
+            
+            Value Name: Description
+            
+        
+        13
+        
+        
+        
+        <HKLM>\SYSTEM\CONTROLSET001\SERVICES\<random, matching '[A-Z0-9]{8}'>
+            
+            
+            Value Name: ImagePath
+            
+        
+        10
+        
+        
+        
+        <HKLM>\SOFTWARE\MICROSOFT\WINDOWS DEFENDER\EXCLUSIONS\PATHS
+            
+            
+            Value Name: C:\Windows\SysWOW64\kuwrnfea
+            
+        
+        3
+        
+        
+        
+        <HKLM>\SOFTWARE\MICROSOFT\WINDOWS DEFENDER\EXCLUSIONS\PATHS
+            
+            
+            Value Name: C:\Windows\SysWOW64\qacxtlkg
+            
+        
+        2
+        
+        
+        
+        <HKLM>\SOFTWARE\MICROSOFT\WINDOWS DEFENDER\EXCLUSIONS\PATHS
+            
+            
+            Value Name: C:\Windows\SysWOW64\oyavrjie
+            
+        
+        1
+        
+        
+        
+        <HKLM>\SOFTWARE\MICROSOFT\WINDOWS DEFENDER\EXCLUSIONS\PATHS
+            
+            
+            Value Name: C:\Windows\SysWOW64xzuqihd
+            
+        
+        1
+        
+        
+        
+        <HKLM>\SOFTWARE\MICROSOFT\WINDOWS DEFENDER\EXCLUSIONS\PATHS
+            
+            
+            Value Name: C:\Windows\SysWOW64\pzbwskjf
+            
+        
+        1
+        
+        
+        
+        <HKLM>\SOFTWARE\MICROSOFT\WINDOWS DEFENDER\EXCLUSIONS\PATHS
+            
+            
+            Value Name: C:\Windows\SysWOW64\fprmiazv
+            
+        
+        1
+        
+        
+        
+        <HKLM>\SOFTWARE\MICROSOFT\WINDOWS DEFENDER\EXCLUSIONS\PATHS
+            
+            
+            Value Name: C:\Windows\SysWOW64\jtvqmedz
+            
+        
+        1
+        
+        
+        
+        <HKLM>\SOFTWARE\MICROSOFT\WINDOWS DEFENDER\EXCLUSIONS\PATHS
+            
+            
+            Value Name: C:\Windows\SysWOW64\zjlgcutp
+            
+        
+        1
+        
+        
+        
+        <HKLM>\SOFTWARE\MICROSOFT\WINDOWS DEFENDER\EXCLUSIONS\PATHS
+            
+            
+            Value Name: C:\Windows\SysWOW64\akmhdvuq
+            
+        
+        1
+        
+        
+        
+        <HKLM>\SOFTWARE\MICROSOFT\WINDOWS DEFENDER\EXCLUSIONS\PATHS
+            
+            
+            Value Name: C:\Windows\SysWOW64\hrtokcbx
+            
+        
+        1
+        
+        
+        
+        
+    
+
+
+    
+
+
+    
+        
+        
+        
+            IP Addresses contacted by malware. Does not indicate maliciousness
+            Occurrences
+        
+        
+        
+        
+            
+            192[.]0[.]47[.]59
+            13
+            
+        
+            
+            216[.]146[.]35[.]35
+            13
+            
+        
+            
+            157[.]240[.]229[.]174
+            13
+            
+        
+            
+            5[.]61[.]37[.]41
+            13
+            
+        
+            
+            95[.]216[.]195[.]92
+            13
+            
+        
+            
+            213[.]227[.]140[.]23
+            13
+            
+        
+            
+            193[.]56[.]146[.]188
+            13
+            
+        
+            
+            193[.]56[.]146[.]41
+            13
+            
+        
+            
+            193[.]56[.]146[.]42/31
+            13
+            
+        
+            
+            208[.]76[.]51[.]51
+            12
+            
+        
+            
+            208[.]76[.]50[.]50
+            12
+            
+        
+            
+            142[.]250[.]80[.]100
+            12
+            
+        
+            
+            208[.]71[.]35[.]137
+            9
+            
+        
+            
+            211[.]231[.]108[.]46/31
+            9
+            
+        
+            
+            199[.]5[.]157[.]131
+            8
+            
+        
+            
+            213[.]91[.]128[.]133
+            8
+            
+        
+            
+            23[.]90[.]4[.]6
+            7
+            
+        
+            
+            199[.]71[.]0[.]46
+            7
+            
+        
+            
+            202[.]137[.]234[.]30
+            7
+            
+        
+            
+            193[.]222[.]135[.]150
+            7
+            
+        
+            
+            209[.]85[.]144[.]103
+            7
+            
+        
+            
+            142[.]250[.]65[.]238
+            7
+            
+        
+            
+            195[.]46[.]39[.]39
+            6
+            
+        
+            
+            212[.]77[.]101[.]4
+            6
+            
+        
+            
+            67[.]195[.]204[.]72/30
+            6
+            
+        
+        
+        
+
+        
+            *See JSON for more IOCs
+        
+    
+
+
+    
+        
+        
+        
+            Domain Names contacted by malware. Does not indicate maliciousness
+            Occurrences
+        
+        
+        
+        
+            
+            249[.]5[.]55[.]69[.]bl[.]spamcop[.]net
+            13
+            
+        
+            
+            249[.]5[.]55[.]69[.]cbl[.]abuseat[.]org
+            13
+            
+        
+            
+            249[.]5[.]55[.]69[.]dnsbl[.]sorbs[.]net
+            13
+            
+        
+            
+            249[.]5[.]55[.]69[.]in-addr[.]arpa
+            13
+            
+        
+            
+            249[.]5[.]55[.]69[.]sbl-xbl[.]spamhaus[.]org
+            13
+            
+        
+            
+            249[.]5[.]55[.]69[.]zen[.]spamhaus[.]org
+            13
+            
+        
+            
+            microsoft-com[.]mail[.]protection[.]outlook[.]com
+            13
+            
+        
+            
+            microsoft[.]com
+            13
+            
+        
+            
+            www[.]google[.]com
+            13
+            
+        
+            
+            www[.]instagram[.]com
+            13
+            
+        
+            
+            whois[.]arin[.]net
+            13
+            
+        
+            
+            whois[.]iana[.]org
+            13
+            
+        
+            
+            aspmx[.]l[.]google[.]com
+            13
+            
+        
+            
+            defeatwax[.]ru
+            13
+            
+        
+            
+            hanmail[.]net
+            9
+            
+        
+            
+            mx1[.]hanmail[.]net
+            9
+            
+        
+            
+            fastpool[.]xyz
+            8
+            
+        
+            
+            m[.]youtube[.]com
+            7
+            
+        
+            
+            rediffmail[.]com
+            7
+            
+        
+            
+            mx[.]tlen[.]pl
+            7
+            
+        
+            
+            mx[.]rediffmail[.]rediff[.]akadns[.]net
+            7
+            
+        
+            
+            www[.]google[.]ru
+            6
+            
+        
+            
+            auth[.]api[.]np[.]ac[.]playstation[.]net
+            6
+            
+        
+            
+            wp[.]pl
+            6
+            
+        
+            
+            mx[.]wp[.]pl
+            6
+            
+        
+        
+        
+
+        
+            *See JSON for more IOCs
+        
+    
+
+
+    
+        
+        
+        
+            Files and or directories created
+            Occurrences
+        
+        
+        
+        
+            
+            %SystemRoot%\SysWOW64\config\systemprofile
+            13
+            
+        
+            
+            %SystemRoot%\SysWOW64\config\systemprofile:.repos
+            13
+            
+        
+            
+            %TEMP%\<random, matching '[a-z]{8}'>.exe
+            13
+            
+        
+            
+            %SystemRoot%\SysWOW64\<random, matching '[a-z]{8}'>
+            13
+            
+        
+            
+            %System32%\config\systemprofile:.repos
+            12
+            
+        
+            
+            %System32%\<random, matching '[a-z]{7,8}'>\<random, matching '[a-z]{6,8}'>.exe (copy)
+            12
+            
+        
+            
+            %TEMP%iewuxj.exe
+            2
+            
+        
+        
+        
+
+        
+    
+
+
+    File Hashes
+    
+    
+    
+        054c9a31a2e6f11f9c39429084ec1eb66073cd4764f750ba0047e40a7570ccbb
+    
+        118346e35c52f1ad9079c6a4ae36d6ef9c70b564bfa4492875b3a139ad1635fc
+    
+        20162740e77110cb52aab90ee971a9ec8fb277dac23e9dbcba62bba73f77c357
+    
+        21f4e0826e3da83b072c4fe665fc7142c7124ff60550709dafc5b58d7854d255
+    
+        3d6484fd4bfd6878f37bdec60591d7316c48cf419efda3753dca309367b6c072
+    
+        579a15787924c921ac60feb45ab0f9c5ff42ac7c69a5941bff7e3de871e886e7
+    
+        6d45387f1e3a3088df9e5a5ba5bf7ef7a439476728870c6f6133fe2b009fa151
+    
+        88a6ddd7cc77c6c3097ba942fdc1703c06931b19b1c07d544f97c189b142d340
+    
+        8df4d47d6c6b85a40c25beb76dedb9eb29ba97ec9bacdf18db7901a3bdce2cbc
+    
+        9e5a240df84c8f27e66ca75c1f046bc15e63773ffdc526e1698a07236c8f7dcb
+    
+        af08d4957b761c798ae660d0f01299688f37e30aa9aa20657aee5bc7d3ef7097
+    
+        c3204fb2d666af9b6da9a5e0b2cd61c7e01624a2ac704a5d61a87370e112c7c7
+    
+        f268658d5a4c160692b86e6f134aee4c005b3e06aa5f602f2f0e30f4657f2f7f
+    
+    
+    
+    
+
+
+    Coverage
+
+    
+    
+        
+            Product
+            Protection
+        
+    
+    
+        
+        
+            AMP
+            
+                
+                    
+                    
+                    
+                
+            
+        
+        
+        
+            Cloudlock
+            
+                
+                    
+                    N/A
+                    
+                
+            
+        
+        
+        
+            CWS
+            
+                
+                    
+                    
+                    
+                
+            
+        
+        
+        
+            Email Security
+            
+                
+                    
+                    
+                    
+                
+            
+        
+        
+        
+            Network Security
+            
+                
+                    
+                    
+                    
+                
+            
+        
+        
+        
+            Stealthwatch
+            
+                
+                    
+                    N/A
+                    
+                
+            
+        
+        
+        
+            Stealthwatch Cloud
+            
+                
+                    
+                    N/A
+                    
+                
+            
+        
+        
+        
+            Threat Grid
+            
+                
+                    
+                    
+                    
+                
+            
+        
+        
+        
+            Umbrella
+            
+                
+                    
+                    
+                    
+                
+            
+        
+        
+        
+            WSA
+            
+                
+                    
+                    
+                    
+                
+            
+        
+        
+    
+    
+
+
+    
+        Screenshots of Detection
+
+            AMP
+
+            ThreatGrid
+
+            MITRE ATT&CK
+
+    
+    
+
+
+
+    Exploit Prevention
+    
+    Cisco AMP for Endpoints protects users from a variety of malware functions with exploit
+    prevention. Exploit prevention helps users defend endpoints from memory attacks commonly
+    used by obfuscated malware and exploits. These exploits use certain features to bypass
+    typical anti-virus software, but were blocked by AMP thanks to its advanced scanning
+    capabilities, even protecting against zero-day vulnerabilities.
+    
+
+    
+    
+    
+        
+        
+            Process hollowing detected - (11834)
+        
+    
+    
+        
+            Process hollowing is a technique used by some programs to avoid static analysis. In typical usage, a process is started and its obfuscated or encrypted contents are unpacked into memory. The parent then manually sets up the first stages of launching a child process, but before launching it, the memory is cleared and filled in with the memory from the parent instead.
+        
+    
+    
+        
+        
+            A Microsoft Office process has started a windows utility. - (11297)
+        
+    
+    
+        
+            A process associated with Microsoft Office, such as EXCEL.exe, OUTLOOK.exe or WINWORD.exe, has started a Windows utility such as powershell.exe or cmd.exe. This is typical behavior of malicious documents executing additional scripts. This behavior is extremely suspicious and is associated with many malware different malware campaigns and families.
+        
+    
+    
+        
+        
+            Excessively long PowerShell command detected - (5527)
+        
+    
+    
+        
+            A PowerShell command with a very long command line argument that may indicate an obfuscated script has been detected. PowerShell is an extensible Windows scripting language present on all versions of Windows. Malware authors use PowerShell in an attempt to evade security software or other monitoring that is not tuned to detect PowerShell based threats.
+        
+    
+    
+        
+        
+            Reverse tcp payload detected - (1941)
+        
+    
+    
+        
+            An exploit payload intended to connect back to an attacker controlled host using tcp has been detected.
+        
+    
+    
+        
+        
+            CVE-2020-1472 exploit detected - (1653)
+        
+    
+    
+        
+            An attempt to exploit CVE-2020-1472 has been detected. Also known as "Zerologon". This is a privelege escalation vulnerability in Netlogon.
+        
+    
+    
+        
+        
+            Dealply adware detected - (1564)
+        
+    
+    
+        
+            DealPly is adware, which claims to improve your online shopping experience. It is often bundled into other legitimate installers and is difficult to uninstall. It creates pop-up advertisements and injects advertisements on webpages. Adware has also been known to download and install malware.
+        
+    
+    
+        
+        
+            Crystalbit-Apple DLL double hijack detected - (1130)
+        
+    
+    
+        
+            Crystalbit-Apple DLL double hijack was detected. During this attack, the adversary abuses two legitimate vendor applications, such as CrystalBit and Apple, as part of a dll double hijack attack chain that starts with a fraudulent software bundle and eventually leads to a persistent miner and in some cases spyware deployment.
+        
+    
+    
+        
+        
+            Kovter injection detected - (318)
+        
+    
+    
+        
+            A process was injected into, most likely by an existing Kovter infection. Kovter is a click fraud Trojan that can also act as an information stealer. Kovter is also file-less malware meaning the malicious DLL is stored inside Windows registry and injected directly into memory using PowerShell. It can detect and report the usage of monitoring software such as wireshark and sandboxes to its C2. It spreads through malicious advertising and spam campaigns.
+        
+    
+    
+        
+        
+            Squiblydoo application control bypass attempt detected. - (300)
+        
+    
+    
+        
+            An attempt to bypass application control via the "Squiblydoo" technique has been detected. This typically involves using regsvr32.exe to execute script content hosted on an attacker controlled server.
+        
+    
+    
+        
+        
+            Malware dropper detected - (238)
+        
+    
+    
+        
+            A malware dropper has been detected. A dropper will download or unpack addtional malware during it's execution. A variety of techniques can be employed for the payload to gain persistence and escalate privelege if neccessary.
+        
+    
+    
+    
+    
+
+
+

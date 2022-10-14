@@ -1,0 +1,24 @@
+
+Yesterday we released Razorback 0.3, the result of the Q3 development run.  Q3 focused on building out the scripting nugget, reworking how the Snort-as-a-Collector nugget works and building out a VM image so you can easily tryout the Razorback system.
+
+The scripting nugget is a huge addition to Razorback.  The scripting nugget uses XML across named pipes to pass registration, alerting and logging information back to the system.  This allows the use of any scripting (or even compiled) language that can pass XML out STDOUT with Razorback.  We ship a ruby gem that makes writing detection scripts fairly straightforward as well as a sample ruby nugget.
+
+The scripting nugget calls each script on startup with the --register argument.  This causes the scripts to output their registration information and the script nugget then registers on their behalf.  The scripting nugget then handles retrieving data blocks and calling the nuggets when they are needed for detection.  The scripting nugget then parses the alerting and logging output and uses the standard C API to alert and log on behalf of the scripts.  Finally, the scripting nugget is constantly watching the scripts directory, so adding detection to a running system is as simple as copying a new script into the directory.
+
+There have been a couple of versions of Snort released since we initially built the SAAC and there were some lingering issues we wanted to clean up, so the Amish Hammer sat down and basically rewrote it from the ground up.  The shipping version is now based on Snort 2.9.1.1, has better memory management and is fully integrated with the current API allowing for the data block captured to have the request information attached to it.  Basically this means that for any given captured data block, we have all the information about how it was requested:  hostname, URI, IP addresses, ports etc...  Very useful for forensics work.
+
+Finally, we have built out a FreeBSD based virtual appliance so you can easily bring up and interact with a Razorback installation.  The system comes pre-configured witha ll of the sub-components requried for Razorback to run:  memcached, MySQL and ActiveMQ.  In addition, it provides the following nuggets:  Yara, OfficeCat, ClamAV, Archive Inflate, Scripting, File Inject and a Snort-as-a-Collector nugget.  Provided you have an API key you can also enable the Virus Total nugget and if you have a license, you can activate the PDF Dissector nugget.
+
+Beyond all this are various and sundry bug fixes, performance enhancements and usability improvments.
+
+You can find the source code for 0.3 here:
+https://sourceforge.net/projects/razorbacktm/files/Razorback/razorback-0.3.0.tbz/download?source=files 
+
+You can find documentation on the VM here:
+https://sourceforge.net/apps/trac/razorbacktm/wiki/Manual/Virtual_Machine
+
+You can find the VM itself here:
+https://sourceforge.net/projects/razorbacktm/files/VM/
+
+Enjoy!
+

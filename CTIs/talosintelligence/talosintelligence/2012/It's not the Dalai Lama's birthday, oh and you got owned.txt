@@ -1,0 +1,26 @@
+
+
+A number of recent targeted attack campaigns have centered around the Dalai Lama, including purported plans for his birthday and calls to action for democracy in Tibet. These attacks use several popular exploits and even include attacks on Mac OS X. While investigating samples of these attacks, Alain Zidouemba and I discovered a few that were using CVE-2012-0158, which exploits a bug in the Mscomctl activex control. Observed in the wild embedded within RTF, DOC or XLS documents, RTFs are the weapon of choice for most of these attacks.
+
+
+
+
+While the vulnerability was originally patched in April, attacks in the wild have evolved since then. Originally, detection consisted of identifying the following elements:
+
+
+  1. The magic code for a stream header
+
+  2. The magic codes for either listview or treeview
+
+  3. The vulnerable record
+
+
+
+Once at the record, the size of data variable had to be checked for overflows. A few extra checks could also be implemented to make sure we were in the right place, but all in all it was pretty straightforward detection. However, the latest samples that claimed to be CVE-2012-0158 did away with the surrounding structures and magic, keeping only the vulnerable record with overflowed value. The resulting file still manages to deliver the attack while leaving a smaller footprint for detection. The observed result of opening one of these malicious RTFs is that MS Office crashes and re-opens immediately to recover the file.
+
+
+Detection for this exploit had to be rewritten, excluding the extraneous checks and focusing on the single record and making sure we are in the right part of the file. While we're happy to announce updated coverage, this vulnerability highlights the difficulty of playing defense - if we hadn't found these new samples, we could have easily continued to rely on the old detection, which appeared to be perfectly valid based on exploits originally observed in the wild. Making sure that detection finds all working exploits is an important part of our jobs here in the VRT, and it's why we continue to look for new attacks in any place we can find them on the Internet.
+
+
+For those who are concerned about this vulnerability, it can be detected with Snort SIDs 21896 - 21093, 21905, 21937, and 23305. It is also picked up by ClamAV signature BC.Exploit.CVE_2012_0158-3.
+

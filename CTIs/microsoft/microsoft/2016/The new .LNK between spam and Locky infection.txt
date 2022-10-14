@@ -1,0 +1,152 @@
+
+		
+
+
+
+Modern social engineering attacks use non-portable executable (PE) files like malicious scripts and macro-laced documents. Every month, Windows Defender AV detects non-PE threats on over 10 million machines.
+Learn how machine learning drives next-gen protection capabilities and cloud-based, real-time blocking of new and unknown threats:
+Machine learning vs. social engineering
+
+
+
+Just when it seems the Ransom:Win32/Locky activity has slowed down, our continuous monitoring of the ransomware family reveals a new workaround that the authors might be using to keep it going.
+The decline in Locky activity can be attributed to the slowdown of detections of Nemucod, which Locky uses to infect computers. Nemucod is a .wsf file contained in .zip attachments in spam email (see our Nemucod WSF blog for details). Locky has also been previously distributed by exploit kits and spam email attachments with other extensions such as .js, .hta, etc.
+
+Figure 1. The graph shows that Locky machine encounters has recently been low
+ 
+
+Figure 2: Nemucod detection peaked early in October 2016
+ 
+We observed that the Locky ransomware writers, possibly upon seeing that some emails are being proactively blocked, changed the attachment from .wsf files to shortcut files (.LNK extension) that contain PowerShell commands to download and run Locky.
+An example of the spam email below shows that it is designed to feign urgency. It is sent with high importance and with random characters in the subject line. The body of the email is empty.
+
+Figure 3: Example of a spam email that could lead to a Locky infection
+ 
+The spam email typically arrives with a .zip attachment, which contains the .LNK files. We’ve observed that the attachment is named bill, possibly meant to trick users into thinking it is a bill they need to pay. In opening the .zip attachment, users trigger the infection chain.
+
+Figure 4: .LNK file inside the zip attachment
+ 
+Inspecting the .LNK file reveals the PowerShell script.
+
+Figure 5: Embedded PowerShell command in the shortcut file
+ 
+This threat is detected as TrojanDownloader:PowerShell/Ploprolo.A.
+When the PowerShell script successfully runs, it downloads and executes Locky in a temporary folder (for example, BJYNZR.exe), completing the infection chain.
+
+Figure 6: Embedded PowerShell command used to download the payload
+ 
+The payload malware is the recent version of Locky that has the following characteristics:
+
+Encrypted file extension:
+
+.odin
+
+
+Decryption instruction files:
+
+_440_HOWDO_text.html
+_HOWDO_text.bmp
+_HOWDO_text.html
+
+
+
+ 
+For details, see the Win32/Locky family description.
+The static configuration inside the binary contains the following information:
+ 
+
+
+
+Static configuration variables
+Values
+
+
+AffiliateId
+5
+
+
+DGA seed
+74311
+
+
+Language skipped
+Russian
+
+
+URL path
+/apache_handler.php
+
+
+Hard coded C&C addresses used
+
+· 93.170.104.126
+· 185.46.11.73
+
+
+Offline encryption allowed using public key
+
+BgIAAACkAABSU0ExAAgAAAEAAQA7cxE2y7KzaqNzjzvUMZHpLzaCnLlnDkPn3W74o09zNmJNhvjw
+qEcwUOJBZmpRCjIoeCnH+NZVPLvdXjfHJGU3WguCLrOE97HEZaXd/uHW95UE8AZW+r4zPdCClnN1
+mfHF+CvvLJGjiTv+8OMJXNxYA/TJlyXqDhpWarPN79UMGrWApdYkkUiPiN+EBXlJWJsnXfWi5d9N
+xrb/vfPIZIzSXmOkOtEg5D1/MlElPrKYJ2yXwCAkSWDzeYXU06uIG6OYeCOrxKIy26wYmCdv+7yE
+KJ6tXZYH3enbsiwXw+6VR2EAwyD7/U6GnWq4LTT0M/u58dY5WlyGuWIvBrzQ2xXO
+ 
+
+
+
+ 
+The following SHA1s were used in this analysis:
+
+TrojanDownloader:PowerShell/Ploprolo.A – 3dcf2f116af0a548e88022baa1f41f61f362ae39
+Ransom:Win32/Locky – c1ee00884c0f872767992d5348e4de576935d8da
+
+ 
+Mitigation and prevention
+To avoid falling prey to this new Locky ransomware campaign, here are some tips:
+For end users
+
+Use an up-to-date, real-time antimalware product, such as Windows Defender for Windows 10.
+Keep Windows and the rest of your software up-to-date to mitigate possible software exploits.
+Disable the loading of macros in Office programs.
+Think before you click. Do not open emails from senders you don’t recognize. Upload any suspicious files here: https://www.microsoft.com/en-us/security/portal/submission/submit.aspx. It is uncommon and quite suspicious for people to send legitimate applications with such extensions through email. Do not click or open such attachments:
+
+Files with .LNK extension
+Files with.wsf extension
+Files with double dot extension (for example, profile-d39a..wsf)
+
+
+
+For IT Administrators
+
+Use Office 365 Advanced Threat Protection. It has a machine learning capability to help your network administrators block dangerous email threats. See the Overview of Advanced Threat Protection in Exchange: new tools to stop unknown attacks, for details.
+Use Windows Defender Advanced Threat Protection to help detect, investigate, and respond to advanced and targeted attacks on your enterprise networks.
+
+
+Use the AppLocker group policy to prevent dubious software from running. Add .LNK,.wsf, and ..wsf to the file types to block in your AppLocker Group Policy.
+
+
+Disable macro loading through the Group Policy settings.
+
+To learn more about what’s new in Windows 10 security, go here: https://technet.microsoft.com/en-us/itpro/windows/whats-new/security
+ 
+Francis Tan Seng and Duc Nguyen
+MMPC
+ 
+Related blog entries:
+
+World Backup Day is as good as any to back up your data
+Ransomware: a declining nuisance or an evolving menace?
+Averting ransomware epidemics in corporate networks with Windows Defender ATP
+
+ 
+ 
+ 
+ 
+
+ 
+
+Talk to us
+Questions, concerns, or insights on this story? Join discussions at the Microsoft community and Windows Defender Security Intelligence.
+Follow us on Twitter @WDSecurity and Facebook Windows Defender Security Intelligence.
+ 
+	

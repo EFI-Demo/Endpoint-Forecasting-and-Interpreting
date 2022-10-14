@@ -1,0 +1,21 @@
+
+One of the most virulent pieces of Android malware to date was recently discovered by TrustGo Labs. Dubbed SMSZombie, this malicious application has infected some 500,000 users throughout China, after having been distributed through the GFan mobile application marketplace.
+
+In some ways, the malware is not particularly novel, as it uses photographs of scantily clad ladies to lure in unsuspecting users, a trend we've observed across many distinct types of Android malware:
+
+
+
+
+What's surprising about it is the fact that its command and control traffic is sent entirely over SMS, instead of the more traditional HTTP or other TCP-based packet. This behavior can be observed very rapidly after installing the application (which kindly returns you to the installer screen if you hit cancel instead of install, making it exceptionally obnoxious to remove); the following two messages were sent when we ran it in our lab:
+
+Number: 13093632006Message: 1.5V:ModelGT-I9000;os2.1-update1;Languageen;NET3G
+Number: 13093632006Message: The program runs again
+
+Interestingly enough, while examining the APK files for keys to detection, we noticed some odd artifacts left by the authors, including an apparent Chinese name of "baoxian zhushou". While that name alone is insufficient for detection - it pulls up legitimate apps in the Google Play store - combined with the name of one of the JPEG files included in the package, it makes for a solid way to find all variants we've observed of this malware.
+
+Since IDS analysts of any stripe are unable to detect SMS messages being sent, we urge mobile providers to watch for these numbers and other related activity as best they can. We're providing Snort SID 23954 to look for patterns we've detected within the malicious APKs themselves, in case it can be blocked at the HTTP level during a download (depending upon the particular environment being protected).
+
+In the meantime, concerned users should be examining their Android antivirus solution for protection. While TrustGo claims that theirs is the only antivirius solution capable of detection, ClamAV detects this malicious app as Andr.Trojan.SMSZombie, and the recently released FireAMP mobile client will detect it as well. 
+
+Stay safe out there!
+

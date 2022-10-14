@@ -1,0 +1,437 @@
+
+Bitdefender researchers recently found 17 Google Play apps that, once installed, start hiding their presence on the user’s device and constantly display aggressive ads. While not malicious per se, the tactics they use to smuggle themselves into Google Play and dodge Google’s vetting system are traditionally associated with malware.
+
+
+
+Waiting
+48 hours before hiding their presence on the device, splitting the app’s code
+into multiple resource files, and holding off displaying ads until 4 hours after app installation are among
+the tactics these developers use to plant their apps onto Google Play.
+
+
+
+With
+over 550,000 downloads in total, the apps found have flown below the radar of
+Google’s vetting system mostly because they also delivered on their promise:
+they do what they say they do. 
+
+
+
+At
+the time of writing, Google has been notified and the reported apps are being
+taken offline.  
+
+
+
+The
+Promise of Adrenaline 
+
+
+
+The
+description for one of the apps analyzed involves enticing users with a racing
+simulator that also offers in-app payments for extra in-game features.
+
+
+
+While
+the gaming part works just fine, the app shows popup ads when the user is not
+playing the game and hides for some time following the installation. The ads
+are displayed at random time intervals, making it hard for users to recognize a
+pattern of when ads are shown. 
+
+
+
+
+
+
+
+
+
+
+
+Under
+the Hood
+
+
+
+The
+app comes with a second component found in an archive from the assets
+directory. Interestingly, the malicious code resides in the first component,
+the second one being the actual game code. The second dex (component) and the
+libraries used by the game are extracted from the archive identified in the
+assets directory. 
+
+
+
+In
+terms of registered receivers, the first one is for
+android.intent.action.BOOT_COMPLETED. When the broadcast is received, the app
+will begin an activity, which starts a job scheduler for showing ads.  The scheduled service starts after 10 minutes
+and shows an ad only once. The scheduler recreates itself by calling the method
+from the activity that created it initially, then starts again after 10
+minutes. 
+
+
+
+Another
+receiver the app registers is for android.intent.action.USER_PRESENT. Whenever
+the user unlocks the device, if at least 4 hours have passed since the app
+installed it, there is a chance an ad will show. That’s because the ad displays
+are programmed by generating a random number of less than 3 that is checked
+against a value. If the number generated is equal to the check number, an ad
+appears. Therefore, the probability of displaying ads is once every three times
+the user unlocks the phone. 
+
+
+
+Adware
+SDKs
+
+
+
+Users
+see multiple ads either in-game when pressing different buttons or even if not
+in the app. The frequency at which ads appear while in the game depends on a
+random value. In half the cases, there is a probability that when using some
+game functionalities, an ad pop ups.
+
+
+
+The
+ad-showing mechanisms are scattered around the application, within multiple
+activities, and using modified adware SDKs. The randomness of ad occurrences
+and display time intervals is modified by the developer to decrease the
+likelihood of users noticing any patterns.
+
+
+
+The
+adware SDK key identifiers are set in a config file within the assets directory
+and retrieved when showing ads. In the config file, there are parameters for
+customizing how often ad-displaying services should be recreated. The config
+file also contains a flag stating if the app should hide its presence on the
+device or not, a flag that is set to true by default.
+
+
+
+Fig. 1  “Hide icon” flag set to true 
+
+
+
+Some
+versions of the app have the “hide icon flag” under a different name:
+
+
+
+ Fig 2. Different name for “Hide Icon” flag 
+
+
+
+ Mechanisms
+for Dodging Google Play 
+
+
+
+One
+method for the app to dodge Google Play checks is by waiting 48 hours to hide.
+The code is also split in two dex files, making it difficult for security
+researchers to grasp the logic of the app. Another technique used is to
+manipulate the broadcast receiver for android.intent.action.USER_PRESENT to
+display ads only after 4 hours following installation.
+
+
+
+The
+app also comes with game-related .so files that are not used. These library
+files are common in Android games, as they provide fast graphics rendering on a
+mobile environment with limited resources. What is interesting here is that the
+game actually uses the other .so files found in an archive within the assets
+directory, despite already having them in the lib directory. This could be a
+mechanism intended to make the app give the impression of being an average
+game, while its main purpose is to aggressively display ads.
+
+
+
+Other
+Versions, Same Reviews
+
+
+
+In
+other versions, including versions that were at some point on Google Play,
+requests to the ad web sites also contain sensitive information about the user,
+such as phone model, IMEI, IP address, MAC address, and location information.
+Some apps have no second dex and have all the functionality in the initial one.
+
+
+
+
+Some
+users that have tried the apps left reviews that raised warning signs about the
+apps’ behavior. While some users were irked that they couldn’t even play the
+game because of full screen ads, other complained of battery drainage and
+accurately identified an app’s dubious hiding behavior after installation.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Fool
+me … 17 times
+
+
+
+The methods described above to dodge Google’s vetting system seem to have been put to good use, as Bitdefender researchers have identified 17 other apps that share the same practices. While the creators’ and applications’ names are different, they all share the same features in terms of hiding their existence and displaying ads.
+
+
+
+
+
+
+
+Stay
+Safe
+
+
+
+While
+the Google Play apps found are not tagged as malware, but more as Riskware,
+users are strongly encouraged to always have a security solution installed on
+their devices, as it can accurately identify these apps and prevent users from
+installing them. Whether downloaded from official or third-party marketplaces,
+a mobile security solution will keep users safe from malware, riskware, or other
+potentially malicious apps as well as phishing or fraudulent websites.
+
+
+
+Bitdefender
+identifies the found samples using the following detections: Android.Riskware.HiddenAds.HH,
+Android.Riskware.HiddenApp.AX, Android.Riskware.HiddenApp.HU.
+
+
+
+All
+found versions:
+
+
+
+75fd1658cd6cb56f9194dbb1aabadd64com.walllive.wallpaperlive   577cda66d8726e4a08840c78a093c133   
+  com.walllive.wallpaperlive
+  c67ec562bd0ad132eb035f36fd897333   
+  com.walllive.wallpaperlive
+  64a53d16d887a49192e5bbdc3c50495a   
+  com.ahau.qrcodeahau
+  30967bfb566795cce63c6ba4688953f3   
+  com.ahau.qrcodeahau
+  01497636a3eb58240ded25dc13b20836   
+  com.dailyapp.hinhnenhd
+  0eec8a0c529d1d28ffa098b7400da745   
+  com.dailyapp.hinhnenhd
+  16075e91f122c225d19c8b9e4abe5e90   
+  com.king.qrcode.barcode.uk
+  ffea0e7167b7426422e1bdb8053b338e   
+  com.calendar.ovulation.timer
+  14eb19b71b708be916ac5981fdb3478e   
+  com.dailyapp.hinhnenhd
+  65db221140f32f43514a7449abdea74a   
+  com.king.qrcode.barcode.uk
+  133f0f7726f067adc163558ffc211a57   
+  com.sdcard.filemanagernham
+  fbea116dc453f460dcdbe8658f6904bf   
+  com.sdcard.filemanagernham
+  6935df9ea6334e478a5fdc0dc54b2f5e   
+  com.king.qrcode.barcode.uk
+  94825120ab63ea35051e0c6215e57292   
+  com.livewapper.livewappernham
+  9f12a4b92280e73a8019ad0fcd0767ad   
+  com.calendar.ovulation.timer
+  0ce8f2d5429bf41992b08521faf00aa4   
+  com.livewapper.livewappernham
+  3d6cca1675db1e518694aff939f2eb9e   
+  com.livewapper.livewappernham
+  c91da7fb949f2665ca6a5ef56f881da6   
+  com.dailyapp.hinhnenhd
+  2f87caa40516e5c51444f31363349900   
+  com.tingrdoumanh.xily
+  04c9865ba8a7f9e2ebeb3dde4abeb8aa   
+  com.sdcard.filemanagernham
+  afdd1ec96fc2cc7e1f9e581143b6390f   
+  com.king.qrcode.barcode.uk
+  6f2017bf31b5557d9dbbc4b343beb4f0   
+  com.stream.streammorriorthien
+  1f67cdc2c32754975e4d010198685a69   
+  com.smartfile.smartfilemobile
+  496fc51fd0e08a46bc2bc304c0398175   
+  com.sdcard.filemanagernham
+  b0c09bc35c47e55fd425f307ff978aa4   
+  com.king.qrcode.barcode.uk
+  3430c8ebb5fe9b07bc6f53d85718f937   
+  com.dailyapp.hinhnenhd
+  d027a7c9b1d9f48466cc444b241d5040   
+  com.racing.car3dnham
+  13f656fbc27570a19f81472bf77c1af6   
+  com.smartmobile.tranferfilesmart
+  01fa5e94133bd0add8132dfca451d0b7   
+  com.stream.streammorriorthien
+  b3d9e60e27bf563e161fb37b0a4f291e   
+  com.weather.weatherapppirlo
+  8a13765c04cd2127af90078e2f7488c1   
+  com.racing.car3dnham
+  e5879256315957b2a77e23facea6b0aa   
+  com.stream.streammorriorthien
+  4c9507a2635085516d5cc01245762650   
+  com.dailyapp.hinhnenhd
+  4919d022e76c825fde52973401a7e5f4   
+  com.livewapper.livewappernham
+  5d7039c91782c3b13f9ad9ebb8198dac   
+  com.calendar.ovulation.timer
+  cb79eaabfd18429c76db8c9786773cfe   
+  com.king.qrcode.barcode.uk
+  e0e9f7aff0ed38406c50dd6b97d78c2c   
+  com.livewapper.livewappernham
+  d37baf314d582e6a5a7cb8f57d01e013   
+  com.sdcard.filemanagernham
+  dcdfcbdcc71333b0f89262c6b1b5cb70   
+  com.ahau.qrcodeahau
+  d087bab15572425fcabccc131a1d1b35   
+  com.tingrdoumanh.xily
+  419141d15e3a152147c954054b9a3d19   
+  com.stream.streammorriorthien
+  5aefbb39e60c722ede71ed3829bef1b1   
+  com.lives.wallpapperathien
+  b7403793bccb634aeefa548db903d35c   
+  com.weather.weatherapppirlo
+  ccdfe80d95b1442e64d3094f89a538f9   
+  com.ahau.qrcodeahau
+  55437c0261d683294b491f2c1b6cb6ba   
+  com.dailyapp.hinhnenhd
+  b5880a1f5dfee2039ff303aa765f4560   
+  com.king.qrcode.barcode.uk
+  40136fbc34306c0ffc1dd55e35bb5819   
+  com.livewapper.livewappernham
+  9c6f75ea9cdf7dbf7ff59c721f10a5eb   
+  com.calendar.ovulation.timer
+  7df3cfd784a7ab16152685d0a18f7b9c   
+  com.sdcard.filemanagernham
+  dd847c8f65a347dd959fac326f4a9f36   
+  com.stream.streammorriorthien
+  2789b7dff80967214264db7f8806b1fe   
+  com.at2.qrcodereaderat2020
+  1698c88584ff5f76d8b8551c6d43fb54   
+  com.at2.filemanagerat2020
+  82cd92b011dff773c886206baba0f6ec   
+  com.at2.wallpapperat2020
+  8bb95db44055d508e341eb7f8bf296a2   
+  com.ahau.qrcodeahau
+  0e3ae8d6680198351e61aa1c0b71fe98   
+  com.funkd.salondoctor
+  e46ff27ead1f32954268e7fed6bb24aa   
+  com.emerency.vanlopegames
+  5fa880af82079cab1245e2fd361919ad   
+  com.dailyapp.hinhnenhd
+  e3fe1a6b45625bdb27ad6b8dd14609f5   
+  com.sdcard.filemanagernham
+  8f8b90cd8e9e9a59bc905aed996c24bf   
+  com.checkup.mommygames
+  038d1f647f211cf5aad2485b1cbf68df   
+  com.livewapper.livewappernham
+  6a8e937ef3309d4408aa4fca60bf418e   
+  com.at2.filemanagerat2020
+  209ef095a9a21547709ec78811b3b6d9   
+  com.checkup.mommygames
+  9429361d98ba9a59e30f50fa4295eed0   
+  com.king.qrcode.barcode.uk
+  7d8262f651e4d8891128e03263f917fe   
+  com.calendar.ovulation.timer
+  59fcde6b9b629e30bc9ee6659785a357   
+  com.smartapp.vpnat2020
+  afaaf9b96bace39efd792c96853a7a79   
+  com.at2.wallpapperat2020
+  18d408f40ed312fdc6284381ce0ba93b   
+  com.at2.qrcodereaderat2020
+  379ae1aea09824c4ec4d133e485339b1   
+  com.at2.filemanagerat2020
+  3a9d03500bbb615d1ab63f03c1e6fff0   
+  com.at2.qrcodereaderat2020
+  a4bdd75c306838b164f853cc5a6eee94   
+  com.alerflash.missmobies
+  292ba0ee434e472ba3e11ac941da4411   
+  com.stream.streammorriorthien
+  9eb2e6837bd071a6611180c9bc4a7998   
+  com.ahau.qrcodeahau
+  982c61b96f6405521fe3e56c6854f4f9   
+  com.smartmobile.tranferfilesmart
+  5f1274aa5f8a5ca3e74533b773cf31b9   
+  com.dailyapp.hinhnenhd
+  b9d2227bc0d74179124191be89cb7a17   
+  com.wallledclock.digitalapps
+  0c6dff9890421dfbc2f1ec0228622518   
+  com.legendapp.qrcode20
+  c6174f804b2c0a79ae6aecef2d28b53f   
+  com.livewapper.livewappernham
+  12c8bd527d30e42cbec2c5acc81d05f9   
+  com.bigfish.clcbgames
+  1861ccc9a159675ae53c90981a80aad2   
+  com.emerency.vanlopegames
+  8f6d45293d1b87d06d3039fd4a4278ae   
+  com.bigfish.clcbgames
+  9eda1388d7a584e3107d9866a82df35c   
+  com.king.qrcode.barcode.uk
+  cc25a0fd2bb2f10a56de321ee9aebf64   
+  com.calendar.ovulation.timer
+  a0af52f538eb33cc4a36047f9b383362   
+  com.sdcard.filemanagernham
+  238d799c8ac62a71199126dfcf04bdd9   
+  com.legendapp.qrcode20
+  05e95ebc99ed9db1cbe2ee01051569a6   
+  com.stream.streammorriorthien
+  ee716886b9a3fe201825265d0e60e91c   
+  com.tonyfarm.smartviewfb
+  f9ff0977b4cc0c5c5785e3585630fbfc   
+  com.stream.streammorriorthien
+  681be70820a64b1cf7b6cde2f5c5e809   
+  com.sdcard.filemanagernham
+  5a38693cd123e036aee51ad4ed133783   
+  com.at2.qrcodereaderat2020
+  1250f1296c0e92112d554960d4f99710   
+  com.legendapp.qrcode20
+  2e11dd08a83cfb8c86372581eddf188c   
+  com.bigfish.clcbgames
+  80abde70e5f4d4dc7ace31586097e026   
+  com.legendapp.qrcode20
+  e739c7e31ab68a894862c751ddf9215f   
+  com.at2.wallpapperat2020 
+  154ac305937943be5971a938c8f5762b   
+  com.carracing3d.newcard
+  e85682656b447164eba3e00c7be65a5d   
+  com.carracing3d.newcard
+  
+
+
+
+
+
+
+
+Note:
+The information in this article was made available courtesy of Alexandra
+Bocereg, Junior Security Researcher, Bitdefender.

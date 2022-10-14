@@ -1,0 +1,215 @@
+Download the 32-bit or the 64-bit removal tools and find out if you’re infected with  Flamer, the world’s most discrete and dangerous piece of malware ever. If you are already protected by a Bitdefender security solution, you do not need to run the removal tool.
+Update 3:  Today we’ll present an overview of two info-stealer components that are bundled with FLAME: flask and jimmy. These components may also be started on other computers on the network if the infected PC manages to successfully exploit the MS10-061 bug (the very printer spooler exploit used by Stuxnet) . The attack across the network is orchestrated by the clanattack component.
+
+
+FLASK
+
+
+This module is an info-stealer that harvests every bit of information available on an infected system. We are not talking here about document theft, as there are other components in charge with this (such as JIMMY and BOOST), which will be described later.
+The binary component associated with FLASK is  rpcns4.ocx, that exports a single function only: RpcNsBindingInit. It is written in the same manner as the main module and features encrypted strings that are decrypted in DllEntry.
+Like the other FLAME modules, FLASK gets copied in the temporary folder of the infected machine under the name ~mso2a2.tmp.
+It records a wide range of information:
+Generic system information :
+
+local time
+list of volumes, their serial number and FileSystem name
+OS Version, Service Pack Number
+Computer Name
+the list of running processes
+a list of user-mode services and their state
+a list of applications from %AppData%
+Internet Explorer, Microsoft Outlook and Microsoft Word versions
+CodePage of the system (can be used for localization)
+entries from %Program Files% directory
+Time Zone Information
+
+Information related to networking:
+
+ information about Remote Desktop Services (if it’s enabled, the listening port and others) and Windows Firewall (if it’s enabled, firewall exceptions)
+open TCP/UDP Connections
+information about the interfaces : MAC Address, IP Address, Gateway Address,
+Primary WINS  Server Address, Secondary WINS Server Address, DHCP Server Address (if enabled), statistics about the transferred packets, in the case of WiFi adapters their PNP ID, the name of the adapter, subnet mask,
+IP routing information including persistent IP routing tables, IP Forward Table
+ list of DNS servers
+ the contents of %windir%\system32rivers\etc\hosts
+the SSIDs stored in registry
+domain information: the domain name to which the computer belongs, user account name, name of computer, group name, the Domain Controller Name
+the local hostname
+Dial-Up information
+Proxy Server list
+the links from “My Network Places”
+cached DNS data table
+ the list of visible network share names and their addresses
+names of files opened in Internet Explorer (from the URL cache)
+a list of printers to which the computer is connected
+the POP3 Server Name and SMTP Mail Address of the accounts used in MS Outlook
+information about disks(name, free space available, .. )
+cookies from yahoo.com
+Internet Explorer saved and protected data
+various data (mainly related to server addresses and passwords) grabbed from the Registry for the following programs:
+
+Inno Setup
+VNC
+PenguiNet
+RageWork File Manager
+NetServe FTP Client
+Jildi FTP Client
+Cyd FTP Client
+AceFTP 3 FreeWare
+Intersoft Secure Key Agent
+DameWare Nt Utilities
+Bitkinex 2.7
+SmartFTP
+VanDyke SecureCrt
+Ipswitch WS_FTP
+BulletProof Ftp Client
+CuteFTP
+FTP Explorer
+Robo Ftp
+SoftX.org FTP Client
+Mssh
+Emurasoft EmFTP
+Netx NetserverFtpClient
+Web Drive From South River Technologies
+WinScp2 (Martin Prikryl)
+TeamViewer
+RADMin
+
+if the victim has installed mobile telephone applications (Nokia PC Suite, Sony Ericson PC Suite), this information will be present
+Will also test if ipcsvnt32.dll is found in %windir%\system32, which may be another component
+
+
+Collected date is encrypted using RC4 and is finally encoded with a modified base64 algorithm.
+An interesting aspect is the large amount of information that this component retrieves from the compromised system. The malware authors probably want to build a “profile” of the victims (for instance, details like the visited websites can often reveal the victim’s habits and interests), so they can build up advanced spear phishing attacks.  It is also possible that, based on the initial information received, the Flask component was continually updated to retreive intelligence from other remote administration tools that are used by the targeted companies.
+
+
+JIMMY
+
+
+This component is designed for leaking data. Files to be leaked are the ones with the following extensions: *.doc, *.docx, *.xls, *.dwg, *.kml *.ppt, *.csv, *.txt, *.url, *.pub, *.rdp, *.ssh, *.ssh2, *.vsd, *.ora, *.eml.
+Please note that jimmy also leaks KML files (formats that are used to view geographic data in Google Earth). AutoDesk files (.dwg) which store three-dimensional layouts and plans are also leaked.
+Several directories are skipped if found: %windir%,  RECYCLER, $Recycle.Bin, %temp%, System Volume, %programfiles%, I386, Comodo.
+Text-based information is extracted from documents using IFilters. There are filters that can handle the most common file formats such as doc, ppt, pps, vsd, or dwg. Files that usually hold plain-text information are extracted as a whole.
+The content grabed is stored in dra52.tmp and then is compressed using the PPMd algorithm. The choice of PPMd is probably due to the fact because it has very good results compressing text.
+File search is stopped if one of the processes is started: Procexp.exe, AntiHook.exe, SpywareTerminator.Exe, SpywareTerminatorShield.Exe, jpf.exe, etc.
+This is a security precaution undertaken by the malware, as searching almost everywhere for files may trigger detection in some security solutions.
+Stay tuned for new updates on this espionage machinery!
+
+Update 2: As we’re digging into Flamer.A, new details about the piece’s modus operandi surface. The team working on it have uncovered that several components use an internal list called NetworkTypeIdentifier. This list references high-profile web sites such as *.overture.* , *.gmail.*, *.hotmail.* , *.bbc.co.* , *.bbc.co.* that are probed in order to get information about the bandwidth capabilities of the connection. However, the list also references three Iranian websites (*.baztab.* , *.maktoob.* , *.gawab.*) , which confirms once again that Iran was one of the designated targets.
+
+
+EUPHORIA
+
+
+Closer inspection of the EUPHORIA module revealed that it controls the spreading mechanism via USB sticks. The USB spreading capabilities are re-enforced with a secondary component called AUTORUN_INFECTOR that is being used to exploit the operating system’s Autorun feature.
+[fragment of the configuration file for the EUPHORIA module]
+EUPHORIA.PayloadNamesList.1.data.PayloadName           string  Lss.ocx
+EUPHORIA.PayloadNamesList.2.data.PayloadName           string  System32.dat
+EUPHORIA.PayloadNamesList.3.data.PayloadName           string  NtVolume.dat
+ 
+
+LUA script controlling the EUPHORIA component
+We have also identified that the JIMMY component is one of the modules that deal with  data leakage. Analysis revealed that the Flamer.A Trojan siphons any type of files, with a focus on documents, pictures and CAD files. Preliminary analysis also outlined that the MICROBE component is used to record audio and upload the captured audio streams to a remote location.
+[fragment  of the configuration file for the MICROBE module]
+MICROBE.DEFAULT_RATE                                dword   20000
+MICROBE.SAMPLING_RATE                               dword   32000
+MICROBE.MIN_ENERGY                                  dword   0
+MICROBE.SEGMENT_LENGTH_SECS                         dword   600
+MICROBE.RUN_MODE                                    dword   3
+ 
+Last, but not least, the GATOR component seems to be responsible with communication between the infected host and the C&C servers. Other components (FROG, FLASK, GADGET, MUNCH and SNACK) are currently under the microscope. We will update the article as we analyse the other modules.
+Update 1: We have just discovered that Trojan.Flamer.A comes with yet another controversial component, suggestively named SUICIDE. This component is used to automatically clean up the system when the appropriate command is issued by remote attackers. The SUICIDE module references more than 70 files (part of the Flamer framework) that should be wiped out from the system in order to deter any forensics analysis on the system. The referenced files are listed below:
+ SUICIDE.RESIDUAL_FILES.A string %temp%\~a28.tmp
+ SUICIDE.RESIDUAL_FILES.B string %temp%\~DFL542.tmp
+ SUICIDE.RESIDUAL_FILES.C string %temp%\~DFL543.tmp
+ SUICIDE.RESIDUAL_FILES.D string %temp%\~DFL544.tmp
+ SUICIDE.RESIDUAL_FILES.E string %temp%\~DFL545.tmp
+ SUICIDE.RESIDUAL_FILES.F string %temp%\~DFL546.tmp
+ SUICIDE.RESIDUAL_FILES.G string %temp%\~dra51.tmp
+ SUICIDE.RESIDUAL_FILES.H string %temp%\~dra52.tmp
+ SUICIDE.RESIDUAL_FILES.I string %temp%\~fghz.tmp
+ SUICIDE.RESIDUAL_FILES.J string %temp%\~rei524.tmp
+ SUICIDE.RESIDUAL_FILES.K string %temp%\~rei525.tmp
+ SUICIDE.RESIDUAL_FILES.L string %temp%\~TFL848.tmp
+ SUICIDE.RESIDUAL_FILES.M string %temp%\~TFL849.tmp
+ SUICIDE.RESIDUAL_FILES.N string %temp%\~ZFF042.tmp
+ SUICIDE.RESIDUAL_FILES.O string %temp%\GRb9M2.bat
+ SUICIDE.RESIDUAL_FILES.P string %temp%\indsvc32.ocx
+ SUICIDE.RESIDUAL_FILES.Q string %temp%\scaud32.exe
+ SUICIDE.RESIDUAL_FILES.R string %temp%\scsec32.exe
+ SUICIDE.RESIDUAL_FILES.S string %temp%\sdclt32.exe
+ SUICIDE.RESIDUAL_FILES.T string %temp%\sstab.dat
+ SUICIDE.RESIDUAL_FILES.U string %temp%\sstab15.dat
+ SUICIDE.RESIDUAL_FILES.V string %temp%\winrt32.dll
+ SUICIDE.RESIDUAL_FILES.W string %temp%\winrt32.ocx
+ SUICIDE.RESIDUAL_FILES.X string %temp%\wpab32.bat
+ SUICIDE.RESIDUAL_FILES.Z string %windir%\system32\commgr32.dll
+ SUICIDE.RESIDUAL_FILES.A1 string %windir%\system32\comspol32.dll
+ SUICIDE.RESIDUAL_FILES.A2 string %windir%\system32\comspol32.ocx
+ SUICIDE.RESIDUAL_FILES.A3 string %windir%\system32\indsvc32.dll
+ SUICIDE.RESIDUAL_FILES.A4 string %windir%\system32\indsvc32.ocx
+ SUICIDE.RESIDUAL_FILES.A5 string %windir%\system32\modevga.com
+ SUICIDE.RESIDUAL_FILES.A6 string %windir%\system32\mssui.drv
+ SUICIDE.RESIDUAL_FILES.A7 string %windir%\system32\scaud32.exe
+ SUICIDE.RESIDUAL_FILES.A8 string %windir%\system32\sdclt32.exe
+ SUICIDE.RESIDUAL_FILES.A9 string %windir%\system32\watchxb.sys
+ SUICIDE.RESIDUAL_FILES.A10 string %windir%\system32\winconf32.ocx
+ SUICIDE.RESIDUAL_FILES.A11 string %COMMONPROGRAMFILES%\Microsoft Shared\MSSecurityMgr\rccache.dat
+ SUICIDE.RESIDUAL_FILES.A12 string %windir%\system32\mssvc32.ocx
+ SUICIDE.RESIDUAL_FILES.A13 string %COMMONPROGRAMFILES%\Microsoft Shared\MSSecurityMgrstrlog.dat
+ SUICIDE.RESIDUAL_FILES.A14 string %COMMONPROGRAMFILES%\Microsoft Shared\MSAudiostrlog.dat
+ SUICIDE.RESIDUAL_FILES.A15 string %COMMONPROGRAMFILES%\Microsoft Shared\MSSecurityMgrstrlogh.dat
+ SUICIDE.RESIDUAL_FILES.A16 string %COMMONPROGRAMFILES%\Microsoft Shared\MSAudiostrlogh.dat
+ SUICIDE.RESIDUAL_FILES.A17 string %SYSTEMROOT%\Temp\~8C5FF6C.tmp
+ SUICIDE.RESIDUAL_FILES.A18 string %windir%\system32\sstab0.dat
+ SUICIDE.RESIDUAL_FILES.A19 string %windir%\system32\sstab1.dat
+ SUICIDE.RESIDUAL_FILES.A20 string %windir%\system32\sstab2.dat
+ SUICIDE.RESIDUAL_FILES.A21 string %windir%\system32\sstab3.dat
+ SUICIDE.RESIDUAL_FILES.A22 string %windir%\system32\sstab4.dat
+ SUICIDE.RESIDUAL_FILES.A23 string %windir%\system32\sstab5.dat
+ SUICIDE.RESIDUAL_FILES.A24 string %windir%\system32\sstab6.dat
+ SUICIDE.RESIDUAL_FILES.A25 string %windir%\system32\sstab7.dat
+ SUICIDE.RESIDUAL_FILES.A26 string %windir%\system32\sstab8.dat
+ SUICIDE.RESIDUAL_FILES.A27 string %windir%\system32\sstab9.dat
+ SUICIDE.RESIDUAL_FILES.A28 string %windir%\system32\sstab10.dat
+ SUICIDE.RESIDUAL_FILES.A29 string %windir%\system32\sstab.dat
+ SUICIDE.RESIDUAL_FILES.B1 string %temp%\~HLV751.tmp
+ SUICIDE.RESIDUAL_FILES.B2 string %temp%\~KWI988.tmp
+ SUICIDE.RESIDUAL_FILES.B3 string %temp%\~KWI989.tmp
+ SUICIDE.RESIDUAL_FILES.B4 string %temp%\~HLV084.tmp
+ SUICIDE.RESIDUAL_FILES.B5 string %temp%\~HLV294.tmp
+ SUICIDE.RESIDUAL_FILES.B6 string %temp%\~HLV927.tmp
+ SUICIDE.RESIDUAL_FILES.B7 string %temp%\~HLV473.tmp
+ SUICIDE.RESIDUAL_FILES.B8 string %windir%\system32teps32.ocx
+ SUICIDE.RESIDUAL_FILES.B9 string %windir%\system32\advnetcfg.ocx
+ SUICIDE.RESIDUAL_FILES.B10 string %windir%\system32\ccalc32.sys
+ SUICIDE.RESIDUAL_FILES.B11 string %windir%\system32\boot32drv.sys
+ SUICIDE.RESIDUAL_FILES.B12 string %windir%\system32\soapr32.ocx
+ SUICIDE.RESIDUAL_FILES.B13 string %temp%\~rf288.tmp
+ SUICIDE.RESIDUAL_FILES.B14 string %temp%\~dra53.tmp
+ SUICIDE.RESIDUAL_FILES.B15 string %systemroot%\system32\msglu32.ocx
+ 
+The discovery of Stuxnet back in 2010 sparked intense debate on the state of security in cyber-space. But, even though Stuxnet has been successfully identified, isolated and dealt with, its predecessor (and companion, as well) has managed to remain undetected all this time by employing stunning tactics that likely make it the most advanced e-threat in the world to date.
+When state-of-the-art malware detection works against intelligence gathering
+This new e-threat, identified by Bitdefender as Trojan.Flamer.A appears to have emerged before Stuxnet and Duqu hit. All this time, it has operated discreetly, and even if it some of its components were detected when Stuxnet was discovered, the AV industry couldn’t see how deep the operation ran.
+On average, between 15,000 and 35,000 unique malware samples appear daily, which makes manual analysis or individual identification technically unfeasible. Most antivirus vendors rely on generic detections and heuristics to cover as much as possible of this malicious pool. Subsequently, the features Flamer.A shared with Stuxnet made antivirus products detect it as a generic Stuxnet sample. This, along with some other technical features allowed it stay hidden, although its operation was impacted.
+At a glance, the Flamer.A Trojan appears much more advanced than Stuxnet. This complex and flexible piece of malware was built using a variety of technologies ranging from LUA scripting to assembly language. Its modular structure makes it extremely flexible and apparently able to carry out any task for its attackers.
+The Flamer Trojan includes a spying component, called nteps32.ocx. This component, named REAR_WINDOW has an earlier version called comspol32.ocx that has definitely been around since the end of 2010 and is well detected by antivirus vendors with miscellaneous signatures.
+Bitdefender also managed to isolate a new component called atmpsvcn.ocx that dates approximately in October 2010 and that is also detected as Stuxnet. Its purpose is unknown yet, as it is pending analysis, but preliminary data point to it being used for USB drive spreading and detection of AV solutions installed on the PC.
+We mentioned that Flamer.A makes heavy use of LUA scripts. Bitdefender identified 62 such scripts used by the malware to control everything, from loading the OCX modules to regulating data exchange between these components. Among others, these highly specialized LUA modules can circumvent some antivirus solutions, control the theft of information from the infected PC or download new malicious components as they get updated. Combined, these LUA scripts are built of more than 6500 lines of code.
+
+Fig. 1: Core LUA scripts copied on the USB drive
+SSL encryption working against the user
+If encrypting data as it gets sent over the web is usually beneficial for the user, Flamer.A uses it against them. The infected PCs connect to an array of servers to which they send encrypted data over HTTPS.  The data packages we intercepted and decrypted were buffers of about 100 kilobytes that apparently carry files with various sizes. The one we intercepted was 108.116 bytes and was encrypted with the “LifeStyle2” password, but using a currently unknown algorithm. This might be either a file leaked from the infected PC or an activity log file sent to the C&C. It also appears that the file was sent by the leak_app.lua script.
+
+Fig. 2: Decrypted traffic sent over HTTPS
+The other C&C servers we tested during the preliminary analysis (quick-net.info, smart-access.net, traffic-spot.biz and traffic-spot.com) now respond with “404: Not Found”, which probably means that the group behind their operation is shutting down the business or switching to newer servers.
+Designed to leak files  via USB in isolated systems
+Although the Flamer.A Trojan is not concealed by a rootkit, it uses a series of tricks to stay hidden and stealthily export stolen data. One of the its most amazing stunts is the creation of a file on the USB stick simply named “.” (dot).
+
+Fig. 3: FAT root directory listing
+Even if the short name for this file is HUB001.DAT, the long name is set to “.”, which is interpreted by Windows as the current directory. This makes the OS unable to read the contents of the file or even display it.
+A closer look inside the file reveals that it is encrypted with a substitution algorithm. Once decrypted, the contents reveal a SQL schema containing the activity of the malware on the infected system, such as Core LUA components with attributes such as ‘SPREADABLE’, a log of leaked files, as well as an event log detailing the activity of every single LUA module.
+
+Fig. 4: SQL Schema dumped on the USB drive
+This logging activity, apparently controlled by the Euphoria LUA module, is likely related to data theft from systems that are not connected to the Internet in any way. Since most sensitive targets operate in isolated environments where data can’t be leaked out via a connection to the Internet, the malware dumps this SQL schema on the USB drive, and will probably send it to the attackers when the disk is plugged into a computer with access to the internet.

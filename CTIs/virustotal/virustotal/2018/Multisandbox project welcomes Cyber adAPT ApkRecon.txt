@@ -1,0 +1,51 @@
+
+
+
+Two weeks ago we announced the release of our new VirusTotal Droidy Android sandbox, a virtual environment that executes Android applications in an automated fashion in order to capture all the actions that the given app performs on the operating system.
+
+Today we are excited to announce that Cyber adAPT is becoming a multisandbox project partner and will be contributing data from its ApkRecon product to the fight against malware. Like Droidy, its solution also focuses on the Android environment. In their own words:
+
+
+
+ApkRecon is a sandbox environment developed by the research team at Cyber adAPT.  Amongst many features, the sandbox boasts a baited Android environment, a decrypted network application level capture, and an attack payload triggering system to gain insight into the true intent of each piece of analyzed malware. ApkRecon is also used to generate detection logic for Cyber adAPT’s Mobile Threat Detection product to keep users safe all around the world.
+
+
+
+These are some example reports displaying the data contributed by Cyber adAPT:
+
+https://www.virustotal.com/#/file/9442fa6e49ffcce01f258b8170cb9ca594fdf7e1f522aa342cc027b642529b88/behavior
+
+https://www.virustotal.com/#/file/554fdf5a7062cdba258fceed217cc7e9098923e64339d34d06973453a41805d5/behavior
+
+https://www.virustotal.com/#/file/19a0d109d51581a07db2932d5481afdc119cc51dc9f2bac221c6d37fff4d72c5/behavior
+
+https://www.virustotal.com/#/file/ee1bd3309054d8c49ada1e78af811999df63d558ed215e211800226de4fa1e25/behavior
+
+It is worth highlighting the usefulness of this kind of data. When facing unknown files for which you have no context it can be very rich contextual information that allows analysts to have an initial judgement of the file before diving into dissecting it. For example, looking at the last example report above we notice that the file performs an HTTP POST to:
+
+hxxp://85.206.166.7/index.php?action=command
+
+This is a URL that we can look up in VirusTotal Graph and jump to the host referenced in the URL, i.e. 85.206.166.7. When exploring this host we notice that only the file under consideration has communicated with it, however, we do notice that expansions are available according to the referrer files relationship. This relationship pinpoints files that contain the given host within its body, even if they have not been seen communicating with it. Let’s follow this notion, something shady seems to be going on:
+
+
+
+Badness is much easier to spot when studying the sample characterised in this other report:
+
+https://www.virustotal.com/#/file/19a0d109d51581a07db2932d5481afdc119cc51dc9f2bac221c6d37fff4d72c5/behavior
+
+In this case the APK reaches out to the URL:
+
+hxxp://zzwx.ru/apkfff?keyword=BBM
+
+From there we can jump to the domain entity, i.e. zzwx.ru, and expand URLs observed under such domain, as well as files communicating with it. Just two hops and we already have a preliminary idea about the initial APK that reached out to the aforementioned URL being malicious:
+
+
+
+These examples highlight the importance of extracting as many attributes and behavioral details as possible from files, not only because they allow us to better understand a particular threat, but because they connect the dots and reveal entire campaigns. For instance, very often blocking a given network location will render ineffective all malware variants of a given campaign (inability to reach the mothership server), so even when certain variants fly under detection radars, there is still hope that network security measures will stop a given attack. 
+This kind of approach to block badness is something that we have shaped into a particular paper hosted in our www.virustotal.com/learn space, more specifically the paper entitled VirusTotal Intelligence for banking trojans. In this paper malicious network infrastructure is shut down by contacting the pertinent domain registrars and hosting providers, however, organizations can also blacklist these locations in their network security controls. 
+
+
+Email ThisBlogThis!Share to TwitterShare to Facebook
+
+
+

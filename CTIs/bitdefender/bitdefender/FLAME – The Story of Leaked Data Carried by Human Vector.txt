@@ -1,0 +1,55 @@
+Earlier this week, we published a review of some of the Flamer components that rank it amongst the fiercest tools of data syphoning in the world. We already discussed about its ability to leak documents and large amounts of data from the affected system. However, as this piece of malware has been designed to spy on computers located in industrial environments, the attackers expected to that the malware would encounter some restrictions and security policies enforced at the protected network perimeter.
+In order to circumvent these shortcomings, the attackers needed to employ a range of tricks that would allow them to “fly under the radar” of any security solutions. Since most security solutions have multiple mechanisms to protect themselves, attacking them was not an answer – the malware rather chooses not to “disturb” these security solutions.
+Except for the strings, the code features no encryption or obfuscation, but the encrypted strings can be hardly told apart from data. The code is written very cleanly, with no anti-debug or anti-reverse techniques set in place. It is also compiled using standard compilers. Files are huge, very uncommon for classical malware that usually tries to stay small as possible. So everything is designed to look as legit as possible. Also certain type of attacks like JIMMY and FLASK described in the previous article are not launched anymore if some security programs exist on the machine. Besides that, the espionage machinery is moving slowly and has lots of delays, which makes it hard to be noticed.
+Smuggling data from protected to exposed environments
+ 
+Even if the infection sets everything in place for massive document theft, there also must be a way for all that data to arrive to C&C servers. This would be extremely easy for computers which have internet access if the C&Cs are reachable while Flame is sending data over HTTPS. But this gets tricky if the breached environment has no internet connection (for instance, because the network may be protected and it is completely disconnected from the outside world).
+Flame creates a covert channel between computers in the protected environment and computers from outside the perimeter that have internet connection. The main idea behind this is something that we have not seen before: the “information mule” is a person who is used to carry information between two systems. Information is stored on a memory stick that a user may insert in an infected computer. Actually, the memory stick is piggy-backing the malware database.
+As we briefly described in our first post about FLAME, the file created on the memory stick is named ‘.’ (dot) and the short file name associated with this file entry is HUB001.DAT. The peculiarity is that one can’t normally create a file named ‘.’ with Windows API. To achieve this, malware is doing a RAW write on the FAT directory entry.
+The dot filename is ignored by Windows Explorer because is interpreted as “the current directory”, so it won’t be visible.  Only the used space in the filesystem is visible to Windows. So what we have here is a little hack/exploit performed on how the operating system is interpreting file names.
+Typing in the “dir /a” command in cmd.exe will reveal the file entry, but it still can’t be accessed until the FAT directory entry is manually modified.
+
+Fig. 1: Directory listing – ‘.’ file created on the memory stick.
+The hidden file contained on the memory stick is an encrypted SQLite database. The decryption algorithm is based on substitutions.
+The database holds six tables:
+
+AppTable
+Configuration
+EventLog
+EventLogParams
+StorageProducts
+StorageMetaData
+
+AppTable contains nine LUA applications: MAIN_APP, EVENT_WRITER, BASIC_INFO, EUPHORIA_APP, GET_CMD, LEAK_APP, PAYLOAD_LOGGER, POST_CMD, STORAGE_MANAGER. These are the core, fundamental LUA applications of the malware.
+The offline update mechanism
+ 
+Flame would also check if the versions of the nine LUA modules from the memory stick are different compared to the ones it is currently running. If so, it synchronizes the versions so the newest is kept. Components with the DELETED attribute could also exist. If this attribute is set to true, both components (the one that exists in the database from the stick and the one on the current computer) will be inactive.
+This way the malware achieves something extremely interesting: it is updating itself in an environment that is not connected to internet by synchronizing its file versions with files on USB media that had been plugged into an affected system with access to the Internet.
+After synchronizing the applications, main_app starts all the enumerated applications.
+The Configuration table contains state variables of the malware. These variables include the ID of the media used to spread information, as well as the maximum limit of the log size that is saved.
+The EventLog table stores all messages from all modules that used this database. Please note that this database resides on the memory stick and that it contains contain logs from all the infected computers that ever mounted this stick. Therefore, this database could be shared by multiple FLAME instances, each instance being able to deal with data from there.
+
+Fig. 2: Everything is logged on file
+The EventLogParams contains all parameters for a message that we have in EventLog table. Even errors, exceptions are logged here with all the information for debugging.
+Prioritization is paramount
+ 
+StorageProducts holds leaked data. The term Product is used for leaked documents, something that I find interesting. If there is no more room in the database, there is a priority attribute, called Grade. Entries that are lower than the grade of the currently leaked document will be deleted from the database . Grades are given based on importance of the file. The following extensions are considered most important: docx, doc, pptx, ppt, pps, xlsx, xls. The middle range is made of  dwg (CAD files), and at the end, the least important are the jpeg files. There are several file types in between. This way, if the database is full with leaked pictures and the victim happens to receive new documents, pictures are deleted at once to make room for the important data.
+These files are harvested by the BOOST component, which leaks whole files. Unlike BOOST, the JIMMY component leaks documents in a different way (as described in the previous blog post).
+This table also contains files from other info-stealer modules like Flask or Jimmy.
+StorageMetaData entries contain metadata for leaked information. That includes the name of the plugin that leaked the information, what type of information it leaked, and even the file path if the entry is a leaked file.
+LEAK_APP is one of the nine core LUA components and it is responsible for transferring stolen data from Flame to the memory stick and from there to Flame instances on PCs with internet-access.
+Penetrating the isolated environments
+ 
+We define a restricted environment as a network that is of much interest to the attacker and that is protected, as in ‘has no connection to internet or to a C&C controlled by the attacker’.
+
+Fig. 3 : The human user acts as information vector between environments
+If Flame runs in a restricted environment, data is still collected, malware plugins are running on the system and probably on other systems from the internal network where malware could spread, as well. Documents, network information, audio recordings – nearly everything – is collected and stored by Flame locally, on the affected system.
+If a memory stick is inserted into a system described above, Flame reads the hidden database (the hidden dot file). If it doesn’t exist, it will be created with default values. EventLogParams contains the evidence that this device had visited the current system because the IP address, the computer name, and media ID are stored in the hidden db.
+If it does exist, EventLog and EventLogParam table are queried. Malware then looks for a message that is written there by a computer that can achieve connectivity with the C&C. If it finds that message, then it begins to store leaked documents in the hidden database
+Flame: Self-aware and self-sufficient
+ 
+What is of particular importance here is that Flame won’t store leaked documents until it is sure that that specific memory stick had been plugged into a system with internet access or – to be more precise – a system that succeeded in contacting the C&C servers. It knows that for sure from the EventLog and EventLogParams tables, since everything is logged. Why it behaves this way, one might wonder. Because this is how it ensures that it has the best chances to call back home and send leaked data to the attacker.
+When the USB stick is plugged into the computer with internet access, Flame decides to read the database from the memory stick and grab all the leaked documents, if there is any. Then it makes room on the memory stick by cleaning up the database of all the documents that were successfully grabbed. Later, data will be sent over HTTPS in a compressed form.
+Another important aspect is the fact that we assumed that both computers are infected with Flame. This is not necessary a prerequisite, because Flamer can use its worm capabilities against the targeted system, in order to infect a PC with internet access when the memory stick is plugged into it. However, it appears that this worm capability is inactive. This is somehow obvious because Flame has to control the spreading mechanism for this espionage machinery and ensure that it remains hidden. Given the complexity of this e-threat, an attacker would not want to lose control of the situation.
+So, how is the memory stick carried between the two systems? Well, here is where the human factor kicks in. So it’s amazing how two instances of Flame communicate with one another using a memory stick and a human as a channel. A private channel is created between two machines and the person carrying the memory stick has no idea that he/she is actually contributing to the data leak. Of course this operation could also be achieved by a man inside – a mole who intentionally carries the stick from the restricted network that is being spied on to a system with internet access.
+Download the 32-bit or the 64-bit removal tools and find out if you’re infected with  Flamer, the world’s most discrete and dangerous piece of malware ever. If you are already protected by a Bitdefender security solution, you do not need to run the removal tool.

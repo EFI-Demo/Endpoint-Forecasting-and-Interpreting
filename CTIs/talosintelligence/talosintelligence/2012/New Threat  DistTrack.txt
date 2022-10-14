@@ -1,0 +1,23 @@
+
+ Sourcefire is aware of at least one ongoing incident in the energy vertical involving a threat named "DistTrack".  This is a new, destructive threat that has not perviously been seen in the wild.  At this time, the earliest known sightings were on 8/14.  Preliminary indications are that this malware is currently targetted in nature as no wide-spread activity has been detected.
+
+This threat involves several files that perform different functions.  The core of the malware set is a 32-bit executable named trksvr.exe and is internally identified as "Distributed Link Tracking Server".  This file purports to be from Microsoft Corporation with a version number of 5.2.3790.0.  This file is responsible for dropping additional files involved in the malware set.  In some cases this file has been reported as str.exe.
+
+The trkssvr.exe file drops three files: a reporter executable, a data destruction executable and 64-bit executable, also named tsksvr.exe that runs as a service.  The reporter executable is responsible for communicating with a C&C server.  An interesting part of this executable is that its hard-coded with the C&C address in the .rdata block, as well as a URL for communicating.  The URL in .rdata is /ajax_modal/modal/data.asp and the construct for reporting is http://%s%s?%s=%s&%s=%s&state=%d (you'll see the parameter names mydata and uid as separate unicode strings in .rdata as well).  While communicating with the C&C server, it uses "you" as the user-agent string.  The request appears on the wire as:
+
+GET /ajax_modal/modal/data.asp?mydata=AA==&uid=aaa.bbb.ccc.ddd&state=3067203 HTTP/1.0User-Agent: you
+
+The danger from this malware comes from the data destruction component.  In short, this application does not pull any punches.  Four hours after infection, it overwrites data files with a portion of a jpeg file, targetting files in "Documents and Settings", "Users", "Windows\System32\Drivers and "Windows\System32\Config".  Once this is done the file overwrites the MBR of the machine, rendering it unable to boot.  Any analysis of this malware should occur only on virtual machines or on computers you are ready to completely rebuild.
+
+Analysis of this threat and its behavior in the wild are ongoing.  Detection for these threats is already in place for FireAMP, Snort and ClamAV.  In IPS mode, Snort will prevent contact with the command and control server and identify infected hosts.  Protection is provided by ClamAV and FireAMP.  Additionally, FireAMP's Threat Root Cause and quarantining capability will provide additional incident response and mitigation capability.  Here is a list of currently available detection:
+
+FireAMP : W32.Distrack.AP
+ClamAV : Win.Trojan.DistTrack
+ClamAV : Win.Trojan.DistTrack-1
+Snort: BOTNET-CNC Win.Trojan.DistTrack command and control traffic (23893)
+Snort: BLOCKLIST User-Agent known malicious user agent - you", (23903)
+
+Additional detection will be released as analysis and research generate further actionable data.
+
+You know, it isn't often that we can say something is targeted and also talk about a widely distributed, devastating payload like this one.  While all the facts aren't yet available, someone somewhere made a very interesting decision.
+

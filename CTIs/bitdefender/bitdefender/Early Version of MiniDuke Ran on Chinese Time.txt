@@ -1,0 +1,23 @@
+Bitdefender antimalware researchers have come across samples of a previously-unrecognized version of the MiniDuke virus which, as it turns out, was active as early as May 2012 – and it wants to know what time it is in China.
+A new sample of the ~20KB MiniDuke backdoor shows (in its header) a compile time of  21st of May 2012.
+Previously known variants show a compile time of 20th of February, 2013.The sample was first detected and added to the Bitdefender malware database on 26th of May 2012. In conclusion, the file can be confidently dated to May 2012 or earlier.
+The 2012 sample uses a different installation mode – it is hosted in an executable file as an embedded .dll. 
+The .dll is packed with the same packer as later variants and the code itself is similar. The .exe file drops the .dll, under the name of tempfile.dat and loads it using rundll32. exe
+Then the virus adds itself to the registry under the key
+Software\Microsoft\Windows NT\CurrentVersion\Winlogon, shell entry:
+Unlike the February 2013 samples, it sets an environment variable which contains the path towards the malware. The path where it is stored is identical to the other variants: C:\Documents and Settings\All Users\ and possibly one of the “Application Data” or “Microsoft” subdirectories (picked at random).
+The environment variable name can be one of the values :
+APPINIT, DATA, PATHDATA, PROGRAM, USERINIT, SPEC, LOCALAPP, SYSTEMAPP, SYSTEMPATH, APPFOLDER, SESSION, etc. (as shown below).
+The .dll copied in the temp path has one of the names: ntuser.dat, registry.dat, index.db, profile.dat, sysdata.dat, config.dat, sysini.dat, bootstat.dat … (see above). By contrast, samples from 2013 concatenate several string chunks, picking from: 
+“base, user, reg, index, profile, system, data, config, init, boot, stat, cache, class, setup, network.. etc”
+and gets run using a .lnk file added to Startup.
+A very interesting detail:
+the virus accesses http://www.time-server.org/get_time.php?country=China which returns the current time and date in China! If an Internet connection is not present, the system time is used (connection is retried twice every 10 minutes.Although it requests date and time values for China, the malware seems to use only the date(y/m/d), not the time of day.
+The time user agent for contacting Google is:
+“User-Agent: Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.1; Trident/5.0)”
+while other variants used different user agents.
+Analysis is ongoing but so far it appears that otherwise this sample behaves the same as later ones.
+The payload files which are downloaded (.gif) are decrypted and saved under one of the names:
+“winupdt.exe wcsntfy.exe netmngr.exe dumpreport.exe taskhosts.exe wupdmngr.exe winhlp.exe dllhosts.exe dxdiagupd.exe dialers.exe netschd.exe connwiz.exe certupdt.exe repfault.exe wuapreport.exe lanmgr.exe”
+and is then run with WinExec() if it is an .exe or loaded using LoadLibrary() if it’s a .dll.
+Bitdefender antivirus software detects and removes all known variants of MiniDuke. A free stand-alone removal tool is available: [download id=”3800″].

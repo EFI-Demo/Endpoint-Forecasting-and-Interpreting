@@ -1,0 +1,189 @@
+
+
+
+
+By Nick Biasini and Edmund Brumaghin.
+
+
+
+Executive Summary
+
+With the U.S. presidential primaries just around the corner, even malware authors can't help but get behind the frenzy. Cisco Talos recently discovered several malware distribution campaigns where the adversaries were utilizing the names and likenesses of several prominent political figures, chief among them U.S. President Donald Trump. We discovered a series of ransomware, screenlockers, remote access trojans (RATs) and other malicious applications that play off of Trump's likeness, as well as former presidential candidate Hillary Clinton. 
+
+Some of the applications are designed to coerce victims into paying ransom demands, while others could be used to gain backdoor access to systems and provide attackers the ability to operate within organizational networks. In many cases, it is clear that the authors of these applications were motivated by their political beliefs, which were reflected in the software that they created. In this post, we'll analyze several of these examples and provide a look at the types of malware they deployed.
+
+There is a wide array of threats that adversaries are willing to deliver through any means necessary, including leveraging political themes and overtones. This is one of the reasons why organizations need to be diligent in protecting their environments through various technologies, applying best practices, and taking a thorough defense-in-depth approach when implementing various security controls. Additionally, ensure you have an employee information security education program that exposes users to the variety of lures that can be leveraged by adversaries to deliver these threats.
+
+
+Initial malspam campaign
+
+Research into these campaigns originally began with a malspam campaign that attempted to deliver malware to victims. The emails associated with this campaign purport to be related to banking fraud and are made to appear as if they were sent by the director of Global Risk for credit card company Visa. Below is an example of one of these emails:
+
+
+Compressed archives are attached to these emails containing RTF files. The RTF files contain information related to fraud prevention.
+
+
+When opened, the RTF documents are responsible for retrieving a malicious PE32 executable from an attacker-controlled server using Dynamic Data Exchange (DDE). In this particular case, the executable is called "trump.exe."
+
+
+The PE32 is then executed, initiating an infection process that is related to the campaign described in detail here. 
+
+
+Political rabbit hole
+
+Pivoting off of these campaign, we began to look for other IOCs that utilized political references. We developed a list of various names, terminology and iconography that has generated headlines across the political spectrum over the past few years. We then began a search throughout various malware repositories and discovered that not only were political names and iconography surprisingly common, but the results produced a wide variety of threats and was almost a microcosm of what we see on the threat landscape daily. Several examples were even indicative of potential nation-state malware distribution campaigns. We found so much malicious activity that we are going to break several examples down by category and mention a couple of key examples of each type of threat. This isn't designed to be a composite look at the political malware landscape, but an indication of how wide and deep it could potentially be.
+
+
+Fake ransomware/screenlockers
+
+During our analysis of samples obtained from various malware repositories, we discovered several examples of fake ransomware and screenlockers that featured iconography related to prominent political figures, such as Donald Trump. These samples didn't always encrypt the data properly or at all, but nonetheless, they could lead users to believe that their data was lost. Victims could also be tricked into paying a ransom demand in an attempt to regain access to their data, generating revenue for attackers. Below is an example of one of the Donald Trump themed ransomware variants we encountered.
+
+
+In this particular example, the sample produced several errors when executed and, after some work to fix various issues, it appeared to start encrypting the files. However, it was preceded by a negative number and did not, based on an analysis of the system, encrypt anything. It's not uncommon to find a large number of various types of "ransomware" or screenlocker malware.
+
+As we continued to dig through samples we encountered other, politically themed, locker malware along the way, this time with a Russian twist.
+
+
+As you can see, this is a screenlocker themed around Russian President Vladimir Putin, titled "Putin Lockware 2.0." As with most screenlockers, the malware simply removes the icons, taskbar, and task manager on the victim machine and displays the application window displayed above in full-screen mode. These steps are performed in an attempt to make exiting the application difficult for victims and maximizes the likelihood of a successful ransom payment.
+
+
+It then directs the user to communicate with the adversary through some means, in this example email, at which point they will demand money to provide the code to "unlock" the screen.
+
+The final locker that we found was yet another Trump-themed locker. This one required the user to take explicit action, in this case, clicking a button displayed in the application window. When executed, the user is presented with the following lock screen.
+
+
+After the user attempts to click the close button, the background changes again to:
+
+
+Finally, the user is presented with the final lock screen, called the "Donald Trump Screen of Death," implying the system has been locked by the president.
+
+
+There are two things that stand out here. First is the fact the adversary didn't provide the user with a way to remove the locker malware and therefore has no avenue of monetization. The other is that if you clicked on the screen, the locker was removed, and the system appeared to operate normally. Below is a quick animation of the full process.
+
+
+
+Remote access trojans
+
+While we were hunting through this data we came across multiple different, politically themed RAT campaigns. Among those that we saw delivered were Neshta, which utilized a theme around North Korean leader Kim Jong Un. Additionally, we found an NjRAT campaign that delivered an unusual decoy image. This same image was used as the icon for the executable, aptly named "Papa-Putin.exe."
+
+
+Finally, we came across a RAT that was being delivered via a Word document titled "12 things Trump should know about North Korea.doc." At first, the document appeared to not function properly, as it took several minutes for the document to open on an analysis system. After further investigation, it was determined the slow opening was related to the executable and DLLs that were being reconstructed from data present within the document itself, which finally opened, revealing the following document.
+
+
+It appears that the malware being delivered was Konni RAT, which we discovered in 2017.
+
+Malicious Excel spreadsheets were also being used as lure documents. We identified the following spreadsheet containing an embedded SWF file that was being used to infect systems with ROKRAT.
+
+
+Another Excel spreadsheet titled "Trump_administration_economic_indicators_on_China_investments.xls" contained malicious macros responsible for infecting systems with PoisonIvy, a RAT that has been leveraged by various adversaries, including well-resourced cyber espionage groups in the past.
+
+
+
+
+Crypters/Packers
+
+We also discovered a crypter featuring iconography associated with Trump. Crypters are commonly used to attempt to evade antivirus detection by encrypting or otherwise obfuscating the malicious code associated with malware binaries. Below is a screenshot of "Trump Crypter."
+
+
+
+
+Process injectors/Malware loaders
+
+In addition to the various crypters we found along the way, we also encountered several injectors and loaders. The injectors we found referenced both former President Barack Obama and Putin. Both provided the same basic functionality of injecting code into processes to help obfuscate the nature of the malicious activity. Below are a couple of screen captures of the injectors with expected features allowing the code to be injected.
+
+
+
+
+
+Finally, encountered another Putin-themed piece of malware, which in this instance, was a loader. These loaders, not be confused with malware loaders like Brushaloader, Jasperloader, and Divergent, are used to obfuscate code and are similar to the Heaven's Gate loader we wrote about earlier this year.
+
+
+
+
+Miscellaneous samples
+
+One thing of note from this investigation is that not everything we found was overtly malicious. During our investigation we came across a large number of "random" politically-related software applications, ranging from the absurd to the disturbing. One of the more humorous examples was a piece of software that allowed the user to make former presidential candidate Hillary Clinton dance.
+
+
+Clicking the "Funky Moves" buttons will cause the tiny Hillary Clinton pictured in the application to perform a variety of funky dance moves. An animation showing interaction with the application is below:
+
+
+Unfortunately, not all the software we found was humorous — much of it bordered on disturbing, including references to violence around political figures.
+
+The next odd piece of software we found, called "Trump's Cyber Security Firewall ™," appeared to be focused on hardening Windows systems in a politically motivated way.
+
+
+This application was built on top of the PSExec utility from Sysinternals, and featured multiple functions available to users. After some initial triage, it appears that when users click the "Build the wall!" button, the system does some basic hardening, including activating the system's firewall and then requests a reboot. The config tab, shown below, also includes application installation management capabilities, as well as password management and some user-based exclusions. Also of note is the ability to enable debugging and remote desktop access.
+
+
+The final tab, "tools," had a couple of cryptic labels that could be interesting: "Trump's Top Secret Email Decryptor" and "CIA Identity Detector." However, both of these functions are benign, with Trump's Top Secret Email Decryptor simply providing basic file information like MD5 hash and file ownership and the CIA Identify Detector simply displaying group membership for the groups present on the system, as shown below.
+
+
+
+
+
+
+There didn't appear to be any malicious intent in the design of this app, instead it appears to be an application written to allow system administrators to complete some tasks they typically would encounter on a frequent basis when managing Windows endpoints.
+
+We also observed a group of explicit programs during the investigation. These apps utilized adult themes and referenced the alleged acts of multiple presidents. These ranged from extremely graphic, to jigsaw puzzle-style "games." Despite indications otherwise, we didn't find anything overtly malicious about these apps.
+
+
+Conclusion
+
+As this investigation has exposed, adversaries will go to any lengths and use anything they deem advantageous, from pop culture to political references — everything is fair game. This is applicable not only to the adversaries delivering malware, but also the miscreants writing tools for adversaries to leverage including crypters, injectors and loaders.
+
+One of the unexpected aspects of the investigation was the presence of lures that dropped malware associated with multiple nation-state attacks in the past, showing how even advanced, sophisticated adversaries will use any means to achieve their nefarious goals. We were also struck by the wide array of different malware from ransomware and screenlockers, to adware and remote access trojans, and everything in between.
+
+Finally, there was the peculiar side of this research, which led us down a path to find both humorous and disturbing software that was created by unknown authors, for purposes unknown. Most of them were benign, but demonstrate how there are weird people everywhere, and some of them write code that is then submitted to malware repositories and multi-engine scanning platforms.
+
+Regardless, what started as a regular task of analyzing a malspam campaign led us to find hundreds of politically charged pieces of software that at least had indications of malicious capabilities, even if in the end, some were not. 
+
+
+Coverage
+
+
+Ways our customers can detect and block this threat are listed below.
+
+
+
+
+Advanced Malware Protection (AMP) is ideally suited to prevent the execution of the malware detailed in this post. Below is a screenshot showing how AMP can protect customers from this threat. Try AMP for free here.
+
+Cisco Cloud Web Security (CWS) or Web Security Appliance (WSA) web scanning prevents access to malicious websites and detects malware used in these attacks.
+
+Email Security can block malicious emails sent by threat actors as part of their campaign.
+
+Network Security appliances such as Next-Generation Firewall (NGFW), Next-Generation Intrusion Prevention System (NGIPS), and Meraki MX can detect malicious activity associated with this threat.
+
+AMP Threat Grid helps identify malicious binaries and build protection into all Cisco Security products.
+
+Umbrella, our secure internet gateway (SIG), blocks users from connecting to malicious domains, IPs, and URLs, whether users are on or off the corporate network.
+
+Additional protections with context to your specific environment and threat data are available from the Firepower Management Center.
+
+Open Source Snort Subscriber Rule Set customers can stay up to date by downloading the latest rule pack available for purchase on Snort.org.
+
+
+Indicators of Compromise (IOCs)
+
+The following IOCs have been observed as being associated with these malware campaigns.
+
+
+Hashes (SHA256)
+
+The following file hashes have been observed as being associated with malware, please note that we are only including the hashes of the malicious files we found:
+
+6a60cd318d1bbae691afa685e1b21799fa62c2581231309bc4d6d2a88270fbeb (Trump Crypter)
+057635f414ae4f9febeca5e6325c9d0e3c3b2e4119e6e6032ea13744e031df01 (Putin Hook)
+47ffdd88735c5c9d20370b4a0b6b4aaabeaaa13b40ac488ecca788d5e7ee491f (Putin Locker)
+2bb693e06f54026a74b07fec0aa7c61bbfeb31124be2e5642f6afd83922f28f2 (NjRAT)
+c12da1253c554b1b952eb3fa45818e267c2ccccf2147981ac3c31bbcb5d84c23 (Putin Injector)
+b01718fd2c768e9564fb087ab560f91b85cfd46eab25987ca15c6ba01848e09f (Obama Injector)
+545a0756449ee6ef221b397308ceca8c81e63d4eb914406a525c9ef7f009cce8 (Neshta)
+60fff84d43d1a18494d44b9bdb9776a71f6cc30373c8fbb663877ab7e28a7581 (Donald Trump Screen of Death)
+4cea9dbc941756f7298521104001bc20cb73cfdda06a60a9e90760188661f5e4 (Donald Trump Ransomware)
+df2ea575168063c53454b5f07f2741d728276309049a5b8906948cbc653fea71 (Word Maldoc)
+d7ef08aabb432d58ddc6a5a6c286c3b729c9085a987e46a6a82652fff4461ef2 (Excel Maldoc)
+1b7d1e76d23cc48e3d3546902ec46c77c891453ce997adebe9a353774cc94efd (PE32)
+bf1a40987d0040ba0672cce074e583132b1a9f559692cd597e8319d94eebca81 (RTF Maldoc)
+

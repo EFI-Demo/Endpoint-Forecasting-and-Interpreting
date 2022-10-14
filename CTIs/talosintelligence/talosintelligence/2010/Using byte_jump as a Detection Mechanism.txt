@@ -1,0 +1,30 @@
+
+This is just a quick tidbit about writing effective snort rules that I thought I would share.  I was writing a Snort shared object (SO) rule for demonstration purposes. I was going to use a  "vulnerability" where the DATA section, which is the last part of the packet, specifies a size that is smaller than the actual amount of data left in the payload.
+
+The idea is based on a fairly standard vulnerability we see often, i.e. the size specified in the packet is used by the server to allocate memory and then the code simply copies all of the remaining bytes from the payload, causing an overflow condition if there are more bytes remaining than the size reported in the size field. Initially, I did the obvious, which was to write an SO rule that reads the size value from the payload then calculates the number of bytes remaining and alerts if there are more than the specified number of bytes left.
+
+Here's the thing: It's actually better done from a very simple text rule using byte_jump as a detection mechanism, for example:
+alert tcp $EXTERNAL_NET any -> $HOME_NET 4444 (msg:"MISC byte_jump invalid
+size test"; flow:to_server,established; content:"MESG"; content:"NAME";
+content:"DATA"; byte_jump:4,0,relative; classtype:misc-activity; sid:64999;)
+This rule will alert if the byte_jump succeeds, meaning there is extra data after the specified size in the DATA section. As you can see this shows that byte_jump, which is typically used to move the detection cursor to another location in the payload for further data content checks, can also be used effectively as a detection mechanism itself.
+
+Now on to rework my example to something that actually requires C code to solve!
+
+----------
+The following payload was used with the above example rule.
+
+Protocol structure:
+MESG[Total size of all remaining data]
+NAME[Size of Record Name][Record Name]
+DATA[Size of Data][Data]Size fields are four byte integers, big endian.
+
+Packet payload:
+00000000  4d 45 53 47 00 00 00 64  4e 41 4d 45 00 00 00 10  |MESG...dNAME....|
+00000010  42 6c 6f 67 20 49 6e 66  6f 72 6d 61 74 69 6f 6e  |Blog Information|
+00000020  44 41 54 41 00 00 00 1f  42 65 20 73 75 72 65 20  |DATA....Be sure |
+00000030  74 6f 20 63 68 65 63 6b  20 6f 75 74 20 6f 75 72  |to check out our|
+00000040  20 62 6c 6f 67 20 61 74  20 68 74 74 70 3a 2f 2f  | blog at http://|
+00000050  76 72 74 2d 73 6f 75 72  63 65 66 69 72 65 2e 62  |vrt-sourcefire.b|
+00000060  6c 6f 67 73 70 6f 74 2e  63 6f 6d 2f              |logspot.com/|
+

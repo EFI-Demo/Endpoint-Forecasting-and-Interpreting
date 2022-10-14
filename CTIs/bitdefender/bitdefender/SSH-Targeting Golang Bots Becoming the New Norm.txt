@@ -1,0 +1,154 @@
+
+Bitdefender researchers have recently found an increasing number of SSH-targeting bots written in Golang. Traditionally, popular malware is written in C, C++ and Perl, and it’s rare that we see attackers creating new malware or bots from scratch, especially using a different programming language. Customizing existing code and botnets is far easier, even when it comes to expanding their capabilities with new features.
+Whatever the reason behind malware developers turning to Golang, this new generation of botnets will likely become the new norm, especially if they’re just as efficient, as feature packed, and as easy to maintain as their predecessors.
+
+
+
+IRCflu –Open-Source Bot Used for Nasties
+
+
+
+Attackers have been using a legitimate open-source IRC bot (IRCflu) as a backdoor into compromised SSH servers. IRCflu has not been previously been used in this way before, suggesting cybercriminals are diversifying their attack methods by using legitimate tools to fly below the radar of security solutions.
+
+
+
+The open source project for the IRCflu bot reads that “among its advanced features are a cat-server which allows you to forward incoming messages from a TCP socket straight to an IRC channel, and an integrated HTTP server ready to process incoming JSON-API calls.”
+
+
+
+Bitdefender researchers found a custom version of the IRCflu bot when some of our honeypots were broken into using SSH bruteforcing, planting this particular backdoor. Interestingly, all the binaries have been cross-compiled for the following architectures:
+
+
+
+ •    386    •    amd64  •    arm    •    mips64 •    mips64le •    mips   •    mipsle •    ppc64  •    ppc64-le •    s390x
+
+
+
+These binaries are hosted on a webserver at 193[.]56.28[.]120:80 and are downloaded during the attack. While the open-source app takes the IRC host and channel as command line arguments, in this version they have been hardcoded to the 185[.]234.216[.]34:80 webserver, and it uses the “#casd3” channel.
+
+
+
+Among its other capabilities, the IRCflu bot can execute shell commands it receives as a private message on this IRC. The commands require authentication, but the password “dmdm” has been hardcoded as well.  Attackers likely wanted to use this IRCflu as a foothold within compromised devices, potentially to download other types of malware, such as cryptocurrency miners, or to enable remote access to the botnet for sale to the highest bidder. It’s common for botnet operators to rent out botnets.
+
+
+
+We have correlated these attacks with a mass-scanning campaign targeting SSH servers that have weak credentials, as well as with other attacks on our honeypots that shared the same CnC server, but used a common IRC bot written in Perl. Perhaps these actors hope to get an edge over their competition by using a less commonly encountered IRC client, which might have lower chances of being flagged as suspicious. 
+
+
+
+This is the first time we have seen an attack involving this particular IRCflu implementation, and we’ll likely see more of it in the long run.
+
+
+
+InterPlanetary Storm, Brewing on the Horizon
+
+
+
+The second observed IoT bot, known as InterPlanetary Storm, was first spotted targeting Windows machines in June 2019. Written in Golang as well, InterPlanetary Storm is a P2P botnet that had been used by threat actors to run PowerShell code on compromised victims. However, apart from compromising victims via SSH, they’ve been targeting Android as well, using ADB as an attack vector.
+
+
+
+Bitdefender researchers found a new campaign in which threat actors seem to be using the same bruteforcing technique observed with IRCflu to compromise SSH servers and drop the InterPlanetary Storm bot. Interestingly, infected systems are configured to act as socks5 proxies, potentially for renting access to the botnet.
+
+
+
+Unlike the previously known samples, these new variants seem to target multiple Android and Linux architectures, such as Darwin, suggesting that its developers have expanded their focus beyond Windows machines to the open-source Unix-like operating system known as Darwin. 
+
+
+
+Also, the original research showed that the malware has been under steady development, going from the known 0.0.2y version to the most recent 0.1.54a. While basic functionalities have remained the same even in the latest version, compiling the code to run on multiple platforms is at least one significant upgrade that’s likely designed to amass a larger number of devices.
+
+
+
+Bitdefender researchers estimate the current number of amassed nodes at over 6,300, and it’s entirely likely this number will continue to rise
+
+
+
+Considering the time and effort placed in the constant development of rapid version iterations of this bot, using it for DDoS capabilities may not be its primary purpose. Whatever the developer’s final goal for creating InterPlanetary Storm, its capabilities will obviously evolve from one version to another.
+
+
+
+Indicators of Compromise (IoC)
+
+
+
+IRCflu
+
+
+
+SHA1: 
+
+
+
+c979b74150642985c67756998e3eda1dbcddd92d
+5e4607eeac2648977a34696d262c352d39572f27
+9d43843ec98c67059020772cc5b2e8a7eb9bad0c
+615444a26a057ebc3288f75f7ef78a3ff78fbaf4
+6de5e6a3dc676985d819f2c2ac62d46fa5dc5d2f
+267c05d6410e8ab03b188b218426952905f6b9d4
+80e7ab516de2e3f47852d71b5c7a0c306ea6b5a5
+3731c18fb084ebc95bfec29ae4bbae2c6ecbd7fd 
+
+
+
+Domains:
+
+
+
+hxxp://193[.]56.28[.]120/linux-386-ircfluhxxp://193[.]56.28[.]120/linux-amd64-ircfluhxxp://193[.]56.28[.]120/linux-arm-ircfluhxxp://193[.]56.28[.]120/linux-mips64-ircfluhxxp://193[.]56.28[.]120/linux-mips64le-ircfluhxxp://193[.]56.28[.]120/linux-mips-ircfluhxxp://193[.]56.28[.]120/linux-mipsle-ircfluhxxp://193[.]56.28[.]120/linux-ppc64-ircfluhxxp://193[.]56.28[.]120/linux-ppc64le-ircfluhxxp://193[.]56.28[.]120/linux-s390x-ircflu
+
+
+
+InterPlanetary Storm
+
+
+
+SHA1:
+
+
+
+007dd1362ca43d06b0ca633aa6099493063df7ca
+0296faedf44c3c376794b09fa59ead1512712a68
+05be2d82e8a98da991699f88bda9d1160525c957
+086ce30530db7a1b72b9b0b270cd4a1dcc2fa9e6
+161dd2e5634e9f5f85632500ea701886ce49a155
+1c62dfc839e694fd6517dfd736ee8d312ca0ff21
+2a1e03b568b4e86f36083adf249966aaca610550
+3be8947a898d0539666c98c00b53ebe84c006fcf
+3ccdbd4044623f9639277baa9f3dbec42c66fcf0
+3dc474b7f4779e4dce565d7c863e0a01fd17a059
+56534152c27b991b2bf54635027d11cd8287d227
+5a0f8d0607e20aea0157a5572039ff255c0ae88b
+5d1aa62b6c67b5678a3697153afbcdf45932f4af
+6278fa0cf6c5c1f98f242702ea95ce38a40b79cf
+70a010d97e9d4cc64aff0daeefcd2ca44d22b7f4
+7afac23e95b4f83769f7ff7df462988d997b964a
+7fdec673db4fdf3391995cc6adc3895794f8ff02
+88aa38f5c03ffdf7f6c3770f6349fbbc86bd9ab4
+92b02a4987b360a50f96f86ef3b78a8df2a4d1a8
+9454754c054fa94715121062a553d9aac3331065
+98b540cfb43f1cbfc9ab558bbf55ca8806942d87
+9d51af0e3602702d5096d108aea2fff620031cd2
+a79933eb5fd08745c2742dff4b852d57d4b681e4
+b47c25a3e34efb40023eeeaddcefa2ead2a71ba8
+baf322bc7a837cd37b0cd132221b8ef2cbfda4f3
+bfd425f2af8ab662cc28ad53ca0bd5f0e44f0600
+c9a570eef414a2511955d704643455ddbfe5d930
+cae869da63ceb8997e140f14fa2ffccec55ac8a6
+d282272b1eec3aab3956e690e56582792109e822
+d331447e55a99692b196147750132770daf28e5b
+d39a2f63dc953c0c1c67cd7a9bec3c5aab9d3628
+d6674f5563f07a4ef2db7e37967cffe78b98e85e
+dbbe855f86059b19bb91b8c78dd2770c9565b733
+dcdd9b4f3fb5a713e5e6ac81f5eb0f1f283ee7ea
+e266f3ca2ad74a3398d3c0996da1c11c631554cb
+fcbc3eb70cc8b1bd19b7d990ba360f1ea2a359c3
+fd9ed7940e949f7c5ad0346fd719407de2d1989c
+
+
+
+Note: This article is based on technical information provided courtesy of Bitdefender Labs teams.
+
+
+
+Updated 6/22/2020 to add IoCs for IRCflu that were mistakenly listed under IPStorm.

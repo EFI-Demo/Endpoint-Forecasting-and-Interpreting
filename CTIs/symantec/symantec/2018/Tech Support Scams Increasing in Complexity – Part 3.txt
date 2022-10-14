@@ -1,0 +1,38 @@
+In my previous blog, I discussed how technical support scammers embraced the technique of “living off the land” by making use of encryption algorithms such as Advanced Encryption Standard (AES) to obfuscate scam content. In the past, I also wrote about scammers’ use of simple encoding techniques to avoid string-based detection engines. In both scenarios, the scam made use of one unique technique across the board. The same obfuscation technique was used multiple times to decode the content on the fly and then perform its intended tasks: scaring the victim through various means, such as non-closing windows, pop-up windows which never seem to go away, preventing the victim from closing the scam by disallowing the pressing of certain keyboard keys, among others.
+
+This blog completes my trilogy of posts on obfuscated scams. This time, I look at how scammers make use of multiple encoding techniques at one go to create a multiple-level obfuscated scam which offers very little scope for detection engines.
+.The scam
+
+Typically, the scam starts when an unsuspecting user visits a malicious website or is redirected to one by various means, such as a malvertisement or compromised website.
+
+One such scam I observed on November 9 was in Italian, although similar campaigns may also come in other languages. This one in particular informs the victim that their computer has been blocked due to “display and dissemination of materials prohibited by Italian law” such as adult content. It also informs the victim that to unblock their computer, they must pay an “administrative penalty” of 500 euros with an iTunes Gift Card. Such tactics are designed to incite worry among victims and get them to pay.
+.Connecting the dots
+
+Going through the source code of the scam reveals a large chunk of obfuscated content, as shown in Figure 2.
+.Moving further, I observed the code used for decryption of this obfuscated data:
+.First, the obfuscated content is captured into a variable and then converted into a base64-encoded content. Then, this base64-encoded content is decoded using the function “atob” and written on the browser, as shown in Figure 3.
+
+After decoding the base64 content, I was able to see a few of the strings which the scam displays to the victim. However, the story does not end here. Moving further, I could still see obfuscated code and decryption routines being used.
+.The code also loads the following JavaScript library, which is interesting:
+
+<script src=“https://cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.2/rollups/aes.js”></script><script>
+
+This CryptoJS library is widely used for AES obfuscation and deobfuscation. This indicates the scam uses AES as its second-level obfuscation technique. Decoding the AES obfuscated content reveals the final layer of the scam with almost no obfuscation being used.
+
+What makes this scam different?
+
+While code obfuscation has been used in scams for a while now, the use of multiple-level encoding is not common. The scam typically forces string-based detection engines to focus detection on strings of random numbers or characters as described above, which, in most scenarios, is highly prone to false positives. Thus, it can be said that this scam uses living off the land encoding techniques to sneak through antivirus engines and avoid detection.
+
+Prevalence and protection
+
+Symantec proactively protects customers against tech support scams. Our intrusion prevention system (IPS) technology protects customers against tech support scams by blocking malicious network activity associated with such scams using a wide variety of detections.
+
+From July through October 2018, Symantec’s IPS technology blocked more than 37 million tech support scams.
+.Our IPS telemetry for this year shows that the countries most targeted by tech support scams were the U.S., Japan, Canada, UK, and Germany.
+.Mitigation
+
+Norton Security, Symantec Endpoint Protection, and many other Symantec security products have comprehensive network-based protection features such as firewall and IPS built in. To protect yourself from these types of scams, ensure that these features are enabled.
+
+Also, make sure to only visit legitimate websites when you need support for any product. Last but not least, make sure your security product is updated regularly.
+
+More information on tech support scams can be found here.

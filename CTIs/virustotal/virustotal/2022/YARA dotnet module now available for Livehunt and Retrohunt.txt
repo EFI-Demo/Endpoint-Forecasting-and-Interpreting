@@ -1,0 +1,8 @@
+
+ Good news for all threat hunters! As announced in our latest release notes, the “dotnet” YARA module is already available both for your Livehunt and Retrohunt rules. This module allows inspecting features and characteristics of .NET executable files, like GUIDs used, .NET assemblies metadata, resources and so on.As an example, the following YARA rule published by AlienVault uses different features provided by the “dotnet” module for detecting Shrug ransomware:import "dotnet" rule ShrugRansomware {    meta:        author = "AlienVault Labs"    strings:        $bitcoin_address = "1Hr1grgH9ViEgUx73iRRJLVKH3PFjUteNx"        $s1 = "upoldhash.php"        $s2 = "HarmedFiles"        $s3 = "ShrugDecryptor"        $s4 = "SHRUG2"        $pdb1 = "\\Debug\\ShrugTwo.pdb"        $pdb2 = "\\Debug\\Shrug.pdb"    condition:        uint16(0) == 0x5A4D and        dotnet.number_of_guids > 0 and        (        dotnet.typelib == "a6ab6b1f-b144-4920-be42-bb90ec6fc22e"        or $bitcoin_address        or 2 of ($s*)        or any of ($pdb*)        )}The “dotnet” module is not exactly new: it has been growing its own fan club since YARA 3.6.0. However, it was not included in the default YARA build nor enabled in VirusTotal services… until now! You can find more information about this module in the official YARA documentation. We want to use the opportunity to thank Wesley Shields, the module’s original author, for this great contribution to YARA. We hope these changes will make life easier for the malware research community and, as usual, we would hear any feedback from you. Happy hunting!
+
+
+Email ThisBlogThis!Share to TwitterShare to Facebook
+
+
+

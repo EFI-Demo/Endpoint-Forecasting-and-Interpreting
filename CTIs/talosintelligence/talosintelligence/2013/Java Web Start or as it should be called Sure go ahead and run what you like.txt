@@ -1,0 +1,17 @@
+
+Late last month, Immunity published a blog post concerning a new way to escape the Java security warnings using a novel and simple method, by using the convenient Java Web Start framework. The Immunity team discovered a parameter called __applet_ssv_validated that sets whether you can run older versions of jre without user validation (Secure Static Versioning). Setting this parameter to true in the applet itself did nothing.
+
+This brings us to Java Web Start.  As a framework meant to facilitate running applets, JWS uses a custom XML document with a special tag, jnlp. When you call an applet you can pass along parameters to the applet you want to run in your browser, including __applet_ssv_validated, like so: "<param name="__applet_ssv_validated" value="true" />".  This is one of the simplest Java exploits to come out in the last year or so, and it was jumped on immediately by exploit kit builders, most notably Blackhole.
+
+The good news is that since it's so simple it can easily be detected, ClamAV signature Java.Trojan.Agent-26 detects it and Snort rules 26524 and 26525 have been out since the beginning of this month and have caught many potential attacks, such as the one below:
+
+
+
+
+Since those rules have been released, exploit kit writers have been busy trying to obfuscate this exploit. A new variant caught by another exploit kit rule, 26535, now uses a jnlp_embedded which is used to pass along supplemental applet data parameter to paste the entire exploit in it's value field, using base 64 encoding thusly:
+
+
+
+
+Detecting the jnlp_embedded parameter we can set snort to decode base 64 data and look for the same exploit conditions. Those rules are 26646 and 26647 and clam sig Java.Trojan.Agent-29. 
+

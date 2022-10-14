@@ -1,0 +1,84 @@
+
+		Meet Jimmy. Jimmy is an employee in your company. He Does Things With Computers (official title).
+Last Wednesday, as Jimmy got out of his car after parking in the company-owned parking lot, he saw something on the ground.
+That “something” is a 512GB USB flash drive!
+Jimmy picks up the drive, whistling along to himself as he enters the office and settles down in his cubicle. At which point he plugs in his new, free USB flash drive. Without knowing it, Jimmy has just allowed a targeted malware into your company’s network.
+Next up, we have Zee, who has been working on an important new account. She has a presentation coming up after the holidays and wants to make a final few tweaks while she’s away from the office on vacation. On the Friday before she leaves, she plugs in her corporate-approved USB flash drive and copies over the presentation files, including the client’s information about their yet-to-be-registered patent ideas.
+On Saturday at the airport, as she’s digging around in her bag for her plane tickets, she accidentally drops the USB drive with the Peterson account’s files. She doesn’t tell you – she doesn’t even realize she’s lost the drive.
+A less-than-honest person swoops by and picks up the drive.
+On Tuesday, you hear from the Peterson account – they’ve decided to go with another company that hasn’t had their files stolen and sold across the dark web.
+These are pretty scary scenarios – but they are possible. So, how do you protect against these and similar attacks?
+Windows Defender ATP to the rescue
+Knowing that removable device usage is a concern for enterprise customers in both of these types of scenarios we’ve worked on how removable devices can be protected with Windows Defender Advanced Threat Protection (Windows Defender ATP):
+
+Prevent threats and data loss by:
+
+Reducing your attack surface area blocking an individual or group of users or machines from using all, specific, or only certain removable devices. 
+Enabling threat protection technologies such as
+
+Windows Defender Antivirus real-time protection (RTP) to scan removable storage for malware 
+The Exploit Guard Attack surface reduction rule that blocks untrusted and unsigned processes that run from USB 
+Kernel DMA Protection for Thunderbolt to block Direct Memory Access (DMA) until the user logs-on 
+
+
+
+
+Enabling data loss prevention technologies, such as BitLocker and Windows Information Protection. 
+Detect plug-and-play connected events with advanced hunting to identify suspicious usage or perform internal investigations and create custom alerts using the custom detection rule feature in Windows Defender ATP.
+
+We recommend a layered approach for device control security, which incorporates multiple avenues of protection, including each of the above. In future blogs we’ll also talk about recent malware infections that use USB drives to spread, and dive deeper into how data loss prevention should be a part of your device control strategy.
+Prevent users from using removable devices (partially/fully)
+We know, unfortunately, that people will plug in devices with unknown history (and that there are also attackers out there who directly attempt to control devices without relying on social engineering). These devices could be the source of malware infections that use USB and other removable devices to get initial access to a system or network.
+This vector of attack falls under social engineering – in this case, appealing to our weakness for “shiny things”: when we see a “free” item we’re inclined to take it, even if we don’t need it – it becomes shiny and exciting and precioussssess and we wantssesss it.
+To help protect against these attacks, you can prevent any removable device from being seen and interacted with by blocking users from using any removable device on the machine.
+To help refine how you can use this feature, with Windows Defender ATP you can block only certain, defined external devices from being used on certain machines or by certain users.
+You can use device hardware IDs to lock out (or enable) specific device types and device manufacturers. You’ll need to do some manual configuration with a DeviceInstallation policy that uses the IDs you specify, which you can read about at our documentation site. This way you can be more targeted, without blocking employees that need to use USB drives.
+If allowing removable devices in your organization, it is recommended that you list known good devices in an allow list. For example if your company buys only from a handful of device manufactures, you can allow only these device manufactures.
+Protect against malware infections that use USB devices to spread
+After reducing which removable devices can be used in your company, you can also make sure that allowable removable storage drives that are connected are protected by Windows Defender Antivirus.
+First, ensure that real-time scanning for USB devices is enabled, and then make sure to enable the exploit guard attack surface reduction rule that can block untrusted and unsigned files on the removable device as soon as it’s connected.
+If the device has direct memory access (DMA) capability (typically Thunderbolt devices) it can potentially be allowed to bypass the login and lockscreen.
+You can prevent this situation by blocking devices from having DMA until a user logs on.
+This can be done in Intune by creating a Device Restrictions policy and setting the Direct Memory Access toggle to Block under the General settings category (as in the following screenshot), or with the DmaGuard MDM CSP policy.
+
+View the device control support documentation for other Windows Defender scanning option (including scheduled scans and starting scans after a removable device is mounted) as well as other DMA protections.
+Control how users can use removable devices (DLP)
+Another angle that can be used within this range of defenses is data loss prevention (DLP). DLP seeks to prevent unintentional (and intentional) loss or theft of sensitive, company information. A DLP solution should include a holistic approach across multiple vectors or places where information can be improperly shared. Some of the DLP solutions we offer are:The two parts of DLP that are most relevant to removable devices is the use of BitLocker (in particular, BitLocker to-go) and Windows Information Protection.
+
+BitLocker (BitLocker to-go is specifically designed for removable devices)
+Windows Information Protection (WIP)
+Azure Information Protection (AIP)
+Office 365 data loss prevention
+
+We’ll be publishing a blog in the new year that talks more about DLP solutions, but in this blog we’re going to focus on BitLocker and WIP as potential protections against the scenarios we started with.
+You can require that files written to removable media is Bitlocker protected through Intune configuration settings.
+ 
+When you attempt to plug in a device that has been encrypted with BitLocker, any files added to the device are automatically encrypted. If someone then tries to access those files on that removable drive by plugging it into another, untrusted computer, they will be prompted to decrypt the removable drive. They won’t be able to do this without a recovery key, password, or smart card, which only company employees have.
+With Windows Information Protection, users are prevented from copying sensitive information, and from running files that belong to unknown or untrusted apps. This means users that try to copy sensitive or confidential-marked materials will be prevented from doing so, and will be notified depending on the level of enforcement.
+
+		
+	
+Use advanced hunting queries to view and identify suspicious removable device activity
+On the flipside, however, it can be hard to know which actual devices you should block, and when and what users to prevent using removable devices, so you can deploy the protections above in specific Active Directory or Intune groups to restrict the controls to certain groups.
+For example, you may have employees that should never need to use removable devices because their work is sensitive and shouldn’t be shared. However, you don’t want to prevent your creative, sales, and marketing teams from being able to easily share content briefs with external groups.
+Going beyond these tactics though, you can use advanced hunting in Windows Defender ATP to identify users, machines, and types of devices that are being used suspiciously, as in the following example:
+MiscEvents
+| where ActionType == "PnpDeviceConnected"
+| extend ParsedFields=parse_json(AdditionalFields)
+| project ClassName=tostring(ParsedFields.ClassName), DeviceDescription=tostring(ParsedFields.DeviceDescription),
+DeviceId=tostring(ParsedFields.DeviceId), VendorIds=tostring(ParsedFields.VendorIds), MachineId, ComputerName, EventTime
+| where ClassName contains "drive" or ClassName contains "usb"
+This is a small part of the full query (“Map external devices”) on our hunting GitHub repository (authored by Microsoft Senior Engineer Tomer Alpert).
+Where to get more information and support
+For more details and examples on implementing the above scenarios to help protect your assets from refer to the device control support documentation.
+If you have any further questions or would like more information about the feature just leave us a comment below or get in touch with us on Twitter. We’ll be back in the new year with even more device control capabilities so make sure to subscribe or bookmark or follow or whatever you need to do so you don’t miss out – we’ll also be writing more blogs about the different ways you can use device control, such as data loss prevention (DLP) and disconnected devices.
+ 
+Jody Cedola (@SecureITBlanket) and Iaan D’Souza-Wiltshire (@IaanDW)
+Windows Defender Advanced Threat Protection
+ 
+
+
+Talk to us
+Questions, concerns, or insights on this story? Join discussions at the Microsoft community and Windows Defender Security Intelligence.
+Follow us on Twitter @WDSecurity and Facebook Windows Defender Security Intelligence.
+	

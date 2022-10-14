@@ -1,0 +1,361 @@
+
+This is the first in a series of blog posts about the Content IQ Test.
+
+
+A few days ago, we came across a test whose purpose is to gauge a security system's ability to detect client-side attacks. The Content IQ Test consists of detecting a set of test files that contain, at various levels of depth within the file, the string:
+
+
+
+
+
+The rules of the test are simple: "The objective is to create a single content rule that fires on all of the Test Files but not on any of the Negative Control files. [...]Triggering on the test files' [...] filenames or MD5 hashes and stuff like that is cheating and it doesn't count. "
+
+Let's see how ClamAV does at this.
+
+These files are all benign, so I encourage you to download and check out how these files are crafted.
+
+Test File 1 is a plain text file containing the target string surrounded by some filler text. I crafted an ndb-style signature to target the eval+unescape string. Moreover, the signature below targets normalized ASCII text files:
+
+azidouemba@ubuntu:~/Downloads$ cat test.ndb 
+TestSig1:7:*:6576616c28756e6573636170652827253635253736253639253663253238253239272929
+
+azidouemba@ubuntu:~/Downloads$ clamscan -d test.ndb Test_File_1_Plain_Text_File.txt 
+Test_File_1_Plain_Text_File.txt: TestSig1.UNOFFICIAL FOUND
+
+----------- SCAN SUMMARY -----------
+Known viruses: 1
+Engine version: 0.97.3
+Scanned directories: 0
+Scanned files: 1
+Infected files: 1
+Data scanned: 0.00 MB
+Data read: 0.00 MB (ratio 1.00:1)
+Time: 0.008 sec (0 m 0 s)
+
+azidouemba@ubuntu:~/Downloads$ clamscan -r -d test.ndb Test_File_1_Negative_Control.txt 
+Test_File_1_Negative_Control.txt: OK
+
+----------- SCAN SUMMARY -----------
+Known viruses: 1
+Engine version: 0.97.3
+Scanned directories: 0
+Scanned files: 1
+Infected files: 0
+Data scanned: 0.01 MB
+Data read: 0.00 MB (ratio 2.00:1)
+Time: 0.010 sec (0 m 0 s)
+
+
+OK, we are detecting the control file and are not detecting the negative control file. Let's proceed!
+
+Test file 2 contains the control text pasted into the body of a Microsoft Word 2011 document.
+
+
+azidouemba@ubuntu:~/Downloads$ cat test.ndb 
+TestSig1:7:*:6576616c28756e6573636170652827253635253736253639253663253238253239272929
+
+azidouemba@ubuntu:~/Downloads$ clamscan -d test.ndb Test_File_2_Microsoft_Word_2011.docx
+Test_File_2_Microsoft_Word_2011.docx: TestSig1.UNOFFICIAL FOUND
+
+----------- SCAN SUMMARY -----------
+Known viruses: 1
+Engine version: 0.97.3
+Scanned directories: 0
+Scanned files: 1
+Infected files: 1
+Data scanned: 0.01 MB
+Data read: 0.17 MB (ratio 0.05:1)
+Time: 0.011 sec (0 m 0 s)
+
+azidouemba@ubuntu:~/Downloads$ clamscan -r -d test.ndb Test_File_2_Negative_Control.docx 
+Test_File_2_Negative_Control.docx: OK
+
+----------- SCAN SUMMARY -----------
+Known viruses: 1
+Engine version: 0.97.3
+Scanned directories: 0
+Scanned files: 1
+Infected files: 0
+Data scanned: 0.59 MB
+Data read: 0.17 MB (ratio 3.41:1)
+Time: 0.028 sec (0 m 0 s)
+
+
+
+It makes sense that ClamAV would alert on such a file with a signature targeting normalized ASCII text files. That's because Office Open XML is a compressed (zip), XML-based file format (docx, xlsx, pptx, etc...). ClamAV treats the file as a zip archive and extracts its contents. It's then able to "see":
+
+
+
+
+Test file 3 contains the control text pasted into the body of a Microsoft Excel 2011 document.
+
+
+azidouemba@ubuntu:~/Downloads$ cat test.ndb 
+TestSig1:7:*:6576616c28756e6573636170652827253635253736253639253663253238253239272929
+
+azidouemba@ubuntu:~/Downloads$ clamscan -d test.ndb Test_File_3_Microsoft_Excel_2011.xlsx 
+Test_File_3_Microsoft_Excel_2011.xlsx: TestSig1.UNOFFICIAL FOUND
+
+----------- SCAN SUMMARY -----------
+Known viruses: 1
+Engine version: 0.97.3
+Scanned directories: 0
+Scanned files: 1
+Infected files: 1
+Data scanned: 0.00 MB
+Data read: 0.04 MB (ratio 0.10:1)
+Time: 0.010 sec (0 m 0 s)
+
+azidouemba@ubuntu:~/Downloads$ clamscan -r -d test.ndb Test_File_3_Negative_Control.xlsx 
+Test_File_3_Negative_Control.xlsx: OK
+
+----------- SCAN SUMMARY -----------
+Known viruses: 1
+Engine version: 0.97.3
+Scanned directories: 0
+Scanned files: 1
+Infected files: 0
+Data scanned: 0.09 MB
+Data read: 0.04 MB (ratio 2.20:1)
+Time: 0.016 sec (0 m 0 s)
+
+
+Test file 4 contains the control text pasted into the body of a Microsoft PowerPoint 2011 document.
+
+
+azidouemba@ubuntu:~/Downloads$ cat test.ndb 
+TestSig1:7:*:6576616c28756e6573636170652827253635253736253639253663253238253239272929
+azidouemba@ubuntu:~/Downloads$ clamscan -d test.ndb Test_File_4_Microsoft_PowerPoint_2011.pptx 
+Test_File_4_Microsoft_PowerPoint_2011.pptx: OK
+
+----------- SCAN SUMMARY -----------
+Known viruses: 1
+Engine version: 0.97.3
+Scanned directories: 0
+Scanned files: 1
+Infected files: 0
+Data scanned: 0.36 MB
+Data read: 0.08 MB (ratio 4.65:1)
+Time: 0.024 sec (0 m 0 s)
+
+
+Using the signature in test.ndb, ClamAV failed to pick up the target string inside the pptx file. Using clamscan with the option --leave-temps, you'll notice that in the case of this PowerPoint file, ClamAV "sees":
+
+
+
+
+Therefore, I modified the signature alerts if we see "eval" followed by "unescape" no farther than 200 bytes away, in turn followed by "('%65%76%69%6c%28%29'))" no farther than 200 away from "unescape". 
+
+
+azidouemba@ubuntu:~/Downloads$ cat test.ndb 
+TestSig1:7:*:6576616c{-200}756e657363617065{-200}2827253635253736253639253663253238253239272929
+azidouemba@ubuntu:~/Downloads$ clamscan -d test.ndb Test_File_4_Microsoft_PowerPoint_2011.pptx 
+Test_File_4_Microsoft_PowerPoint_2011.pptx: TestSig1.UNOFFICIAL FOUND
+
+----------- SCAN SUMMARY -----------
+Known viruses: 1
+Engine version: 0.97.3
+Scanned directories: 0
+Scanned files: 1
+Infected files: 1
+Data scanned: 0.08 MB
+Data read: 0.08 MB (ratio 1.05:1)
+Time: 0.013 sec (0 m 0 s)
+
+azidouemba@ubuntu:~/Downloads$ clamscan -r -d test.ndb Test_File_4_Negative_Control.pptx 
+Test_File_4_Negative_Control.pptx: OK
+
+----------- SCAN SUMMARY -----------
+Known viruses: 1
+Engine version: 0.97.3
+Scanned directories: 0
+Scanned files: 1
+Infected files: 0
+Data scanned: 0.36 MB
+Data read: 0.08 MB (ratio 4.65:1)
+Time: 0.025 sec (0 m 0 s)
+
+
+
+Test file 5 contains the control text pasted into the body of a PDF document.
+
+
+azidouemba@ubuntu:~/Downloads$ cat test.ndb 
+TestSig1:7:*:6576616c{-200}756e657363617065{-200}282725363525373625363925366325323825323927
+
+azidouemba@ubuntu:~/Downloads$ clamscan -d test.ndb Test_File_5_Control_Text_in_Body_of_PDF_File.pdf 
+Test_File_5_Control_Text_in_Body_of_PDF_File.pdf: TestSig1.UNOFFICIAL FOUND
+
+----------- SCAN SUMMARY -----------
+Known viruses: 1
+Engine version: 0.97.3
+Scanned directories: 0
+Scanned files: 1
+Infected files: 1
+Data scanned: 0.00 MB
+Data read: 0.02 MB (ratio 0.25:1)
+Time: 0.009 sec (0 m 0 s)
+
+
+azidouemba@ubuntu:~/Downloads$ clamscan -r -d test.ndb Test_File_5_Negative_Control.pdf 
+Test_File_5_Negative_Control.pdf: OK
+
+----------- SCAN SUMMARY -----------
+Known viruses: 1
+Engine version: 0.97.3
+Scanned directories: 0
+Scanned files: 1
+Infected files: 0
+Data scanned: 0.04 MB
+Data read: 0.02 MB (ratio 2.75:1)
+Time: 0.012 sec (0 m 0 s)
+
+
+ClamAV generates an alert because it's able to parse some PDF objects. In this particular case, it's able to "see":
+
+
+
+
+Test file 6 contains the control file embedded into a PDF document. In a similar way to how Test file 5 was handled, we have:
+
+
+azidouemba@ubuntu:~/Downloads$ cat test.ndb 
+TestSig1:7:*:6576616c{-200}756e657363617065{-200}282725363525373625363925366325323825323927
+
+azidouemba@ubuntu:~/Downloads$ clamscan -d test.ndb Test_File_6_Control_File_Attached_to_PDF_File.pdf 
+Test_File_6_Control_File_Attached_to_PDF_File.pdf: TestSig1.UNOFFICIAL FOUND
+
+----------- SCAN SUMMARY -----------
+Known viruses: 1
+Engine version: 0.97.3
+Scanned directories: 0
+Scanned files: 1
+Infected files: 1
+Data scanned: 0.00 MB
+Data read: 0.02 MB (ratio 0.25:1)
+Time: 0.012 sec (0 m 0 s)
+
+
+azidouemba@ubuntu:~/Downloads$ clamscan -r -d test.ndb Test_File_6_Negative_Control.pdf 
+Test_File_6_Negative_Control.pdf: OK
+
+----------- SCAN SUMMARY -----------
+Known viruses: 1
+Engine version: 0.97.3
+Scanned directories: 0
+Scanned files: 1
+Infected files: 0
+Data scanned: 0.02 MB
+Data read: 0.01 MB (ratio 1.67:1)
+Time: 0.014 sec (0 m 0 s)
+
+
+
+Test file 7 contains the control file compressed with Zip.
+
+
+azidouemba@ubuntu:~/Downloads$ cat test.ndb 
+TestSig1:7:*:6576616c{-200}756e657363617065{-200}282725363525373625363925366325323825323927
+azidouemba@ubuntu:~/Downloads$ clamscan -d test.ndb Test_File_7_Control_File_Compressed_with_Zip.zip
+Test_File_7_Control_File_Compressed_with_Zip.zip: TestSig1.UNOFFICIAL FOUND
+
+----------- SCAN SUMMARY -----------
+Known viruses: 1
+Engine version: 0.97.3
+Scanned directories: 0
+Scanned files: 1
+Infected files: 1
+Data scanned: 0.00 MB
+Data read: 0.00 MB (ratio 0.00:1)
+Time: 0.011 sec (0 m 0 s)
+azidouemba@ubuntu:~/Downloads$ clamscan -d test.ndb Test_File_7_Negative_Control.zip
+Test_File_7_Negative_Control.zip: OK
+
+----------- SCAN SUMMARY -----------
+Known viruses: 1
+Engine version: 0.97.3
+Scanned directories: 0
+Scanned files: 1
+Infected files: 0
+Data scanned: 0.01 MB
+Data read: 0.00 MB (ratio 0.00:1)
+Time: 0.053 sec (0 m 0 s)
+
+
+
+We see that a ZIP archive is treated as a container. Its contents are inflated and examined.
+
+Test file 8 contains the control text pasted into the body of a Microsoft Word 2011 document. This Word document is compressed with Zip, then Tar, then RAR.
+
+
+azidouemba@ubuntu:~/Downloads$ cat test.ndb 
+TestSig1:7:*:6576616c{-200}756e657363617065{-200}282725363525373625363925366325323825323927
+azidouemba@ubuntu:~/Downloads$ clamscan -d test.ndb Test_File_8_Word_File_Compressed_with_Zip_Tar_and_Rar.rar 
+Test_File_8_Word_File_Compressed_with_Zip_Tar_and_Rar.rar: TestSig1.UNOFFICIAL FOUND
+
+----------- SCAN SUMMARY -----------
+Known viruses: 1
+Engine version: 0.97.3
+Scanned directories: 0
+Scanned files: 1
+Infected files: 1
+Data scanned: 0.01 MB
+Data read: 0.16 MB (ratio 0.05:1)
+Time: 0.108 sec (0 m 0 s)
+azidouemba@ubuntu:~/Downloads$ clamscan -d test.ndb Test_File_8_Negative_Control.rar 
+Test_File_8_Negative_Control.rar: OK
+
+----------- SCAN SUMMARY -----------
+Known viruses: 1
+Engine version: 0.97.3
+Scanned directories: 0
+Scanned files: 1
+Infected files: 0
+Data scanned: 0.43 MB
+Data read: 0.02 MB (ratio 18.17:1)
+Time: 0.081 sec (0 m 0 s)
+
+
+
+As with Test file 7, archive files are treated as the containers they are. Here, ClamAV recursively extracts the contents of the RAR, TAR and ZIP files.
+
+Finally, Test file 9 contains the target string embedded in the metadata of an Excel 2011 file as a custom property.
+
+
+azidouemba@ubuntu:~/Downloads$ cat test.ndb 
+TestSig1:7:*:6576616c{-200}756e657363617065{-200}282725363525373625363925366325323825323927
+azidouemba@ubuntu:~/Downloads$ clamscan -d test.ndb Test_File_9_Target_String_in_Custom_Properties_of_Excel_File.xlsx 
+Test_File_9_Target_String_in_Custom_Properties_of_Excel_File.xlsx: TestSig1.UNOFFICIAL FOUND
+
+----------- SCAN SUMMARY -----------
+Known viruses: 1
+Engine version: 0.97.3
+Scanned directories: 0
+Scanned files: 1
+Infected files: 1
+Data scanned: 0.03 MB
+Data read: 0.03 MB (ratio 0.88:1)
+Time: 0.045 sec (0 m 0 s)
+azidouemba@ubuntu:~/Downloads$ clamscan -d test.ndb Test_File_9_Negative_Control.xlsx 
+Test_File_9_Negative_Control.xlsx: OK
+
+----------- SCAN SUMMARY -----------
+Known viruses: 1
+Engine version: 0.97.3
+Scanned directories: 0
+Scanned files: 1
+Infected files: 0
+Data scanned: 0.04 MB
+Data read: 0.01 MB (ratio 3.33:1)
+Time: 0.043 sec (0 m 0 s)
+
+
+This is what ClamAV "sees":
+
+
+
+
+
+
+Today we saw how ClamAV fared with the basic content test files. In the next post I'll take a look at the test files with auto-executing embedded active content.
+

@@ -1,0 +1,96 @@
+
+Ransomware continues as the top threat, while a novel increase in APT activity emergesBy Caitlin Huey.Ransomware was still the top threat Cisco Talos Incident Response (CTIR) saw in active engagements this quarter, continuing a trend that started in 2020. As mentioned in the 2021 year-in-review report, CTIR continues to deal with an expanding set of ransomware adversaries and major cybersecurity incidents affecting organizations worldwide.  The first quarter of 2022 also featured an increase in engagements involving advanced persistent threat (APT) activity. This included Iranian state-sponsored MuddyWater APT activity, China-based Mustang Panda activity leveraging USB drives to deliver the PlugX remote access trojan (RAT), and a suspected Chinese adversary dubbed “Deep Panda” exploiting Log4j. TargetingA wide variety of verticals were targeted, including education, energy, financial services, health care, industrial production and equipment, local government, manufacturing, real estate, telecommunications and utilities. The top targeted vertical was telecommunications, following a trend where it was among the top targeted verticals in the previous quarter, closely followed by organizations in the education and government sectors. ThreatsRansomware continued to comprise the majority of threats CTIR responded to. No one ransomware family was observed twice in incidents that closed out this quarter. This is indicative of a trend toward greater democratization of ransomware adversaries that Talos began observing last year. This quarter also saw the appearance of emerging ransomware families, including Cerber (aka CerberImposter), Entropy and Cuba. There were also high-profile ransomware families, such as Hive and Conti. CTIR observed ransomware adversaries exfiltrating sensitive data supporting double extortion as another method to further compel victims to pay the ransom, a continuation of a trend that began in the winter of 2019. For example, in an Entropy ransomware engagement affecting a local government organization, CTIR identified traffic and activity associated with mega[.]nz, a utility commonly used for file transfer and data exfiltration. It was first observed executing from the following path: "C:\Users\admin\AppData\Local\MEGAsync\MEGAsync.exe".  After ransomware, the next most commonly observed threat this quarter included exploitation of Log4j, the Apache logging utility commonly used by organizations globally. Adversaries have continued to exploit Log4j (CVE-2021-44228, CVE-2021-45046, and related vulnerabilities) since the security flaws were initially published in December 2021. In January 2022, CTIR started to observe a growing number of engagements in which adversaries are attempting to exploit Loj4j in vulnerable VMware Horizon servers. In one engagement affecting an education institution, CTIR found evidence of PowerShell scripts including a line that killed the process “ws_TomcatService.exe”, a key parent process in commonly observed malicious Log4j activity. The combination of the timeframe and the unpatched, vulnerable state of the VMware Horizon server suggests that Log4j exploitation was a probable root cause of the compromise. The adversary also installed cryptocurrency miners; conducted reconnaissance with Bloodhound, an application used to enumerate relations within Active Directory (AD); created at least one local “DomainAdmin” account; and leveraged remote desktop protocol (RDP) for potential lateral movement. Advanced persistent threatsAs mentioned above, CTIR observed a novel increase in APT activity in engagements compared to previous quarters. This includes activity associated with Iranian state-sponsored MuddyWater, China-based Mustang Panda deploying the PlugX RAT, and a suspected Chinese state-sponsored actor dubbed Deep Panda leveraging Log4j. For example, a health care organization was affected by threat activity associated with Deep Panda in which the adversary exploited Log4j to deploy a custom backdoor. CTIR initially observed a PowerShell command that downloaded three additional files — “1.bat”, “syn.exe” and “l.dll” — from the attacker’s server, which has been linked to the adversary by other security firms. The PowerShell script executes “1.bat,” which subsequently executes “syn.exe” and proceeds to delete all three files from the disk. The “syn.exe” file creates a service set to autorun and is launched via “svchost.exe”. The “1.dll” file is packed with Themida, which is used to detect monitoring programs that may be used for malware reversing.    In another engagement affecting a telecommunications organization, CTIR’s research provided moderate to high confidence that several of the indicators of compromise (IOCs) and tactics, techniques and procedures (TTPs) discovered were linked to Mustang Panda. The initial compromise was determined to be due to a malware-infected USB connected to corporate resources that subsequently deployed PlugX, a RAT commonly deployed by Mustang Panda that steals credentials from compromised machines. After the USB was connected to the corporate environment for approximately one hour, a hidden directory was created within “C:\ProgramData” containing files associated with PlugX. The variant can uniquely spread via USB, which distinguishes it from other PlugX variants. This PlugX variant creates a hidden folder named “RECYCLE.BIN” and copies three files: a benign EXE, a loader DLL and an encrypted DAT file. The malware hides all of the folders in the root directory and creates LNK files for each one in order to deceive the victim. In this instance, the malware used legitimate Avast-signed executables to sideload a malicious PlugX DLL.  Initial vectorsFor the majority of engagements, identifying an initial vector was difficult due to shortfalls in logging and visibility. However, in engagements in which the initial vector could be confirmed, or reasonably assumed, this quarter featured a number of engagements where adversaries exploited public-facing applications that were vulnerable to Log4j. For example, in one engagement affecting a telecommunications company, CTIR observed a large number of PowerShell download requests to an IP address associated with Log4j exploitation attempts against vulnerable VMware Horizon servers. Following this activity, high CPU usage was detected on a VMware Horizon server, leading to the identification of several clusters of cryptocurrency miners, consistent with typical cryptocurrency miner threat actor behavior following the release of high-profile vulnerabilities.In a Cerber ransomware incident affecting a holding company, the adversary used vulnerabilities affecting GitLab (CVE-2021-22204 and CVE-2021-22205) to upload and execute code remotely, ultimately granting unauthorized access to that system in the context of the "git" account. This is consistent with reporting from other security firms on a new version of Cerber ransomware targeting Atlassian Confluence and GitLab servers with older RCE vulnerabilities. The adversary attempted to expand access through privilege escalation and lateral movement and ultimately executed ransomware.  Security weaknessesThe top recommendation that responders have for organizations is to implement multi-factor authentication (MFA) on all critical services, including endpoint detection response (EDR) solutions. MFA is an effective way to prevent adversaries from gaining unwanted access, and we routinely see threat activity that could have been prevented if MFA had been enabled.  In one engagement that kicked off this quarter affecting a telecommunications company involving pre-ransomware TTPs, the adversary compromised the organization’s help desk/call center partner company. This was identified as the root cause of the compromise due to the third party having access to the organization’s Citrix machines while not enabling MFA. CTIR recommends that all third parties in the environment are following MFA security policies and guidelines.Top-observed MITRE ATT&CK techniquesBelow is a list of the MITRE ATT&CK techniques observed in this quarter’s IR engagements. Given that some techniques can fall under multiple tactics, we grouped them under the most relevant tactic in which they were leveraged. The table below represents the techniques used with a relevant example, and the approximate number of times seen. However, it is not an exhaustive list.Key findings from the MITRE ATT&CK appendix include: We observed an increase in engagements in which initial access was achieved via phishing with a malicious link or document that relied upon subsequent user execution. Compared to last quarter, we observed more threats leveraging social engineering techniques, as well as masquerading as legitimate files or utilities to entice users to click or execute a given link or file.Due to the number of engagements responders supported that exploited Log4j, we observed an increase in techniques relying on exploiting unpatched and vulnerable public-facing applications. This coincides with our observations of adversaries capitalizing on organizations’ lack of up-to-date patches and improper data protections.We saw a large increase in defense evasion and collection techniques compared to previous quarters. The observed collection techniques exhibited the actors’ interest in specific information, including collecting details about certain hosts that could be used for targeting, keylogging to access credentials in the browser, and selecting particular files of interest for possible exfiltration.  Consistent with last quarter’s findings, we continued to see a reliance on utilities such as PsExec and Cobalt Strike and a variety of remote access software, such as TeamViewer and ScreenConnect, to facilitate remote access. 
+
+.tg  {border-collapse:collapse;border-spacing:0;}
+.tg td{border-color:black;border-style:solid;border-width:1px;font-family:Arial, sans-serif;font-size:14px;
+  overflow:hidden;padding:10px 5px;word-break:normal;}
+.tg th{border-color:black;border-style:solid;border-width:1px;font-family:Arial, sans-serif;font-size:14px;
+  font-weight:normal;overflow:hidden;padding:10px 5px;word-break:normal;}
+.tg .tg-pad2{background-color:#26282a;border-color:#ffffff;color:#ffffff;font-size:18px;text-align:left;vertical-align:top}
+.tg .tg-ab2z{background-color:#26282a;border-color:#ffffff;color:#ffffff;font-size:18px;font-weight:bold;text-align:left;
+  vertical-align:top}
+.tg .tg-kzft{background-color:#26282a;border-color:#ffffff;color:#ffffff;font-weight:bold;text-align:left;vertical-align:top}
+.tg .tg-size{background-color:#26282a;border-color:#ffffff;color:#ffffff;text-align:left;vertical-align:top}
+
+
+
+  
+    Tactic
+    Technique
+    Example
+  
+
+
+  
+    Initial Access (TA0001)
+    T1190 Exploit Public-Facing Application
+    Attackers successfully exploited a vulnerable application that was publicly exposed to the Internet.
+  
+  
+    Reconnaissance (TA0043)
+    T1592 Gather Victim Host Information
+    Malicious file contains details about host
+  
+  
+    Persistence (TA0003)
+    T1053 Scheduled Task/Job
+    Scheduled tasks were created on a compromised server
+  
+  
+    Execution (TA0002)
+    T1059.001 Command and Scripting Interpreter: PowerShell
+    Executes PowerShell code to retrieve information about the client's Active Directory environment
+  
+  
+    Discovery (TA0007)
+    T1087 Account Discovery
+    Use a utility like ADRecon to enumerate information on users and groups
+  
+  
+    Credential Access (TA0006)
+    T1003.001 OS Credential Dumping: LSASS Memory
+    Use “lsass.exe” for stealing password hashes from memory
+  
+  
+    Privilege Escalation (TA0004)
+    T1574.002 Hijack Execution Flow: DLL Side-Loading
+    A malicious PowerShell script attempted to side-load a DLL into memory
+  
+  
+    Lateral Movement (TA0008)
+    T1021.001 Remote Desktop Protocol
+    Adversary made attempts to move laterally using Windows Remote Desktop
+  
+  
+    Defense Evasion (TA0005)
+    T1027 Obfuscated Files or Information
+    Use base64-encoded PowerShell scripts
+  
+  
+    Command and Control (TA0011)
+    T1219 Remote Access Software
+    Remote access tools found on the compromised system
+  
+  
+    Impact (TA0040)
+    T1486 Data Encrypted for Impact
+    Deploy Conti ransomware and encrypt critical systems
+  
+  
+    Exfiltration (TA0010)
+    T1567.002 Exfiltration Over Web Service: Exfiltration to Cloud Storage
+    Actor exfiltrated data to file sharing site mega[.]nz
+  
+  
+    Collection (TA0009)
+    T1114.003 Email Collection: Email Forwarding Rule
+    Adversary used a compromised account to create a new inbox rule to place emails in a folder
+  
+  
+    Software/Tool
+    S0029 PsExec
+    Adversary made use of PsExec for lateral movement
+  
+
+
+

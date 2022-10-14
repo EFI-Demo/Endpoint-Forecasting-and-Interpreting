@@ -1,0 +1,72 @@
+
+
+Executive summary
+
+Emotet has been one of the most widely distributed threats over the past several years. It has typically been observed being distributed via malicious spam email campaigns, and often leads to additional malware infections as it provides threat actors with an initial foothold in an environment. These email campaigns exhibit characteristics previously described here. International police announced a takedown campaign to disrupt Emotet in early 2021, effectively removing the botnet from the threat landscape. But as of last week, Emotet has re-emerged and has been observed establishing the infrastructure and distribution required to rebuild the botnets. While the current distribution campaigns are not at the same volumes as those previously observed when Emotet was at full strength, this is likely the beginning of a resurgence in Emotet activity that will continue to amplify as more systems become infected and are leveraged for spam distribution.
+
+  
+Technical details
+
+We initially discovered this resurgence in Emotet activity when Trickbot command and control (C2) servers began sending commands to infected systems instructing them to retrieve and execute a new version of Emotet. We observed several Trickbot C2 servers issuing this command to Trickbot infections associated with a variety of different gtags. Subsequently, new malicious email campaigns were observed delivering Emotet to victims directly. These emails are currently taking the form of hijacked email threads, forwards, and other similar types of messages instructing victims to open an attached file that they claim contain scanned documents or other information of interest to the victim. Below is an example of a message sent via email thread hijacking. We have observed that many of these messages are in response to email threads dating back to October 2020. 
+
+
+These emails typically contain an attached file that functions as a downloader to retrieve the Emotet payload. Emotet has been observed leveraging DOCM, XLSM, and password-protected ZIP archives across these spam campaigns. Below is an example of one of the XLSM files observed being delivered in these malspam campaigns.
+
+
+Likewise, here is an example of one of the DOCM files associated with this activity:
+
+
+These documents contain OLE2 macros. When executed, WScript is used to invoke PowerShell which is used to retrieve the Emotet DLL from attacker-controlled distribution servers. The macros are obfuscated, but the screenshot below shows the PowerShell invocation once deobfuscated at runtime. 
+
+The DLL is then executed via rundll32.exe, thus infecting the system with Emotet. After rundll32.exe execution, the DLL is saved in "C:\\ProgramData\\<RANDOM FILENAME>" or "C:\Windows\SysWOW64\<RANDOM FILENAME>."
+
+Persistence is achieved by registering a Windows Service that is set to execute the malware following system reboots. Below is an example observed from one of the XLSM files analyzed.
+
+
+The infected system establishes a C2 communications channel and begins receiving instructions. These systems can then be leveraged for additional spam distribution, allowing an attacker to further increase the scope of their distribution campaigns. The threat actor(s) behind this recent campaign activity have been observed rapidly adding new C2 infrastructure as they attempt to increase the size of their botnets. 
+
+Historically, Emotet has been leveraged as a modular framework, allowing attackers flexibility in determining how to best leverage the access gained through successful Emotet infections. The botnet has historically been leveraged to drop additional malware or provide an initial foothold to adversaries conducting "big game hunting" style ransomware attacks.
+
+
+Conclusion
+
+Over the past several years, Emotet has been one of the most widely distributed malware families across the globe. Earlier this year, the botnets associated with this threat were disrupted, causing new Emotet activity to disappear. Recently, new Emotet infrastructure has been established and distribution campaigns are now being observed as the operators of this threat attempt to rebuild their botnets. Organizations should be aware of this, as Emotet has the potential to cause significant issues in their environments. We will likely continue to see new Emotet activity moving forward. While current campaign volumes are much lower than those seen at the peak of Emotet activity, it will likely continue to increase in scope as more systems fall under adversarial control. 
+
+Coverage
+
+Ways our customers can detect and block this threat are listed below.
+
+
+Cisco Secure Endpoint (formerly AMP for Endpoints) is ideally suited to prevent the execution of the malware detailed in this post. Try Secure Endpoint for free here.
+
+Cisco Secure Email (formerly Cisco Email Security) can block malicious emails sent by threat actors as part of their campaign. You can try Secure Email for free here.
+
+Cisco Secure Firewall (formerly Next-Generation Firewall and Firepower NGFW) appliances such as Threat Defense Virtual, Adaptive Security Appliance and Meraki MX can detect malicious activity associated with this threat.
+
+Cisco Secure Malware Analytics (Threat Grid) identifies malicious binaries and builds protection into all Cisco Secure products.
+
+Umbrella, Cisco's secure internet gateway (SIG), blocks users from connecting to malicious domains, IPs and URLs, whether users are on or off the corporate network. Sign up for a free trial of Umbrella here.
+
+Cisco Secure Web Appliance (formerly Web Security Appliance) automatically blocks potentially dangerous sites and tests suspicious sites before users access them. 
+
+Additional protections with context to your specific environment and threat data are available from the Firewall Management Center.
+
+Cisco Duo provides multi-factor authentication for users to ensure only those authorized are accessing your network. 
+
+Open-source Snort Subscriber Rule Set customers can stay up to date by downloading the latest rule pack available for purchase on Snort.org.The following Snort SIDs have been released to detect this threat: 48402, 43890, 51971, 55931 and 57901.
+
+The following ClamAV signatures have been released to detect this threat:
+
+Xls.Downloader.EmotetExcel112100-9910690-0
+Doc.Downloader.EmotetRed112100-9910732-0 
+Win.Trojan.Emotet11210-9911407-0
+Indicators of Compromise
+
+The following indicators of compromise (IOCs) have been observed associated with ongoing Emotet campaigns:
+
+
+
+Hashes
+
+Network IOCs
+

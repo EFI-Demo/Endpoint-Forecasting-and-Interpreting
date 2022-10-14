@@ -1,0 +1,78 @@
+
+		This post is authored by Igal Gofman, Security Researcher, Advanced Threat Analytics. 
+On June 27, 2017 reports on a new variant of Petya (which was later referred to as NotPetya) malware infection began spreading across the globe. It seems the malware’s initial infection delivered via the “M.E.doc” update service, a Ukrainian finance application. Based on our investigation so far, the propagation steps executed by the malware can be considered sophisticated and well tested.
+The malware distributes itself as a DLL file, spreading over internal networks using different lateral movement techniques.
+This blog post focuses on the network behavior analysis of NotPetya and the techniques it uses to propagate in the network. This is ongoing research, and we’ll update with additional findings as those become available.
+Malware Propagation Flows
+
+Delivery & Initial execution
+The malware is delivered via the “M.E.doc” service to infect the first endpoint.
+The malware executes and extracts the relevant components to disk. These include:
+
+PsExec – Network remote execution tool.
+A credential dumping tool.
+
+More information on these steps can be found at the Windows Security blog.
+Reconnaissance
+The internal network is probed using multiple discovery methods to identify new workstations and domain controllers. These include:
+
+LANMAN NetServerEnum2 API used to get information about workstations and domain controllers.
+Probing using ports 139 and 445 to other endpoints.
+If a domain controller is accessible, the malware queries its DHCP Service to enumerate DHCP subnet.
+In case DHCP subnets are discovered, the malware will continue its discovery against those subnets as well.
+
+Reconnaissance example – NetServerEnum2
+
+In the screenshot above, we can see the NetServerEnum2 API used by the infected machine. 
+The response includes the domain controller and a list of all known workstations response.
+Lateral Movement
+To spread itself on the network, the malware tries to access the administrative share ($admin).
+
+If the SeDebugPrivilege privilege obtained (Step2), a credentials dumping tool is used to recover additional user credentials from the local memory.
+Our lab tests have shown that in addition to the current account session, only one additional user is used by the malware to probe the remote hosts. The malware seems to ignore memory dumped users who were tagged under a new credentials session. Moreover, it seems like only one user (the last one who is in memory) is used to probe the destination host
+Each target endpoint is accessed using multiple authentication protocols, such as NTLM and Kerberos over GSSAPI (SPNEGO). The credentials used for access are:
+
+Current user context, under which the malware is running.
+Successfully dumped credentials (if available).
+
+
+
+In the screenshot below, we can see multiple CIFS ticket requests performed by the malware on behalf of the dumped user. Such broad abnormal access attempts performed by the malware will be detected by Microsoft Advanced Threat Analytics’ (ATA) abnormal behavior detection. Based on previously learned user behavior analytics, the detection mechanism will recognize and alert on the abnormal resource access performed by the malware using the compromised credentials.
+Multiple TGS-REQ
+
+In the screenshot above, we can see multiple CIFS ticket requests.
+Example of abnormal user access – ATA
+
+Remote Execution
+If access to the administrative share was obtained, the malware copies itself to the target host and executes PSEXEC and WMIC.
+Malware Copy
+
+PSEXEC Service creation
+
+In the screenshot above, the infected host starts executing the PSEXEC tool.
+Exploitation (optional)
+If all propagation steps failed, the malware tries to execute one of the SMB exploits (MS17-010).
+Available SMB Exploits:
+
+EternalBlue – CVE-2017-0144
+EternalRomance – CVE-2017-0145
+
+The above steps are performed simultaneously, using multiple threads and runs against each target host. For further information regarding the SMB exploit mitigation, malware encryption steps and initial infection stage, please refer to the Petya worm capabilities blog post.
+The spreading capabilities used by the NotPetya malware introduce a new level of sophistication when executing lateral movement.
+Detection and mitigation
+Microsoft Advanced Threat Analytics allows customers to detect and to investigate a variety of advanced techniques including the lateral movement technique used by NotPetya.
+This type of lateral movement can be detected by ATA as abnormal resource access – given the large scanning performed by the user to attempt access additional endpoints on the subnet.
+There are several ways customers can detect and prevent NotPetya from impacting their environment.
+First, we strongly recommend customers that have not yet installed security update MS17-010 to do so as soon as possible. If applying the patch is not possible, disable SMB V1 on the corporate networks.
+Second, we recommend that you verify good credential hygiene. To learn more, read the following article about protecting high value assets with secure admin workstations.
+Additional Resources
+KB
+
+MS17-010 Security Update
+
+Blog
+
+New ransomware, old techniques: Petya adds worm capabilities
+Windows 10 platform resilience against the Petya ransomware attack
+
+	

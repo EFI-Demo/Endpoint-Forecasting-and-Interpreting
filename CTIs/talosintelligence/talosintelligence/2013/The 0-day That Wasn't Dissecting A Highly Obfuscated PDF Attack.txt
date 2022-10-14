@@ -1,0 +1,99 @@
+
+
+
+This morning, I was made aware of an article in which someone had snagged a PDF from one of the exploit kits that cybercriminals are using to spread malware. The author of this article claimed that the malicious PDF was a 0-day attack; if it actually was, that would be hot news, and we'd need to create coverage. That in mind, I grabbed a copy of the PDF (MD5: eff7d3c7066cac351d3232cccf60fe81) and started analyzing it.
+
+
+
+First, I generated a PCAP of the file being transferred over the wire and ran it through Snort. I got an alert for sid:23401: "FILE-PDF EmbeddedFile contained within a pdf". Opening up the PDF in Vim showed an interesting chunk of data:
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+This turned out to be the embedded file, and with the help of PDF StreamDumper it could be extracted. It turned out that it was an XML file, with JavaScript embedded in it. It had been compressed in the PDF.
+
+
+
+
+
+
+The JavaScript inside the XML was obviously obfuscated with simple things like "ret'+'urn" and "repl"+"a"+"ce". The string following the "return" is interesting:
+
+x2tdh45jRe0Ax2tdh45jRe78
+
+
+This appears to be hex data separated like this: "x2tdh(hex-byte)jRe(hex-byte)". This is repeated for roughly 8,000 bytes. All those bytes are in the ASCII printable range so I converted it to text:
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+More JavaScript is revealed with some Base64 encoded data. The interesting piece of the code here is this string concatenation below:
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+The first part sets a variable equal to "qmnfkyns" which is equal to "SUkqADggAACQAll". When that string is Base64-decoded we get the hex bytes 0x4949002a. These are the first four bytes of the file magic of a tiff image, in little-endian representation.
+
+The JavaScript continues to build a TIFF image by appending base64-encoded to the end of these bytes. I followed along and built a segment of this TIFF image and using ClamAV identified the exploit :
+
+$clamscan tiff-image tiff-image: Exploit.CVE_2010_0188-1 FOUND
+
+
+The exploit code used here is very similar to the exploit publicly available at SecurityFocus and Metasploit.
+
+While the original article's claims of a 0-day attack didn't pan out, this PDF is still interesting, given the level of obfuscation used to hide the underlying attack: a Base64-encoded TIFF built with JavaScript that is hex encoded in more JavaScript that is embedded in an XML which is compressed inside a PDF. What's more interesting - at least from our perspective here on the VRT - is that our generic detection of embedded files within PDFs would have caught this in the wild. Though rules such as that will, by their very nature, have some false positives - there are legitimate reasons to embed files in PDFs - if you have the manpower to examine all of the alerts generic rules generate, you're likely to find plenty of malware that might otherwise go undetected.
+
+UPDATE:  2013-01-25 11:33 EST
+Some additional info from Hendrik Adrian @unixfreaxjp shows that the image object is part of a widget and will be opened by the Flash Player via CVE 2011-0611. His detailed analysis is available here
+

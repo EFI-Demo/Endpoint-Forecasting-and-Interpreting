@@ -1,0 +1,15 @@
+
+It's no surprise that, as the 2012 London Olympic games approach, cybercriminals are using the event as bait for a variety of scams. Sure, there are plenty of 419 scams revolving around the games - but we'll assume that none of the readers of this blog are dumb enough to fall an online lottery scam or the like. I'll focus today on a pair of different phish we've seen with more dirty tricks - one with an attached RTF file exploiting CVE-2010-3333, and one with a fairly standard link off to an exploit kit.
+
+The email with the attached RTF has come in from several different sources, and all of them were classic "please read the attached file to do the thing we think you're interested in" sorts of phish. For those foolish enough to be opening random documents from strangers out of their email, an intriguing little sequence of events occurred.
+
+After exploiting a bug in Microsoft Office (which has plenty of public exploits, and which has been actively expoited in the wild since shortly after its release in November of 2010), the included shellcode drops a file with a random name into C:\Documents and Settings\< User >\Local Settingsemp\< random >.exe, whose contents are wholly contained within the initial RTF. The extracted file is then executed; its sole purpose appears to be to drop antoehr file named cydll.dll, which is then set up as a Windows service. Once connected to its C&C server, this malicious service sends out a GET request with a very strange HTTP header named "Extra-Data-Bind". This, along with "Extra-Data-Space" and "Extra-Data" - the last of which contains what is most likely the initial beacon indicating a newly compromised host - make for easy IDS detection; SIDs 21964 and 22095 cover this traffic. The RTF itself is detected by SIDs 22101 and 22102.
+
+The phishing message with links in it was also fairly primitive in terms of design - but likely will get people clicking on it anyway:
+
+
+
+This particular theme comes as no surprise, given similarly-themed scams seen by other researchers. Clicking any of the links in this email leads you off to - surprsie! - a Blackhole exploit kit, which then drops multiple binaries on the target machine. In the process, the kit lit up Snort like a pinball machine - SIDs 23171, 21041, 20669, 21042, and 15306 all generated alerts on our packet capture from visiting the site.
+
+Clearly, the best way to stay safe as this year's Olympics approach is to be suspicious of any email you get regarding the games, especially if the email offers something too good to be true. If, of course, you've got users who fall for every trick in the book - the good news is that the VRT has you covered.
+

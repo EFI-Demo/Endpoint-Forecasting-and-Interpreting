@@ -1,0 +1,39 @@
+
+Last November, the VRT established an open-source rule testing group, composed of a number of Snort users from around the planet in industries as diverse as defense contracting and education. To date, we've tested well over a hundred rules with this group, and have had a great deal of useful feedback in the process - which has led to both killing rules that didn't perform as well as expected in the field, and the release of rules that we would have never previously dared to put in public after seeing them function well with the test group. I wanted to take a moment today to publicly thank the members of the group for all of their efforts, and to highlight some of the cool work that's come out of this project.
+
+Rules worth highlighting include:
+
+* SID 21941, "INDICATOR-COMPROMISE Wordpress Request for php file in fgallery directory". The fgallery plug-in for WordPress is a common target for remote file inclusion attacks; automated scanners are roving the Internet at this very moment looking for vulnerable installations. Since the directory the rule looks for in the URI should only ever have image files in it, looking for PHP files in that directory is a great generic indicator that a compromise has taken place. 
+
+* SIDs 21544-21546, "MALWARE-CNC Possible host infection - excessive DNS queries for .cn/.ru/.eu". We had observed several pieces of malware which cycled through a large number of domains on these TLDs in an attempt to find that day's algorithmically generated command and control location, and wanted to ensure that the rate at which we chose to alert on these queries was high enough to avoid problems in the field. These signatures have proven very useful as generic infection indicators since their release; we're happy to expand them to any other TLD where the false positive rate is low enough to be useful.
+
+* SIDs 22033, 22034, "MALWARE-CNC Apple OSX Flashback malware outbound connection". The User-Agent strings used by the Flashback malware, while only one piece of the overall detection puzzle, were a perfect example of why this group was put together - they looked likely to cause false positives, but would be an ironclad indicator of infection if they were not standard slices of normal, in-field User-Agent strings.
+
+* SID 21860 "EXPLOIT-KIT Phoenix exploit kit post-compromise behavior". This rule looks for a User-Agent string that appears perfectly normal, but for the inclusion of "Windows 98" (which we felt was likely to be exceptionally rare on networks protected by Snort, given the age of that operating system). Since we're continually surprised by the age of systems we're protecting, however, we wanted to check this before release.
+
+* SIDs 23481, 23482 "INDICATOR-OBFUSCATION hex escaped characters in setTimeout/AddEventListener call". See this previous VRT post for details.
+
+* SID 23621, "INDICATOR-OBFUSCATION known packer routine with secondary obfuscation". This rule takes advantage of the fact that one of the most widely-used JavaScript packers on the Internet (Dean Edwards' "function(p,a,c,k,e,d)" routine) gives the original names of the functions used in the code that's being obfuscated. Since certain calls such as fromCharCode(), charCodeAt(), parseInt(), and eval() are much more common in malicious JavaScript than normal JavaScript, the rule looks for three of them that were involved in an exploit kit observed in the wild by a Sourcefire customer.
+
+* SID 23798, "MALWARE-OTHER Malvertising redirection page". A common technique for embedding malware on otherwise innocuous pages is to use hidden Iframes; this rule looks for these tags with height and width values of 0. Since we were uncertain as to the frequency of such elements in legitimate pages, testing this rule prior to release was crucial to ensure we didn't trigger an avalance of false positives.
+
+* SIDs 23831, 23832, "WEB-CLIENT non-alphanumeric javascript detected". Put together in response to a new JavaScript obfuscation routine, these rules rely on strings which could have easily occurred in legitimate pages. Testing proved that our signatures were specific enough to catch only this encoding routine, and not legitimate activity.
+
+* 24103-24110, "INDICATOR-COMPROMISE HTTP POST request to a JPG/JPEG/GIF/PNG/BMP/RAR/ZIP/MP3 file". This group of signatures detects HTTP POST transactions being sent towards files which generally do no process POST data. While our testing revealed some false positives, the rate was low enough that these rules were published anyway, outside of default policies an with appropriate documentation on how to check whether a hit was in fact a false positive. 
+
+* Several of our less-specifc signatures for the Blackhole exploit kit have either been released or put into the balanced policy after testing through this group revealed that they were free of false positives.
+
+Current members of the group who have consented to being publicly named include:
+
+* James Lay, Winco Foods
+
+* Peter Bates, University College London
+
+* Ralf Spennenberg, OpenSource Training
+
+* Christian Teutenberg/Sandra Sucevic, Telstra
+
+Thanks to them and the others whose management/policies have dictated keeping their contributions private. We wouldn't be as awesome as we are without you!
+
+For those who may be interested in joining this group going forward, please drop me a line at akirk < at > sourcefire < dot > com. Also, if you missed out first "Don't Do That" rules post, it's worth a read, as it highlights several  anomaly detection rules that are still useful over two years later.
+

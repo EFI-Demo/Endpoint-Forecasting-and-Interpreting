@@ -1,0 +1,68 @@
+
+		Recently I wrote an article on the risk of leaked credentials in which I discussed how credentials are stolen in bulk directly from organizations’ websites. As illustrated in Figure 1, during the eight months between November 2013 and June 2014, Microsoft tracked about 1,700 distinct website credential thefts, comprising a little more than 2.3 million credentials that were posted in public places on the Internet. This number represents only a small fraction of the credentials that are traded in forums and specialized websites on less publicly accessible spaces on the Internet that cater to the illicit trade in stolen credentials. This problem is amplified in cases where victims have used the same credentials for access to multiple different service accounts on the Internet. Additionally, many of the high profile network compromises you have heard about over the past several years all had a phishing component in the attack. In many cases someone with a valid user name and password was tricked into disclosing those credentials in a phishing attack that subsequently provided attackers with a way into their infrastructure. Figure 2 illustrates that SmartScreen Filter reported 10.2 phishing attempts per 1,000 unique IP addresses in June 2014. Computers in Western Europe were disproportionately affected by phishing attempts. Four of the 10 locations reporting more than 20 phishing impressions per 1,000 unique IP addresses in June 2014 were in Western Europe: Italy (35.0), France (27.3), Belgium (26.1), and Spain (23.4). Other locations reporting high rates of phishing impressions include Venezuela (24.9) and South Africa (22.0).
+Figure 1 (left):  Number of stolen credentials from publicly-posted credential thefts, per month, from November 2013 to June 2014, data from the Microsoft Security Intelligence Report volume 17; Figure 2 (right): Computers reporting phishing impressions per 1,000 unique client IP addresses in June 2014, data from the Microsoft Security Intelligence Report volume 17
+
+In a world where hundreds of millions of leaked credentials are bought and sold regularly, and phishing attacks are so common and effective, many of the CISOs I talk to have come to the conclusion that passwords, even complex passwords and passphrases, by themselves are no longer sufficient to protect many of the resources that they are entrusted with. After all, even if all the passwords and passphrases meet all of their organization’s password complexity requirements, if attackers have a massive list of leaked credentials they can use to find valid credentials in, the complexity of those credentials isn’t really a mitigating factor for that type of risk.  Most of the CISOs I have talked to have implemented or plan to implement some form of multi-factor authentication as a control that helps mitigate some of these attacks. Multi-factor authentication adds one or more factors to the authentication process so that in addition to something the user knows (a password or pin), successful authentication also relies on something the user has (like a token generator, a smartcard, a specific device or application) or something the user is (biometrics like facial recognition or using iris or fingerprint scans). These additional factors make it harder for attackers to use leaked or stolen credentials to gain illegal access to systems. Security professionals use multi-factor authentication to help manage authentication in many on-premise scenarios including logging into Windows and authenticating to Active Directory, VPN, Direct Access, Exchange, Terminal Services, web applications, etc. In some cases multi-factor authentication helps organizations meet their compliance requirements.
+When I have conversations about Microsoft’s Cloud services with customers, one of the first security controls I get asked about is multi-factor authentication. Naturally, security professionals that have implemented multi-factor authentication in their on-premise environments want to know they have the option to also use it to help protect users, data, and applications in the Cloud. Multi-factor authentication is available for Microsoft Cloud services and there are several configuration options to choose from depending on the service and assets you are trying to protect. Some of these options include Multi-factor Authentication for Azure Administrators, Azure Multi-factor Authentication, and Azure Multi-factor Authentication Server, Multi-factor Authentication for Office 365.
+Azure Multi-factor Authentication is the multi-factor authentication service for Azure Active Directory. It helps to protect whatever assets you have protected with Azure Active Directory authentication including Cloud applications like Microsoft Office 365, OneDrive for Business, and Windows Intune. It can also be used to protect applications you develop on-premise as well as the thousands of SaaS applications available through Azure’s Application Gallery (screen shot in Figure 3), thus providing a more secure, single sign-on experience for people in your organization.
+Figure 3: A screen shot of the Azure Application Gallery in the Azure portal, currently with 2,494 popular SaaS applications available
+
+
+When enabled, Azure Multi-factor Authentication can be configured to require users to use a mobile app, phone call, or text message after entering a valid password when authenticating to Cloud-based or on-premise applications. You can enforce multi-factor authentication on individual users or on specific applications. For example, let’s say your organization had a corporate LinkedIn account. You can provide access to that application to specific users in your organization via Azure Active Directory so they can access it via the app access panel at http://myapps.microsoft.com/. You could enforce multi-factor authentication for specific users so they have to use multiple factors when they logon to the app access panel or when they launch LinkedIn in the app access portal. Figure 4 illustrates how this is configured.  in the configuration settings for that application, I had the option to require multi-factor authentication for the users of that application or any of the other applications I have added in my Azure Active Directory.
+Figure 4: How the Azure administrator adds the LinkedIn app to Azure Active Directory Applications in the Azure Portal and configuring multi-factor authentication, so that users can access the application from the Azure app access panel
+ 
+
+
+Figure 5: A user logs into the Azure app access panel and sees they have been given access to the LinkedIn application; when the user launches LinkedIn from the Azure app access panel for the first time after multi-factor authentication has been enabled on the application, the user is prompted to set up the second factor for use in authentication after they successfully authenticate with their user name and password; the user can select the method they want to use for a second factor; the user selected “Mobile app” in this example and has some configuration options available; instructions are then presented to help the user install the mobile app on their smartphone – essentially installing the multi-factor authentication app from the appropriate app store and scan the barcode
+ 
+ 
+
+You can enable the multi-factor authentication service for on-premises applications by using Azure Multi-factor Authentication Server that can be downloaded from the Azure Portal, as seen in Figure 7. Multi-Factor Authentication for Azure Administrators allows every administrative account of an Azure subscription to be protected by multi-factor authentication. So even if your organization decides not to implement multi-factor authentication for all users, the organization’s Azure administrators have the option to enable it for their accounts.
+Figure 6: Advanced configuration for Azure Multi-factor Authentication
+
+
+
+Figure 7: The Server download option for Azure Multi-factor Authentication Server
+
+
+One tip about multi-factor authentication providers in Azure, as illustrated in Figure 8. You only need to configure a multi-factor authentication provider if you aren’t getting Azure Multi-factor Authentication as part of the service you are using. If you are using Azure Active Directory Premium edition or Office 365 or Multi-Factor Authentication for Azure Administrators, then Azure Multi-factor Authentication is provided for free as part of these offerings. If you plan to use Azure Multi-factor Authentication as a stand-alone service, then you’ll have to create a multi-factor authentication provider to pay for that service. If you create a multi-factor authentication provider when you don’t really need to, you’ll likely pay for Azure Multi-factor Authentication when you don’t really need to – so ensure you need a multi-factor authentication provider before you create one.
+Figure 8: Multi-factor Authentication Providers found in the Azure portal under the Active Directory in the left navigation bar, then click the “MULTI-FACTOR AUTH PROVIDERS” tab
+
+There are a lot of great resources that the Microsoft Azure Active Directory team have published on this topic:
+Azure Multi-Factor Authentication
+Getting started with Windows Azure Multi-Factor Authentication
+Azure Multi-Factor Authentication Story
+Securing access to cloud services – Information for Administrators
+Adding Multi-Factor Authentication to Azure Active Directory
+Configuring Azure Multi-Factor Authentication
+Azure Multi-Factor Authentication FAQ
+Enabling Multi-Factor Authentication for On-Premises Applications and Windows Server
+Building Multi-Factor Authentication into Custom Apps (SDK)
+Multi-Factor Authentication for Azure AD (video)
+As I mentioned earlier, many of the enterprise customers I talk to have already invested in on-premise identity management solutions to meet specific security or compliance objectives they have. They use technologies such as Active Directory Federation Services (AD FS), certificate based authentication, physical smart cards or virtual smart cards. Both Microsoft and third-party authentication methods are available in Windows Server 2012 R2 AD FS. For example, using Windows Server 2012 R2 on-premise, once installed and registered with AD FS, you can enforce multi-factor authentication as part of the global or per-relying-party authentication policy. There are a bunch of providers with multi-factor authentication offerings available for AD FS in Windows Server 2012 R2. Currently these include offerings from Gemalto, inWebo Technologies, Login People, RSA, SafeNet, Swisscom and Symantec. Microsoft Azure Multi-factor Authentication will also work in this scenario. More background information long with the steps to do this are available: Manage Risk with Additional Multi-Factor Authentication for Sensitive Applications.
+Figure 9: An illustration of how Azure Multi-factor Authentication Server can be integrated to manage authentication requests from on-premise applications
+
+
+Figure 10 (left): Installing the AD FS Adapter in the Azure Multi-factor Authentication Server after it has been installed and activated; Figure 11 (right): Configuring the AD FS Global Authentication Policy to use Azure Multi-factor Authentication
+ 
+There are a bunch of other resources available related to using AD FS multi-factor authentication:
+Microsoft Azure Multi-Factor Authentication Deep Dive: Securing Access on Premises and in the Cloud (video)
+Active Directory Federation Services Overview
+Getting started with Azure Multi-Factor Authentication and Active Directory Federation Services
+Securing cloud resources with Azure Multi-Factor Authentication and AD FS
+Secure cloud and on-premises resources using Azure Multi-Factor Authentication Server with Windows Server 2012 R2 AD FS
+Secure cloud and on-premises resources using Azure Multi-Factor Authentication Server with AD FS 2.0
+Building Multi-Factor Authentication into Your Applications Using the SDK
+Windows Azure: Authenticate Windows Azure with ADFS
+Windows Azure Multi-Factor Authentication Server (video)
+Taking advantage of Identity capabilities in the Azure Pack (video)
+For Office 365, multi-factor authentication can be used to protect both Office 365 administrative accounts and Office 365 user accounts. Multi-factor Authentication for Office 365 is powered by Azure Multi-factor Authentication, and works exclusively with Office 365 applications and is managed from the Office 365 portal. It’s available for all the different SKUs of Office 365. Once enabled, users are required to acknowledge a phone call, text message, or an app notification on their smartphone after correctly entering their password. Only after this second authentication factor has been satisfied does the user get access to Office 365 resources. The Office 365 team has published some great articles and videos that you can use to learn more about Multi-factor Authentication for Office 365:
+Multi-Factor Authentication for Office 365
+Webcast: Office 365 sign-in with Multi-Factor Authentication
+Set up multi-factor authentication for Office 365
+Security in Office 365 White Paper
+As you can see, you have several options that make it easy to enable multi-factor authentication to help protect administrator and user credentials used to access on-premise applications, Office 365 applications, Azure-based applications, and thousands of third party Cloud SaaS applications.
+Tim Rains
+Chief Security Advisor
+Worldwide Cybersecurity & Data Protection
+	

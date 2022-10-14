@@ -1,0 +1,49 @@
+
+		“Step 10. Detect and investigate security incidents” is the final installment in the Top 10 actions to secure your environment blog series. Here we walk you through how to set up Azure Advanced Threat Protection (Azure ATP) to secure identities in the cloud and on-premises.
+Azure ATP is a service in the Microsoft Threat Protection solution, which integrates with Azure Identity Protection and Microsoft Cloud App Security and leverages your on-premises Active Directory signals to identify suspicious user and device activity with both known-technique detection and behavioral analytics. It protects user identities and credentials stored in Active Directory and allows you to view clear attack information on a simple timeline for fast triage. Integration with Windows Defender Advanced Threat Protection (Windows Defender ATP) provides a single interface to monitor multiple entry points.
+Azure ATP works by analyzing data sent by Azure ATP sensors that parse network traffic from domain controllers (Figure 1). In this blog, we share resources and advice that will help you install and configure the Azure ATP sensors following these steps:
+
+Plan your Azure ATP capacity.
+Install the Azure ATP sensor package.
+Configure Azure ATP sensor.
+Detect alerts.
+
+
+Figure 1: Azure ATP sensors parse network traffic from domain controllers and send it to Azure ATP for analysis.
+Plan your Azure ATP capacity
+Before you begin your Azure ATP deployment, you’ll need to determine what resources are required to support your Azure ATP sensors. An Azure ATP sensor analyzes network traffic and reads events locally, without the need to purchase and maintain additional hardware or configurations. The Azure ATP sensor also supports Event Tracing for Windows (ETW), which provides the information for multiple detections. ETW-based detections include suspected DCShadow attacks that attempt to use domain controller replication requests and domain controller promotion.
+The recommended and simplest way to determine capacity for your Azure ATP deployment is to use the Azure ATP sizing tool. Once you download and run the tool, the details in the “Busy Packets/sec” field will help you determine the resources required for your sensors.
+Next, you create your Azure Advanced Threat Protection instance and connect to your Azure Directory forest. You’ll need an Azure Active Directory (Azure AD) tenant with at least one global/security administrator. Each Azure ATP instance supports a multiple Active Directory forest boundary and Forest Functional Level (FFL) of Windows 2003 and above.
+Install the Azure ATP sensor package
+Once Azure ATP is connected to Azure Directory, you can download the sensor package. Click Download from the Azure ATP portal to begin the process. You need to copy the access key for use when you install the sensor (Figure 2).
+
+Figure 2: The access key is used in installation.
+Next, verify the domain controller(s) on which you intend to install Azure ATP sensors have internet connectivity to the Azure ATP Cloud Service. These URLs automatically map to the correct service location for your Azure ATP instance:
+
+For console connectivity: <your-instance-name>.atp.azure.com (For example, “Contoso-corp.atp.azure.com”)
+For sensors connectivity: <your-instance-name>sensorapi.atp.azure.com (For example, “contoso-corpsensorapi.atp.azure.com”)
+
+Note: There is no “.” Between <your-instance-name> and “sensorapi”.
+Extract the files from the ZIP and run the Azure ATP sensor setup.exe, which initiates the installation wizard. When you get to the Configure the Sensor screen, enter the access key you copied during the download.
+Note that all domain controllers in your environment should be covered by an Azure ATP sensor. The Azure ATP sensor supports the use of a proxy.
+For more information on proxy configuration, see Configuring a proxy for Azure ATP.
+Configure the Azure ATP sensor
+The domain synchronizer is responsible for synchronization between Azure ATP and your Active Directory domain. Depending on the size of the domain, the initial synchronization may take time and is resource intensive. We recommend setting at least one domain controller as the domain synchronizer candidate per domain. This ensures Azure ATP is actively scanning your network at all times. By default, Azure ATP sensors aren’t domain synchronizer candidates. To manually set an Azure ATP sensor as a domain synchronizer candidate, switch the domain synchronizer candidate toggle option to ON in the configuration screen (Figure 3).
+
+Figure 3: The domain synchronizer candidate toggle option set to ON in the configuration screen.
+Next, manually tag groups or accounts as sensitive to enhance detections. This is important because some Azure ATP detections, such as sensitive group modification detection and lateral movement paths, rely on sensitive groups and accounts.
+We also recommend that you integrate Azure ATP with Windows Defender ATP. Windows Defender ATP monitors your endpoints and the integration provides a single interface to monitor and protect your environment. It is easy to turn on the integration from the Azure ATP portal (Figure 4).
+
+Figure 4: A simple toggle enables integration with Windows Defender ATP.
+You can also integrate with your VPN solution to collect additional user information, such as the IP addresses and locations where connections originated. This complements the investigation process by providing additional information on user activity as well as a new detection for abnormal VPN connections.
+Detect alerts
+After you set up Azure ATP, we recommend that you set up an Azure ATP security alert lab to help you better understand the alerts which may be generated in your environment. The lab includes a reconnaissance playbook that shows how Azure ATP identifies and detects suspicious activities from potential attacks. The lateral movement playbook allows you to see lateral movement path threat detections and security alerts services of Azure ATP. In the domain dominance playbook, you’ll simulate some common domain dominance methods. For best results set up your lab as close as possible to the instructions in the tutorial.
+When Azure ATP is configured, you will be able to manage security alerts in the Security Alerts Timeline of the Azure ATP portal. Azure ATP security alerts provide tools to discover which suspicious activities were identified on your network and the actors and computers involved in the threats. Alerts are organized by threat phase, graded for severity, and color-coded to make them easy to visually filter.
+Learn more
+This completes our series, “Top 10 actions to secure your environment.” Review the entire series for advice on setting up other Microsoft 365 security products, such as Azure AD or Microsoft Cloud App Security.
+Resources
+
+Top 10 Security Deployment Actions with Microsoft 365 infographic
+Deployment series
+
+	

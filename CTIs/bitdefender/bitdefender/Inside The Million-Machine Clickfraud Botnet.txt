@@ -1,0 +1,113 @@
+Online advertising is a multi-billion dollar business mostly ran by Google, Yahoo or Bing via AdSense-like programs. The current generation of clickbots such as the Redirector.Paco Trojan have taken abuse to a whole new level, burning through companies’ advertising budget at an unprecedented pace.
+
+This paper is based on research carried by Bitdefender antimalware researchers Cristina Vatamanu, Răzvan Benchea and Alexandru Maximciuc.
+How it works
+The malware’s objective is to redirect all traffic performed when using a popular search engine (such as Google, Yahoo or Bing) and replace the results with others obtained from a Google custom search. The goal is to help cyber-criminals earn money from the AdSense program.
+Google’s AdSense for Search program places contextually relevant ads on Custom Search Engine’s search results pages and shares a portion of its advertising revenue with AdSense partners.
+To redirect the traffic the malware performs a few simple registry tweaks. It modifies the “AutoConfigURL” and “AutoConfigProxy” values from the “Internet Settings” registry key so that for every request that a user makes, a PAC (Proxy auto-config) file will be queried. This file tells the browser to redirect the traffic to a different address.
+The malware tries to make the search results look authentic. However, there are some markers that would normally raise suspicions.
+In the status bar of the browser, messages like “Waiting for proxy tunnel” or “Downloading proxy script” may be displayed. Secondly, the Google page takes abnormally long to load. Furthermore, the malware doesn’t show the typical yellow ‘o’ characters above the page numbers.
+
+Redirector.Paco has been active in the wild starting mid-september 2014. During this period it has managed to infect more than 900000 IPs worldwide, mainly from India, Malaysia, Greece USA, Italy, Pakistan, Brazil and Algeria.
+
+MSI type
+The malicious infection chain starts with a modified MSI file. The installation files usually belong to known benign programs such as “WinRAR 5.2 msi”, “WinRAR 5.11”, “YouTube Downloader 1.0.1”, “WinRAR 5.11 Final”, “”Connectify 1.0.1”, “Stardock Start8 1.0.1”, “KMSPico 9.3.3”. The installation files are modified using Advanced Installer[1] [2] .[3]
+In one of the versions analyzed, three additional files were added to the installation file: “prefs.js”, “reset.txt” and “update.txt”. As seen in the image below, the “prefs.js” file will be dropped in %programfiles% while “reset.txt” and “update.txt” will be dropped in %commonprogramfiles%.
+
+In addition to these, two scheduled tasks are also added in order to assure persistence on the system.
+
+The Scheduled tasks, named “Adobe Flash Scheduler” and “Adobe Flash Update” will start the files dropped in the %commonprogramfiles% folder. The “Adobe Flash Scheduler” task will execute the “update.txt” file using VBScript each time a user logs on, while “Adobe Flash Update” will execute “reset.txt” in the same way, but only on Tuesdays at 6:00 PM.
+
+1. The Scripts
+Reset.txt, comprised of nine lines of text and an additional 164 blank lines at the beginning, modifies the Internet Settings for the current user.
+
+It first deactivates the proxy cache by setting the value “EnableAutoProxyResultCache” to 0 from the key “HKCU\Software\Policies\Microsoft\Windows\CurrentVersion\Internet Settings”. Afterwards, it modifies the following four values. The main purpose is to make the browser download and use the proxy auto-configuration file identified by the URL “http://wp[redacted].com.gr/server.pac”.
+
+The content of the PAC file:
+
+As shown, any request to any page that starts with https://www.google or https://cse.google will be redirected to the IP 93.*.*.240 on port 8484. However, at this point, since the requests are made on the HTTPS protocol, they will be accompanied by a warning that alerts the user that there is a problem with the certificate.
+
+This is where update.txt comes in use.
+
+Update.txt downloads and installs a root certificate so that any connection that goes through the server specified in the PAC file looks private. As displayed in the image below, the icon for the HTTPS protocol remains unaltered, so the user doesn’t get suspicious. However, if he checks the certificate, he can observe that it was issued by DO_NOT_TRUST_FiddlerRoot.
+
+2. JavaScript file
+The malware also contains JavaScript files similar in behavior to update.txt and reset.txt files. The script is given below.
+
+The script first queries the “text” record from the DNS server for remotesettings1.mtmyoq.se. This returns the following output.
+
+The text record contains two URLS, splitted by the character “|”.
+The first one points to the PAC file, while the second is the certificate that will be used in order to avoid the issuing of alerts when HTTPS is used for browsing. The URL that will be stored in registry is “http://localhost.[redacted]/localhost.local”.
+Other variants of the same scripts were spotted in the wild. For example, a variant of this script was made to look like a PDF file. This was achieved by using markers specific to PDF files as well as parts from a PDF file as comments for the JavaScript.
+
+Another variant of the JavaScript was made to look like a ini file. In fact we have found two versions of this kind of file. In the first case, the whole JavaScript was written as a single line and was appended to a line located in the middle of the original file. A great amount of blank spaces were also inserted between the original line and the JavaScript code to hide it in case someone was checking the file with a text editor that doesn’t have word wrap enabled.
+
+In another version, the same JavaScript was broken and pieces were inserted at random positions in a configuration file. Unless someone views this file with an editor that has syntax highlighting is very hard to spot the malicious code.
+
+.Net Type
+This component of the malware modifies the search results locally and not through the use of an external server, as previous ones. For this to be accomplished, the malware performs a man-in-the-middle attack, as described below:
+ 
+1.    Tries to contact a server every 5 seconds in order to receive the URLs  to redirect
+2.    Modifies the registry settings in order to redirect some requests to the local system
+3.    Starts a server on the local system to receive the redirected requests and modify them
+4.    Checks for updates
+A piece of code describing the steps:
+
+In order to contact the server, the malware has integrated a simple DGA. A list of domains is generated based on a fix seed. The TLDs for these domains is ‘se’. In addition a number is prepended at the beginning of the string. It represents a counter, starting with the value 1, and is incremented until a condition is satisfied.
+
+
+As it can be observed, the first generated domain, 1.m[redacted]q.se is the one found in the JavaScript file.
+These binary files will iterate through the list of generated domains and will perform a nslookup operation in order to retrieve the txt record of each domain.
+Example:
+nslookup -type=txt 1.m[redacted]q.se
+In contrast to the JavaScript file, the responses are encrypted using base64 and rijndael algorithms. The setup for the rijndael algorithm is:
+rijndaelManaged.Padding = PaddingMode.PKCS7;
+rijndaelManaged.Mode = CipherMode.CBC;
+rijndaelManaged.KeySize = 256;
+rijndaelManaged.BlockSize = 256;
+rijndaelManaged.Key = uTF8Encoding.GetBytes(“anjueolkdiwpoida”);
+rijndaelManaged.IV= uTF8Encoding.GetBytes(“45287112549354892144548565456541”);
+After applying the decryption algorithm, the following xml is revealed:
+
+The <PacFile> tag contains the ‘server.pac’ functionality. In this case, all searches performed on the three most popular search engines (Google, Bing and Yahoo) are going to be redirected to the local system on the port 8080, where a man-in-the-middle server listens.
+
+After the PAC file is retrieved, the user’s Internet Settings are adjusted so that the browser will query the PAC file. The steps are similar to the ones performed by the JavaScript file, yet the PAC file will not be retrieved from an external server, but from a HTTP server listening on port 9090 on the local system.
+
+Once the browser is configured, the malware starts the man-in-the-middle service, as well as the HTTP server that will provide the PAC file to the browser.
+For the main-in-the-middle proxy, the malware relies on the FiddlerCore, a .NET class library that allows the capturing and alteration of HTTP and HTTPS traffic. The Fiddler service is configured to run on port 8080, to ignore certificate errors, as well as to modify HTTP headers, the HTTP response and body.
+The redirection can be performed either by returning the 302 response code or by replacing the keyword “/search” with “/cse?cx=”.
+
+Also, to overcome certificate errors, a new root certificate is added using the CertMaker class from the FiddlerCore library.
+At the final stage, a check for updates is performed. From the initial setting XML, the update URL is retrieved (http://search[hidden].org/update.php) and an executable file is downloaded in the %temp% folder (if the current version is different from the one in the XML file).
+ 
+MD5 hashes  of analyzed samples throughout this paper:
+0681d610f382f5aa59e69d976ed7acdb
+10fca73594868fd485be04bff65aced8
+22aafceaf916d0e4bc41f86b3e88f823
+29de111df1983e169959dca011721e1b
+387c228de33429edb68ae4c766525bfa
+3943bc3e0cf71334bb2e996452507d53
+4058fffb19b7d72b4ab89934c80e93e8
+4f19bb0b2f343c2bcc25fe36bccbbab7
+521ac14c9aae6cac9b988dd4dd6a2f6b
+5dd5153f292147f7dfa63d3fdbecde45
+6a2ac9046e8632e00d52bfb804ddeb5e
+713dc2ca729aad773380c6fca70af8b7
+84c2eb6006a68a18380525ca01adcb53
+8f93e41c30911fd2321973c01277c752
+99a0df95986f975a4e5229550d710f23
+9f7f337257c8b90e75355483dacbd0c8
+b29816a16f6ac75432d52848236c04db
+b5b98837ede4701a98f1467ab53160fb
+bd2d150a810541d4e8af07d40c6c2d9e
+bfe9796d943966d05b7a7fb57cc6e595
+c6b90576c2f6aae51fc932c98b17daf0
+d62b97f57093cc5cb4d1fd3cff89f63b
+e13911d77eaed1f495c78757f0790033
+eed81f2283c05191c77ceec6ecf989bc
+f9db0d4abe8486186ca21466750dfbd8
+fef9c06700c1aa40a467d2da56a08ead
+Custom searches used:
+008492270633049060610:wwrnggf2czw
+017628126614017098810:c2rlwcsnsbe
+009793234822822480237:wabrdd_t6e8

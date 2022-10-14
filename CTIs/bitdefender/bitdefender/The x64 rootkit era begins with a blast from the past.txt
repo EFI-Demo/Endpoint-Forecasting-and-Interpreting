@@ -1,0 +1,13 @@
+The latest incarnation of the TDL3 rootkit is capable of infecting x64  systems. Ironically enough, the basic techniques used to achieve this  are positively ancient by the computing world’s standards, having been  perfected in the MS-DOS age.
+Indeed, TDL3 is a rootkit that  replaces legit master boot records (the bits of code stored on a  computer’s hard-disk that tell its BIOS where to find the operating  system and how to load it) with a malicious version, causing malware  code to be loaded even before the operating system is started.
+TDL3 arrives on victim computers via a downloader, either as a “drive-by download” or via other means.
+On 32-bit windows systems, the MBR infection is performed, then a  kernel-level malicious driver is loaded which goes on to provide the  rootkit functionality.
+In contrast, on 64-bit systems, where  unsigned drivers are not allowed, the downloader only infects the MBR (a  thing which is still possible without kernel access). Then, a reboot is  forced and the malicious code can take over at boot-time.
+The  malicious code in the MBR is nothing special, bearing much similarity  with other bootkits such as Mebroot or Stoned. It’s used to load  “ldr16”, a piece of 16-bit code harkening straight back to old DOS boot  viruses, which hooks int13h (a software interrupt for disk reading).
+
+ldr16 then intercepts the OS loading process, detect what kind of OS is  loading and, if it’s a 64-bit kernel, patches it to allow the loading of  unsigned drivers.
+
+The loader then loads a malicious kernel driver which provides most of the backdoor/rootkit functionality.
+As in previous versions, TDL3 stores its payload and various “utility”  components in a virtual filesystem it creates, which now has new  entries, such as ldr64.
+The most recent variant under analysis crashes some x86 systems at boot  time, but other than that is entirely functional, managing to infect  even the latest Windows 7 x64 systems.
+As a side-note,  disinfection of TDL3 (once one becomes aware it is running) is as simple  as running the command ‘fixmbr’ from a recovery console, thus restoring  the original master boot record.

@@ -1,0 +1,19 @@
+A new variant of the Linux Encoder ransomware is now targeting vulnerable servers worldwide. As of the moment of writing, more than 600 servers have been infected. The good news is that we still can decrypt the files held at ransom for free.
+
+But let’s backtrack a few weeks.
+Last November saw the emergence of an interesting piece of ransomware targeting vulnerable Linux web servers. Fortunately, a programming flaw allowed Bitdefender researchers to get hold of the decryption key and provide victims with a free recovery utility. Soon after the release of the decryption tool, we learnt about the existence of an even older version of the ransomware that allowed us to guess the symmetric AES key used for decryption.
+As we expected, the creators of Linux.Encoder have fixed their previous “bugs” and have come up with a new and improved variant. Luckily for the victims, the new variant of Linux.Encoder is still vulnerable to key recovery attacks.
+What went wrong this time?
+The old version of the Linux.Encoder ransomware used to generate a 16-byte initialization vector and a 16-byte AES key by calling the rand() function. The initial seed to the RNG was taken from the current timestamp, which was actually very close to the modification time of the file after encryption.
+In the current version of the Linux.Encoder ransomware, every file that goes through the encryption process is given the modification time of the original, unencrypted file. If a file generated in 2012 is encrypted now, it would still appear that it has been last modified in 2012, so we wouldn’t be able to look at the modification time and use it as a decryption key.
+When we documented the flawed approach to generating IVs and keys in the previous versions, the Twitter community ridiculed the developers by suggesting wild improvements to the ransomware’s functionality.
+
+Reminder to everyone: srand(time()) is not cryptographically secure! You need to do srand(md5(time())).
+— thaddeus e. grugq (@thegrugq) November 11, 2015
+
+Apparently, the operators actually took note of these sarcastic recommendations;  As a result, the IV is now generated from a hash of the file size and the filename – 32 bytes from rand() are hashed 8 times and used as the AES-256 key.
+Moreover, the new Linux.Encoder now does not statically link the libc library such that older systems (which are more likely to be vulnerable and thus more susceptible to getting infected) are not compatible with the ransomware and will fail to even start the program.
+However, the breaking flaw shipped with the Linux.Encoder ransomware resides in the way the attackers are hashing the random bytes to produce the AES-256 key. Apparently, they have completely forgotten to select a hashing algorithm, so the output of the hashing function is unchanged. This means that all calls to the Update and Finish primitives do not, in effect, do anything. As a result, the full AES key is now written to the encrypted file, which makes its recovery a walk in the park.
+If you have been hit by the new version of this ransomware and would like to get your files back for free, head over to the download section, download and run the decryption utility provided by Bitdefender. While this is the third lucky strike, please make sure that, after recovery, you update the vulnerable platforms and stop this type of attack cold in the first place. Next time, hackers could actually come up with a working version of the ransomware that won’t be as easy to decrypt.
+[mks_button size=”large” title=”Download the decryption utility” style=”squared” url=”https://labs.bitdefender.com/wp-content/uploads/downloads/linux-encoder-3-free-decryption-utility/” target=”_self” bg_color=”#81d742″ txt_color=”#FFFFFF” icon=”” icon_type=”” nofollow=”0″]
+This tool is based on research provided by Bitdefender crypto specialist Radu Caragea. 

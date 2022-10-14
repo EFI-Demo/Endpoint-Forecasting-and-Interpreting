@@ -1,0 +1,44 @@
+Symantec has observed a surge in detections for a malicious Android application that can hide itself from users, download additional malicious apps, and display advertisements. The app, called Xhelper, is persistent. It is able reinstall itself after users uninstall it and is designed to stay hidden by not appearing on the system’s launcher. The app has infected over 45,000 devices in the past six months.
+
+We have seen many users posting about Xhelper on online forums, complaining about random pop-up advertisements and how the malware keeps showing up even after they have manually uninstalled it.
+.Xhelper in action
+
+Xhelper does not provide a regular user interface. The malware is an application component, meaning it won’t be listed in the device’s application launcher (see Figure 2). This makes it easier for the malware to perform its malicious activities undercover.
+.Xhelper can’t be launched manually since there is no app icon visible on the launcher. Instead, the malicious app is launched by external events, such as when the compromised device is connected to or disconnected from a power supply, the device is rebooted, or an app is installed or uninstalled.
+.Once launched, the malware will register itself as a foreground service, lowering its chances of being killed when memory is low. For persistence, the malware restarts its service if it is stopped; a common tactic used by mobile malware.
+.Once Xhelper gains a foothold on the victim’s device, it begins executing its core malicious functionality by decrypting to memory the malicious payload embedded in its package. The malicious payload then connects to the attacker’s command and control (C&C) server and waits for commands. To prevent this communication from being intercepted, SSL certificate pinning is used for all communication between the victim’s device and the C&C server.
+.Upon successful connection to the C&C server, additional payloads such as droppers, clickers, and rootkits, may be downloaded to the compromised device. We believe the pool of malware stored on the C&C server to be vast and varied in functionality, giving the attacker multiple options, including data theft or even complete takeover of the device.
+.The rise of Xhelper
+
+We first began seeing Xhelper apps in March 2019. Back then, the malware’s code was relatively simple, and its main function was visiting advertisement pages for monetization purposes. The code has changed over time. Initially, the malware’s ability to connect to a C&C server was written directly into the malware itself, but later this functionality was moved to an encrypted payload, in an attempt to evade signature detection. Some older variants included empty classes that were not implemented at the time, but the functionality is now fully enabled. As described previously, Xhelper’s functionality has expanded drastically in recent times.
+
+We strongly believe that the malware’s source code is still a work in progress. For example, we spotted many classes and constant variables labeled as “Jio”, indicating possible future interest in Jio users, the largest 4G network in India. However, we have no evidence that Jio users are at risk at this time. Jio customers with JioSecurity installed on their devices are protected from these malicious apps. JioSecurity, which is powered by Norton Mobile Security, is available to Jio customers for free from the MyJio app.
+.Xhelper download sources
+
+None of the samples we analyzed were available on the Google Play Store, and while it is possible that the Xhelper malware is downloaded by users from unknown sources, we believe that may not be the only channel of distribution.
+
+From our telemetry, we have seen these apps installed more frequently on certain phone brands, which leads us to believe that the attackers may be focusing on specific brands. However, we believe it to be unlikely that Xhelper comes preinstalled on devices given that these apps don’t have any indication of being system apps. In addition, numerous users have been complaining on forums about the persistent presence of this malware on their devices, despite performing factory resets and manually uninstalling it. Since it is unlikely that the apps are systems apps, this suggests that another malicious system app is persistently downloading the malware, which is something we are currently investigating (keep an eye on the Threat Intelligence blog for more on this).
+.Xhelper infections
+
+According to our telemetry, at least 45,000 devices have been impacted by the Xhelper malware. In the past month alone, there was an average of 131 devices infected each day, and an average of 2,400 devices persistently infected throughout the month. The malware mostly affects users in India, the U.S. and Russia.
+
+Protection/Mitigation
+
+Symantec and Norton products detect these malicious apps as the following:
+
+
+	Android.Malapp
+
+
+We advise users to take the following precautions:
+
+
+	Keep your software up to date.
+	Do not download apps from unfamiliar sites.
+	Only install apps from trusted sources.
+	Pay close attention to the permissions requested by apps.
+	Install a suitable mobile security app, such as Norton or Symantec Endpoint Protection Mobile, to protect your device and data.
+	Make frequent backups of important data.
+
+
+Indicators of Compromise

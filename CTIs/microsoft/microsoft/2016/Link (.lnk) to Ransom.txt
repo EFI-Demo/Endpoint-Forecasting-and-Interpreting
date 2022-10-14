@@ -1,0 +1,238 @@
+
+		
+
+
+Modern social engineering attacks use non-portable executable (PE) files like malicious scripts and macro-laced documents. Every month, Windows Defender AV detects non-PE threats on over 10 million machines.
+Learn how machine learning drives next-gen protection capabilities and cloud-based, real-time blocking of new and unknown threats:
+Machine learning vs. social engineering
+
+
+
+We are alerting Windows users of a new type of ransomware that exhibits worm-like behavior. This ransom leverages removable and network drives to propagate itself and affect more users. We detect this ransomware as Ransom:Win32/ZCryptor.A.
+Infection vector
+Ransom:Win32/ZCryptor.A is distributed through the spam email infection vector. It also gets installed in your machine through other macro malware*, or fake installers (Flash Player setup).
+Once ZCryptor is executed, it will make sure it runs at start-up:
+HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Run
+zcrypt = {path of the executed malware}
+It also drops autorun.inf in removable drives, a zycrypt.lnk in the start-up folder:
+%User Startup%\zcrypt.lnk
+..along with a copy of itself as {Drive}:\system.exe and %APPDATA%\zcrypt.exe, and changes the file attributes to hide itself from the user in file explorer.
+For example: c:\users\administrator\appdata\roaming\zcrypt.exe
+Payload
+This ransomware will display the following ransom note to users in a dropped HTML file How to decrypt files.html:
+
+It will also target, encrypt files with the following extension, and change the file extension to .zcrypt once it is done (for example,<originalfilename.zcrypt>):
+
+
+
+.accdb
+.dwg
+.odb
+.raf
+
+
+.apk
+.dxg
+.odp
+.raw
+
+
+.arw
+.emlx
+.ods
+.rtf
+
+
+.aspx
+.eps
+.odt
+.rw2
+
+
+.avi
+.erf
+.orf
+.rwl
+
+
+.bak
+.gz
+.p12
+.sav
+
+
+.bay
+.html
+.p7b
+.sql
+
+
+.bmp
+.indd
+.p7c
+.srf
+
+
+.cdr
+.jar
+.pdb
+.srw
+
+
+.cer
+.java
+.pdd
+.swf
+
+
+.cgi
+.jpeg
+.pdf
+.tar
+
+
+.class
+.jpg
+.pef
+.tar
+
+
+.cpp
+.jsp
+.pem
+.txt
+
+
+.cr2
+.kdc
+.pfx
+.vcf
+
+
+.crt
+.log
+.php
+.wb2
+
+
+.crw
+.mdb
+.png
+.wmv
+
+
+.dbf
+.mdf
+.ppt
+.wpd
+
+
+.dcr
+.mef
+.pptx
+.xls
+
+
+.der
+.mp4
+.psd
+.xlsx
+
+
+.dng
+.mpeg
+.pst
+.xml
+
+
+.doc
+.msg
+.ptx
+.zip
+
+
+.docx
+.nrw
+.r3d
+.3fr
+
+
+
+Infected machines are noticed to have zcrypt1.0 mutex. The mutex denotes that an instance of this ransomware is already running in the infected machine.
+We have also seen a connection to the following URL. However, the domain is already down when we were testing:
+http://<obfuscated>/rsa/rsa.php?computerid={Computer_ID} where the {Computer_ID} is entry found inside a dropped file %APPDATA%\cid.ztxt
+For example, c:\users\administrator\appdata\roaming\cid.ztxt
+Prevention
+To help stay protected:
+
+Keep your Windows Operating System and antivirus up-to-date. Upgrade to Windows 10.
+Regularly back-up your files in an external hard-drive
+Enable file history or system protection. In your Windows 10 or Windows 8.1 devices, you must have your file history enabled and you have to setup a drive for file history
+Use OneDrive for Business
+Beware of phishing emails, spams, and clicking malicious attachment
+Use Microsoft Edge to get SmartScreen protection. It will prevent you from browsing sites that are known to be hosting exploits, and protect you from socially-engineered attacks such as phishing and malware downloads.
+Disable the loading of macros in your Office programs
+Disable your Remote Desktop feature whenever possible
+Use two factor authentication
+Use a safe internet connection
+Avoid browsing web sites that are known for being malware breeding grounds (illegal download sites, porn sites, etc.)
+
+Detection
+
+Install, use, and regularly update an antivirus solution like Windows Defender to detect ransomware.
+Enable Microsoft Active Protection Service (MAPS) to get the latest cloud-based ransomware detection and blocking.
+
+Recovery
+In Office 365’s How to deal with ransomware blog, there are several options on how one can remediate or recover from a ransomware attack. Here are some of the few that are applicable for a home user or those in the information industry like you:
+
+Make sure you have backed-up your files.
+Recover the files in your device. If you have previously turned File History on in Windows 10 and Windows 8.1 devices or System Protection in Windows 7 and Windows Vista devices, you can (in some cases) recover your local files and folders.
+
+To restore your files or folders in Windows 10 and Windows 8.1:
+
+Swipe in from the right edge of the screen, tap Search (or if you’re using a mouse, point to the upper-right corner of the screen, move the mouse pointer down, and then click Search). Enter “restore your files” in the search box, and then tap or click Restore your files with File History.
+Enter the name of file you’re looking for in the search box, or use the left and right arrows to browse through different versions of your folders and files.
+Select what you want to restore to its original location, and then tap or click the Restore button. If you want to restore your files onto a different location than the original, press and hold, or right-click the Restore button, tap or click Restore To, and then choose a new location.
+
+Source: Restore files or folders using File History
+To restore your files in Windows 7 and Windows Vista
+
+Right-click the file or folder, and then click Restore previous versions. You’ll see a list of available previous versions of the file or folder. The list will include files saved on a backup (if you’re using Windows Backup to back up your files) as well as restore points. Note: To restore a previous version of a file or folder that’s included in a library, right-click the file or folder in the location where it’s saved, rather than in the library. For example, to restore a previous version of a picture that’s included in the Pictures library but is stored in the My Pictures folder, right-click the My Pictures folder, and then click Restore previous versions. For more information about libraries, see Include folders in a library.
+Before restoring a previous version of a file or folder, select the previous version, and then click Open to view it to make sure it’s the version you want. Note: You can’t open or copy previous versions of files that were created by Windows Backup, but you can restore them.
+To restore a previous version, select the previous version, and then click Restore.
+
+Warning: The file or folder will replace the current version on your computer, and the replacement cannot be undone. Note: If the Restore button isn’t available, you can’t restore a previous version of the file or folder to its original location. However, you might be able to open it or save it to a different location.
+Source: Previous versions of files: frequently asked questions 
+Important: Some ransomware will also encrypt or delete the backup versions and will not allow you to do the actions described before. If this is the case, you need to rely on backups in external drives (not affected by the ransomware) or OneDrive (Next step).
+Warning: If the folder is synced to OneDrive and you are not using the latest version of Windows, there might be some limitations using File History.
+
+Recover your files in your OneDrive for Consumer
+
+Find lost or missing files in OneDrive
+Delete or restore files and folders
+
+
+Recover your files in your OneDrive for Business
+
+If you use OneDrive for Business, it will allow you to recover any files you have stored in it. You can use either of the following options:
+Restore your files using the Portal
+Users can restore previous version of the file through the user interface. To do this you can:
+1. Go to OneDrive for Business in the office.com portal
+2. Right click the file you want to recover, and select Version History.
+3. Click the dropdown list of the version you want to recover and select restore
+If you want to learn more about this feature, take a look at the Restore a previous version of a document in OneDrive for Business support article.
+Create a Site Collection Restore service request
+If a large number of files were impacted, using the user interface in the portal will not be a viable option. In this case, create a support request for a ‘Site Collection Restore’. This request can restore up to 14 days in the past. To learn how to do this please take a look at the Restore Option in SharePoint Online blog post.
+*Related macro malware information:
+
+Malicious macro using a sneaky new trick
+New feature in Office 2016 can block macros and help prevent infection
+Threat intel on macro malware
+Macro malware
+
+Edgardo Diaz and Marianne Mallen
+
+Talk to us
+Questions, concerns, or insights on this story? Join discussions at the Microsoft community and Windows Defender Security Intelligence.
+Follow us on Twitter @WDSecurity and Facebook Windows Defender Security Intelligence.
+	

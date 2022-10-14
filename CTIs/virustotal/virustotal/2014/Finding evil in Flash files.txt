@@ -1,0 +1,43 @@
+
+Adobe Flash is present on nearly every PC, thus, malware authors have been increasingly targeting it over the last years, following the principle of return on investment, i.e. they will focus on popular technologies to exploit as that will eventually mean a larger base of compromised machines. The rich ActionScript features that are available in Flash also led to these files being commonly abused in multi-stage web-based attacks, using them as a vehicle to perform heap-spraying, JIT spraying and other badness.
+
+Just recently FireEye discovered a new Zero-Day targeting Internet Explorer that used a well-known flash exploitation technique to achieve arbitrary memory access and bypass Windows’ ASLR and DEP protections. In trying to find SWF samples from this attack across our entire collection we realized that, while we produce very rich information for most commonly abused file types (behavioural reports, Androguard Android static information, RTF maliciousness signals, etc.), we did not have any file characterization tool specifically focusing on SWF files. Remember that VirusTotal is not only a multi-antivirus, it also runs many other tools on files.
+
+We have built a very simple tool which we call swfknife in order to extract certain interesting properties from flash files. In addition to this, the tool also produces a feature hash that can be used in VirusTotal Intelligence in order to search for similar SWF files and cluster these together, just as you can do right now with PEs, MS Office files, RTFs and PDFs.
+
+The new data will give you a quick overview of the flash file, pinpointing interesting features such as:
+
+The use of ActionScript2/ActionScript3.
+Whether the file fingerprints the OS executing it.
+The use of the loadBytes function in order to load other SWF files or custom code at runtime.
+Whether the file has been encrypted/obfuscated with common SWF packing tools.
+Whether the file contains long strings of hex characters, very often revealing encoded malicious code that gets decoded with hexToBin and loaded at runtime.
+Indicators revealing that the file is performing heap spraying.
+Whether it contains code identifying the environment executing it, e.g. the flash player and version.
+Whether it uses the ExternalInterface class to communicate with the external host of the Flash plugin, such as the web browser, commonly used in multi-stage attacks where the browser gets redirected, injected with an iframe or some other badness.
+Whether the file contains javascript code.
+The presence of iframe injecting code, or iframe tag references.
+The use of the fscommand function to save or execute other files.
+Whether the file embeds other file types such as Portable Executables, RARs or ZIPs.
+
+
+
+
+It will also print out any iframe patterns and suspicious URLs the file might contain. Additionally the tool will extract other flash properties such as the number of flash tags it contains, the frame size, the compression used, etc. Hopefully all of the extracted characteristics can be used by researchers as signals in order to improve their file scoring mechanisms, will enhance Intelligence's searching capabilities for flash files and will help track campaigns pertaining to the same groups of attackers.
+
+
+
+Here are a couple of VirusTotal report examples displaying the new information (refer to the file details tab):
+https://www.virustotal.com/en/file/00db30d185678bacc8f3fa12f6a642ca923d93219a9447b448e0e1e1c97b2c69/analysis/  (Recent CVE-2014-1776 example)
+https://www.virustotal.com/en/file/ac49aa73ed37aacf4a1a1e2c00824cb4f7372ede2dc210e2f706390b6bebf936/analysis/ (Example highlighting iframe extractions)
+https://www.virustotal.com/en/file/dc3494bc8b03275bdff59608c62dd685af472b993aa8ad1ccd9a6900ec5150a1/analysis/
+https://www.virustotal.com/en/file/8c13d272bc13044719364dfc26b7624fa32d218b4701991f45bf28974d5277a1/analysis/
+
+
+In coming up with this new information we found Timon Van Overveldt, Christopher Kruegel, and Giovanni Vigna's paper entitled FlashDetect: ActionScript 3 malware detection very useful and inspiring.
+
+
+Email ThisBlogThis!Share to TwitterShare to Facebook
+
+
+

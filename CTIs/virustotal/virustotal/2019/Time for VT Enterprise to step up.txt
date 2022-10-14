@@ -1,0 +1,179 @@
+
+Late last year we announced the release of VT Enterprise for existing VT Intelligence subscribers. Since the launch, we have iterated on and improved upon VT Enterprise and it is time to begin a full deprecation of the old VT Intelligence interface. Today, we are announcing a 1 month deprecation timeline. Note that this does not affect APIv2, Graph or any other VirusTotal functionality. Similarly, this comes at no extra cost and existing users of VT Intelligence will be able to continue to use the solution within the new VT Enterprise interface.
+
+Let us shed some light into what is new, what you are getting for free with this change and why you want to be moving to the new platform right now!
+
+
+Improved Intelligence modifier-based searching
+When searching for files by hash you are searching across the entire history of VirusTotal going back to 2006. This was never the case when combining many advanced search modifiers, for example:
+
+type:doc p:10+ tag:macros tag:run-file metadata:Cyrillic
+
+As many of you have correctly observed over the years, this kind of faceted search was limited to 2 months worth of submissions. The technical cost of being able to mix together more than 40 modifiers when seeking through tens of millions of files forced this limitation upon us. Often this was even more confusing as certain file types (e.g. images without detections) were discarded from indexing. 
+With VT Enterprise we are increasing your look back period for free from 2 months to 3 months and we are making the index complete, in other words, no more discarding of certain non-interesting file types without detections and some other filtering logic to circumvent index size limitations. 
+
+At the same time we are making available even more modifiers. Many of you always wanted more granularity when searching over behavior reports, you felt that searches like behavior:”gate.php” were too broad and wanted to restrict this to just the network communications, this is now possible:
+behavior_network:"gate.php"
+
+
+
+
+
+Other new modifiers include:
+
+behavior_files - changes related to the filesystem
+behavior_processes - observations related to execution of processes
+behavior_registry - modifications related to the Windows registry
+behavior_services - observations related to services and daemons
+main_icon_dhash - file icon similarity search, more on this later
+No more experimental content searching, welcome VTGREP
+File content searching has been in VT Intelligence since 2012, however, it was an experimental project based on suffix arrays, running on just two machines and spanning just 2 weeks worth of data. 
+
+With VT Enterprise we have completely rebuilt the content search service with a 5 Petabyte n-gram index, this is akin to Google planet scale in the field of malware;  we are calling this new functionality, VTGREP. We are also seamlessly upgrading your subscription to cover 3 months worth of data instead of 2 weeks.
+
+Moreover, unlike the former suffix array based content searching, this new service allows you to combine multiple content conditions in one single query. This is an example to locate VTFlooder samples:
+content:"apikey" AND content:"Transfer-Encoding: binary" AND content:"%015d--"
+OR conditions are also allowed:
+content:/(virustotal|google)/
+You can even search over content found in certain decodings/transformations of files, e.g. in macro VBA code streams:
+content:"z5bP7"
+This starts to look more and more like a lightening fast retrohunt, doesn’t it? More on this in future updates.
+
+Greater Retrospection
+If you have ever used retrohunt, you have probably asked yourself why a given file that you know is in VirusTotal does not match against your rule. Retrohunt used to operate on a limited pool of machines, meaning that it was only hunting over approximately the last 45-60 days of submissions, depending on the amount of files submitted during that period. We have noticeably improved the setup and are increasing your retrohunt limit deterministically to 3 months; this makes it consistent with the other two timespan improvements.
+
+Let’s recap, in addition to offering more modifiers and better condition combinations, we are seamlessly and freely increasing your retrospection powers across the 3 advanced searching and hunting capabilities. So can we do any better? Yes. We have poured many more resources into all of these features, and we are announcing a Threat Hunter PRO add-on that allows you to go back in time one year, many of you will have already become aware of this in your retrohunt listings:
+
+
+
+For some use cases 3 months retrospection is more than enough, however, if you are tracking advanced actors and truly immersed in the threat intel space you will probably be interested in the extended retrospection add-on. Contact us to learn more about how to get access to it.
+
+
+
+Before
+
+Now 
+
+(free upgrade)
+
+With Threat Hunter PRO 
+
+add-on
+
+
+Advanced search
+
+60 days
+
+90 days
+
+1 year
+
+
+Retrohunt
+
+45-60 days
+
+90 days
+
+1 year
+
+
+Content search (VTGREP)
+
+14 days
+
+90 days
+
+1 year
+
+
+
+
+With all that, you may think we’re done with this announcement. Let’s explore some additional benefits of the new interface that further expand the malware hunters’ arsenal.
+
+
+File icon/thumbnail similarity search
+If you have launched a VT Enterprise search you will have probably noticed that we now extract and display file icons for Windows Executables, Android APKs and DMGs. We also create thumbnails for PDFs and MS Office files.
+
+
+
+You can click on these icons and search for files with a visually similar icon or thumbnail. This is obviously very useful for locating malware that tries to impersonate certain brands (e.g. banks), for spotting evil at a glance (e.g. executables with a PDF icon) and to immediately see that a similarity search is indeed grouping things that truly have things in common. Moreover, it is a great way to cluster together malware variants belonging to similiar campaigns:
+https://www.virustotal.com/gui/search/main_icon_dhash:47474b4b4b4b4b4b/files
+
+This is especially useful if you combine it with other modifiers in order to locate variants of a same campaign which still have low antivirus coverage:
+main_icon_dhash:47474b4b4b4b4b4b positives:7-
+
+
+Direct pivoting within reports
+When looking at reports you may spot interesting static properties, having to type a search to locate other files with the same characteristic was slow and tedious. Now you can simply click on the property value and immediately launch the search.
+
+
+
+
+Multisandbox behavior reports and behavior searching
+Are you stuck in the old VT Intelligence interface? Then you are probably seeing very little execution behavior information. The old templates do not include the data contributed by the multisandbox project, which already integrates nearly ten sandboxes. Example:
+https://blog.virustotal.com/2018/04/meet-virustotal-droidy-our-new-android.html
+
+Moreover, you want to be able to search across these reports, and that is something you can only do in the new VT Enterprise:
+type:apk behavior:http behavior:"Sign in to your account"
+
+One-click away commonalities
+Have you launched a multihash search in the new VT Enterprise platform? Then you have probably spotted a weird and distortedly big electric blue icon:
+
+
+
+It is time to spot metadata patterns that are common to all your files instantaneously, with just one click. Those of you generating IoCs during your investigations will probably find this nifty little feature very useful.
+
+
+
+Click on any of the displayed commonalities and pivot to other files exhibiting the same property.
+
+
+File, URL, domain and IP address lookups all in one place
+Many of you have suffered the pain of having to have two open tabs when working with VirusTotal, one pointing to the public website and one pointing to VT Intelligence. The first one used to perform network location lookups and and the second one to perform your file related searches. It was a broken world, it is now time to unify everything in one place and leave the door open for a future inclusion of network location (URLs, domains, IPs) advanced faceted searching.
+
+
+Richer relationships
+If you are stuck in the old Intelligence interface you will not be enjoying some of the new relationships being generated for items in the dataset, for instance, embedded domains and IP addresses. These are domain and IP address patterns found within the binary content of files in the dataset, network location information that often does not surface in behavior reports because of different execution paths, delays, etc.
+
+
+
+Not only can you see this data in the fully fledged file reports when navigating to your matches, but also as handy popovers within the search result matches.
+
+
+Multiple VT Hunting goodies
+You may notice far richer and more comprehensive VT Hunting notification listings, improved ruleset searching and retrohunt matches in-app visualizations instead of having to download a plain list of hashes.
+
+
+
+As you can see, you no longer have to download the list of matching hashes and then launch a multihash search. Even better, you can now do all of the above via new API endpoints that not only allow you to automate retrohunts and livehunts, but also rule management:
+https://developers.virustotal.com/v3.0/reference#livehunt
+https://developers.virustotal.com/v3.0/reference#retrohunt
+
+This said, the most attractive new feature of VT Hunting is the fact that you no longer have to wait for the next "train departure" when enqueuing a retrohunt, your jobs are kicked off immediately and results start to come in without delay. This also means that you can launch several retrohunt jobs without waiting for previous tasks to conclude.
+
+
+Enter VT Graph Premium
+If you have a zillion open tabs with multiple file reports and searches related to an investigation, it is time to get smarter. Your subscription now incorporates VT Graph and its premium features for free. You can share graphs with other users, granting them viewer or editor roles. You can also make graphs private so that they do not appear in VirusTotal Community and you don’t disclose your most sensitive investigations. Note that graphs generated by free users become publicly available and linked in reports for items contained in those graphs.
+
+Last but not least, you can create custom nodes such as “attacker”, “victim”, “email”, etc. and draw the full picture of a campaign. This is enriched via the privileged relationship information that is newly available (e.g. embedded domains, embedded ips, etc.) and via the commonality generation that was discussed earlier.
+
+
+
+If all of this were not enough, you will discover other little new nifty features along the way such as two factor authentication, improved group management for administrators and further quota consumption insights.
+
+Have we managed to convince you to move over to the new platform? If not, please contact us, we will address your pain points in order to make the migration as seamless as possible.
+
+Similarly, get in touch if you want access to the new Threat Hunter PRO add-on, for many advanced investigations greater retrospection is a must. Why? These are just three clear-cut reasons:
+
+When investigating a malware family you want to be able to go back in time to its very first variant. Often in the very first campaigns attackers are careless and leave behind debug artifacts, network infrastructure trails and other hints that enable you to perform attribution and know more about your adversary. Think of a serial killer, police always tries to find other related crimes as these often reveal other clues. 
+Advanced threats are not like commodity malware (adware, banking trojans, etc.), there are no massive campaigns with thousands of variants but rather just a handful of spearheaded attacks sparse over a very long period of time. In order to understand the tactics, techniques and procedures used by attackers you need to see the full picture, you need enough sampling, only extended retrospection capabilities will allow that.
+A 5 petabyte n-gram index is not something you can do in-house, only a handful of organizations can scale into these numbers. You should be focusing on your investigations and not on maintaining complex hunting infrastructure. 
+
+
+
+Email ThisBlogThis!Share to TwitterShare to Facebook
+
+
+

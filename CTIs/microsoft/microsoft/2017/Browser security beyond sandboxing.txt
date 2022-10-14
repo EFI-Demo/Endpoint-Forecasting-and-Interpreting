@@ -1,0 +1,144 @@
+
+		Security is now a strong differentiator in picking the right browser. We all use browsers for day-to-day activities like staying in touch with loved ones, but also for editing sensitive private and corporate documents, and even managing our financial assets. A single compromise through a web browser can have catastrophic results. It doesn’t help that browsers are also on their way to becoming some of the most complex pieces of consumer software in existence, increasing potential attack surface.
+Our job in the Microsoft Offensive Security Research (OSR) team is to make computing safer. We do this by identifying ways to exploit software, and working with other teams across the company on solutions to mitigate attacks. This workflow typically involves identifying software vulnerabilities to exploit. However, we believe that there will always be more vulnerabilities to find, so that isn’t our primary focus. Instead, our job is really all about asking: assuming a vulnerability exists, what can we do with it?
+We’ve so far had success with this approach. We have helped improve the security of several Microsoft products, including Microsoft Edge. We continue to make strides in preventing both Remote Code Execution (RCE) with mitigations like Control Flow Guard (CFG), export suppression, and Arbitrary Code Guard (ACG), and isolation, notably with Less Privileged AppContainer (LPAC) and Windows Defender Application Guard (WDAG). Still, we believe it’s important for us to validate our security strategy. One way we do this is to look at what other companies are doing and study the results of their efforts.
+For this project, we set out to examine Google’s Chrome web browser, whose security strategy shows a strong focus on sandboxing. We wanted to see how Chrome held up against a single RCE vulnerability, and try to answer: is having a strong sandboxing model sufficient to make a browser secure?
+Some of our key findings include the following:
+
+Our discovery of CVE-2017-5121 indicates that it is possible to find remotely exploitable vulnerabilities in modern browsers
+Chrome’s relative lack of RCE mitigations means the path from memory corruption bug to exploit can be a short one
+Several security checks being done within the sandbox result in RCE exploits being able to, among other things, bypass Same Origin Policy (SOP), giving RCE-capable attackers access to victims’ online services (such as email, documents, and banking sessions) and saved credentials
+Chrome’s process for servicing vulnerabilities can result in the public disclosure of details for security flaws before fixes are pushed to customers
+
+Finding and exploiting a remote vulnerability
+To do this evaluation, we first needed to find some kind of entry point vulnerability. Typically, we do this by finding a memory corruption bug, such as buffer overflow or use-after-free vulnerability. As with any web browser, the attack surface is extensive, including the V8 JavaScript interpreter, the Blink DOM engine, and the pdfium PDF renderer, among others. For this project, we focused our attention on V8.
+The bug we ended up using for our exploit was discovered through fuzzing. We leveraged the Windows Security Assurance team’s Azure-based fuzzing infrastructure to run ExprGen, an internal JavaScript fuzzer written by the team behind Chakra, our own JavaScript engine. People were likely already throwing all publicly available fuzzers at V8; ExprGen, on the other hand, had only ever been run against Chakra, giving it greater chances of leading to the discovery of new bugs.
+Identifying the bug
+One of the disadvantages of fuzzing, compared to manual code review, is that it’s not always immediately clear what causes a given test case to trigger a vulnerability, or if the unexpected behavior even constitutes a vulnerability at all. This is especially true for us at OSR; we have no prior experience working with V8 and therefore know fairly little about its internal workings. In this instance, the test case produced by ExprGen reliably crashed V8, but not always in the same way, and not in a way that could be easily influenced by an attacker.
+As fuzzers often generate very large and convoluted pieces of code (in this case, nearly 1,500 lines of unreadable JavaScript), the first step is typically to minimize the test case — trimming the fat until we’re left with a small, understandable piece of code. This is what we ended up with:
+
+The code above looks strange and doesn’t really achieve anything, but it is valid JavaScript. All it does is to create an oddly structured object, then set some of its fields. This shouldn’t trigger any strange behavior, but it does. When this code is run using D8, V8‘s standalone executable version, built from git tag 6.1.534.32, we get a crash:
+
+Looking at the address the crash occurs at (0x000002d168004f14), we can tell it does not happen within a static module. It must therefore be in code dynamically generated by V8‘s Just-In-Time (JIT) compiler. We also see that the crash happens because the rax register is zero.
+At first glance, this looks like a classic null dereference bug, which would be a let-down: those are typically not exploitable because modern operating systems prevent the zero virtual address from being mapped. We can look at surrounding code in order to get a better idea of what might be going on:
+
+We can extract a few things from this code. First, we notice that our crash occurs right before a function call to what looks like a JavaScript function dispatcher stub, mostly due to the address of v8::internal::Builtin_FunctionPrototypeToString being loaded into a register right before that call. Looking at the code of the function located at 0x000002d167e84500, we find that address 0x000002d167e8455f does contain a call rbx instruction, which appears to confirm our suspicion.
+The fact that it calls Builtin_FunctionPrototypeToString is interesting, because that’s the implementation for the Object.toString method, which our minimized test case calls into. This appears to indicate that the crash is happening within the JIT-compiled version of our func0 Javascript function.
+The second piece of information we can glean from the disassembly above is that the zero value contained in register rax at the time of the crash is loaded from memory. It also looks like the value that should have been loaded is being passed to the toString function call as a parameter. We can tell that it’s being loaded from [rdi + 0x18]. Based on that, we can take a look at that piece of memory:
+
+This doesn’t yield very useful information. We can see that most of these values are pointers, but that’s about it. However, it’s useful to know where the value (which is meant to be a pointer) is loaded from, because it can help us figure out why this value is zero in the first place. Using the WinDbg‘s newly public Time Travel Debugging (TTD) feature, we can place a memory write breakpoint at that location (baw 8 0000025e`a6845dd0), then place an execution breakpoint at the start of the function, and finally re-run the trace backwards (g-).
+Interestingly, our memory write breakpoint doesn’t trigger, meaning that this memory slot does not get initialized in this function, or at least not before it’s used. This might be normal, but if we play around with the test case, for example by replacing the o.b.bc.bca.bcab = 0; line with o.b.bc.bca.bcab = 0xbadc0de;, then we start noticing changes to the memory region where our crash value originates:
+
+We see that our 0xbadc0de constant value ends up in that memory region. Although this doesn’t prove anything, it makes it seem likely that this memory region is used by the JIT-compiled function to store local variables. That idea is reinforced by how the code from earlier looked like the value we crash trying to load was being passed to Object.toString as a parameter.
+Combined with the fact that TTD confirmed that this memory slot is not initialized by the function, a possible explanation is that the JIT compiler is failing to emit code that would initialize the pointers representing the object members used to access the o.b.ba.bab field.
+To confirm this, we can run the test case in D8 with the –trace-turbo and –trace-turbo-graph parameters. Doing so will cause D8 to output information about how TurboFan, V8‘s JIT compiler, goes about building and optimizing the relevant code. We can use this in conjunction with turbolizer to visualize the graphs that TurboFan uses to represent and optimize code.
+TurboFan works by applying various optimization phases to the graph one after the other. About half-way through the optimization pipeline, after the Load elimination optimization phase, this is what our code’s flow looks like:
+
+It’s fairly straightforward: the optimizer apparently inlined func0 into the infinite loop, and then pulled the first loop iteration out. This information is useful to see how the blocks relate to each other. However, this representation omits nodes that correspond to loading function call parameters, as well as the initialization of local variables, which is the information we’re interested in.
+Thankfully, we can use turbolizer‘s interface to display those. Focusing on the second Object.toString call, we can see where the parameter comes from, as well as where it’s allocated and initialized:
+
+(NOTE: node labels were manually edited for readability)
+At this stage in the optimization pipeline, the code looks perfectly reasonable:
+
+A memory block is allocated to store local object o.b.ba (node 235), and its fields baa and bab are initialized
+A memory block is allocated to store local object o.b (node 259), and its fields are all initialized, with ba specifically being initialized with a reference to the previous o.b.ba allocation
+A memory block is allocated to store local object o (node 303), and its fields are all initialized
+Local object o‘s field b is overwritten with a reference to object o.b (node 185)
+Local object field o.b.ba.bab is loaded (nodes 199, 209, and 212)
+The Object.toString method is called, passing o.b.ba.bab as first argument
+
+Code compiled at this stage in the optimization pipeline looks like it shouldn’t exhibit the uninitialized local variable behavior that we’re hypothesizing is the root cause of the bug. That being said, certain aspects of this representation do lend credence to our hypothesis. Looking at nodes 209 and 212, which load o.b.ba and o.b.ba.bab, respectively, for use as a function call parameter, we can see that the offsets +24 and +32 correspond to the disassembly of the crashing code:
+
+0x17 and 0x1f are values 23 and 31, respectively. This fits, when taking into account how V8 tags values in order to distinguish actual objects from inlined integers (SMIs): if a value meant to represent a JavaScript variable has its least significant bit set, it is considered a pointer to an object, and otherwise an SMI. Because of this, V8 code is optimized to subtract one from JavaScript object offsets before they are used for dereferencing.
+As we still don’t have an explanation for the bug, we keep looking through optimization passes until we find something strange. This happens after the Escape analysis pass. At that point, the graph looks like the following:
+
+There are two notable differences:
+
+The code no longer goes through the trouble of loading o and then o.b—it was optimized to reference o.b directly, probably because that field’s value is never changed
+The code no longer initializes o.b.ba; as can be seen in the graph, turbolizer grays out node 264, which means it is no longer live, and therefore won’t be built into the final code
+
+Looking through all the live nodes at this stage seems to confirm that this field is no longer being initialized. As another sanity check, we run d8 on this test case with the flag –no-turbo-escape in order to omit this optimization phase: d8 no longer crashes, confirming that this is where the issue stems from. In fact, that turned out to be Google’s fix for the bug: completely disable the escape analysis phase in v8 6.1 until the new escape analysis module was ready for production in v8 6.2.
+With all this information about the bug’s root cause in hand, we need to find ways to exploit it. It looks like it could be a very powerful bug, but it depends entirely on our ability to control the uninitialized memory slot, as well as how it ends up being used.
+Getting an info leak
+At this point, the easiest way to get an idea of what we can or can’t do with the bug is simply to play around with the test case. For example, we can look at the effect of changing the type of the field we’re loading from an uninitialized pointer:
+
+The result is that the field is now loaded directly as a float, rather than an object pointer or SMI:
+
+Similarly, we can try adding more fields to the object:
+
+Running this, we get the following crash:
+
+This is interesting, because it looks like adding fields to the object modifies the offsets from where the object fields are loaded. In fact, if we do the math, we see that (0x67 – 0x1f) / 8 = 9, which is exactly the number of fields we added from o.b.ba.bab. The same applies to the new offset that rbx is loaded from.
+Playing around with the test case a bit more, we are able to confirm that we have extensive control over the offset where the uninitialized pointer is loaded from, even though none of these fields are being initialized. At this point, it would be useful to see if we can place arbitrary data into this memory region. The earlier test with 0xbadc0de seemed to indicate that we could, but the offset appeared to change with each run of the test case. Often, exploits get around that by spraying values. The rationale is that if we can’t accurately trap our target to a given location, we can instead just make our target bigger. In practice, we can try spraying values by using inline arrays:
+
+Looking at the crash dump, we see:
+
+The crash is essentially the same as previously, but if we look at the memory where our uninitialized data is coming from, we see:
+
+We now have a big block of arbitrary script-controlled values at an offset from r11. Combining this observation with the previous one about offsets, we can come up with something even better:
+
+The result is that we are now dereferencing a float value arbitrary from an arbitrary address:
+
+This, of course, is extremely powerful: it immediately results in an arbitrary read primitive, impractical as it may be. Unfortunately, an arbitrary read primitive without an initial info leak is not that useful: we need to know which addresses to read from in order to make use of it.
+As the variable v can be anything we want it to be, we can replace it with an object, and then read its internal fields. For example, we can replace the call to Object.toString() with a custom callback, and replace v with a DataView object, reading back the address of that object’s backing store. This produces a way for us to locate fully script-controlled data:
+
+The above code returns (modulo ASLR):
+
+Using WinDbg we can validate that this is indeed the backing store for our buffer:
+
+Once again, this is an incredibly powerful primitive, and we could use it to leak just about any field from an object, as well as the address of any JavaScript object, as those are sometimes stored as fields in other objects.
+Building an arbitrary read/write primitive
+Being able to place arbitrary data at a known address means we can unlock an even more powerful primitive: the ability to create arbitrary JavaScript objects. Just changing the type of the field being read from a float to an object makes it possible for us to read an object pointer from anywhere in memory, including a buffer whose address is known to us. We can test this by using WinDbg to place controlled data at a known address (the same primitive we just developed above) using the following commands:
+
+This places an SMI representing the integer 0xbadc0de at the location where our arbitrary object pointer would be loaded from. Since we didn’t set the least significant bit, it will be interpreted by V8 as an inline integer:
+
+As expected, V8 prints the following output:
+
+Given this, we have the ability to create arbitrary objects. From there, we can put together a convenient arbitrary read/write primitive by creating fake DataView and ArrayBuffer objects. We again place our fake object data at a known location using WinDbg:
+
+We then test it with the following JavaScript:
+
+As expected, the call to DataView.prototype.setUint32 triggers a crash, attempting to write value 0xdeadcafe to address 0x00000badbeefc0de:
+
+Controlling the address where the data will be written to or read from is just a matter of modifying the obj.arraybuffer.backing_store slot populated through WinDbg. Since in the case of a real exploit that memory would be part of the backing store of a real ArrayBuffer object, doing so wouldn’t be difficult. For example, a write primitive might look like this:
+
+With this, we can reliably read and write arbitrary memory locations in the Chrome renderer process from JavaScript.
+Achieving Arbitrary Code Execution
+Achieving code execution in the renderer process, given an arbitrary read/write primitive, is relatively easy. At the time of writing, V8 allocates its JIT code pages with read-write-execute (RWX) permissions, meaning that getting code execution can be done by locating a JIT code page, overwriting it, and then calling into it. In practice, this is achieved by using our info leak to locate the address of a JavaScript function object and reading its function entrypoint field. Once we’ve placed our code at that entrypoint, we can call the JavaScript function for the code to execute. In JavaScript, this might look like:
+
+It is worth noting that even if V8 did not make use of RWX pages, it would still be easy to trigger the execution of a Return Oriented Programming (ROP) chain due to the lack of control flow integrity checks. In that scenario, we could, for example, overwrite a JavaScript function object’s entrypoint field to point to the desired gadget (likely a stack pivot of some kind) and then make the function call.
+Neither of those techniques would be directly applicable to Microsoft Edge, which features both CFG and ACG. ACG, which was introduced in Windows 10 Creators Update, enforces strict Data Execution Prevention (DEP) and moves the JIT compiler to an external process. This creates a strong guarantee that attackers cannot overwrite executable code without first somehow compromising the JIT process, which would require the discovery and exploitation of additional vulnerabilities.
+CFG, on the other hand, guarantees that indirect call sites can only jump to a certain set of functions, meaning they can’t be used to directly start ROP execution. Creators Update also introduced CFG export suppression, which significantly reduced the set of valid CFG indirect call targets by removing most exported functions from the valid target set. All these mitigations and others make the exploitation of RCE vulnerabilities in Microsoft Edge that much more complex.
+The dangers of RCE
+Being a modern web browser, Chrome adopts a multi-process model. There are several process types involved: the browser process, the GPU process, and renderer processes. As its name indicates, the GPU process brokers interactions between the GPU and all the processes that need to use it, while the browser is the global manager process that brokers access to everything from file system to networking.
+Each renderer is meant to be the brains behind one or more tabs—it takes care of parsing and interpreting HTML, JavaScript, and the like. The sandboxing model makes it so that these processes only have access to as little as they need to function. As such, a full persistent compromise of the victim’s system is not possible from the renderer without finding a secondary bug to escape that sandbox.
+With that in mind, we thought it would be interesting to examine what might be possible for an attacker to achieve without a secondary bug. Although most tabs are isolated within individual processes, that’s not always the case. For example, if you’re on bing.com and use the JavaScript developer console (which can be opened by pressing F12) to run window.open(‘https://microsoft.com’), a new tab will open, but it will typically fall into the same process as the original tab. This can be seen by using Chrome’s internal task manager, which can be opened by pressing Shift + Escape:
+
+This is an interesting observation, because it indicates that renderer processes are not locked down to any single origin. This means that achieving arbitrary code execution within a renderer process can give attackers the ability to access other origins. While attackers gaining the ability to bypass the Single Origin Policy (SOP) in such a way may not seem like a big deal, the ramifications can be significant:
+
+Attackers can steal saved passwords from any website by hijacking the PasswordAutofillAgent interface.
+Attackers can inject arbitrary JavaScript into any page (a capability known as universal cross-site scripting, or UXSS), for example, by hijacking the blink::ClassicScript::RunScript method.
+Attackers can navigate to any website in the background without the user noticing, for example, by creating stealthy pop-unders. This is possible because many user-interaction checks happen in the renderer process, with no ability for the browser process to validate. The result is that something like ChromeContentRendererClient::AllowPopup can be hijacked such that no user interaction is required, and attackers can then hide the new windows. They can also keep opening new pop-unders whenever one is closed, for example, by hooking into the onbeforeunload window event.
+
+A better implementation of this kind of attack would be to look into how the renderer and browser processes communicate with each other and to directly simulate the relevant messages, but this shows that this kind of attack can be implemented with limited effort. While the democratization of two-factor authentication mitigates the dangers of password theft, the ability to stealthily navigate anywhere as that user is much more troubling, because it can allow an attacker to spoof the user’s identity on websites they’re already logged into.
+Conclusion
+This kind of attack drives our commitment to keep on making our products secure on all fronts. With Microsoft Edge, we continue to both improve the isolation technology and to make arbitrary code execution difficult to achieve in the first place. For their part, Google is working on a site isolation feature which, once complete, should make Chrome more resilient to this kind of RCE attack by guaranteeing that any given renderer process can only ever interact with a single origin. A highly experimental version of this site isolation feature can be enabled by users through the chrome://flags interface.
+We responsibly disclosed the vulnerability that we discovered along with a reliable RCE exploit to Google on September 14, 2017. The vulnerability was assigned CVE-2017-5121, and the report was awarded a $7,500 bug bounty by Google. Along with other bugs our team reported but didn’t exploit, the total bounty amount we were awarded was $15,837. Google matched this amount and donated $30,000 to Denise Louie Education Center, our chosen organization in Seattle. The bug tracker item for the vulnerability described in this article is still private at time of writing.
+Servicing security fixes is an important part of the process and, to Google’s credit, their turnaround was impressive: the bug fix was committed just four days after the initial report, and the fixed build was released three days after that. However, it’s important to note that the source code for the fix was made available publicly on Github before being pushed to customers. Although the fix for this issue does not immediately give away the underlying vulnerability, other cases can be less subtle.
+For example, this security bug tracker item was also kept private at the time, but the public fix made the vulnerability obvious, especially as it came with a regression test. This can be expected of an open source project, but it is problematic when the vulnerabilities are made known to attackers ahead of the patches being made available. In this specific case, the stable channel of Chrome remained vulnerable for nearly a month after that commit was pushed to git. That is more than enough time for an attacker to exploit it. Some Microsoft Edge components, such as Chakra, are also open source. Because we believe that it’s important to ship fixes to customers before making them public knowledge, we only update the Chakra git repository after the patch has shipped.
+Our strategies may differ, but we believe in collaborating across the security industry in order to help protect customers. This includes disclosing vulnerabilities to vendors through Coordinated Vulnerability Disclosure (CVD), and partnering throughout the process of delivering security fixes.
+ 
+Jordan Rabet
+Microsoft Offensive Security Research team
+ 
+ 
+ 
+ 
+
+ 
+
+Talk to us
+Questions, concerns, or insights on this story? Join discussions at the Microsoft community and Windows Defender Security Intelligence.
+Follow us on Twitter @WDSecurity and Facebook Windows Defender Security Intelligence.
+ 
+	

@@ -1,0 +1,19 @@
+A new bootkit-enhanced file infector is making the rounds and its design spells headaches for the unwary antimalware analyst.  Bitdefender researcher Mircea Pavel has the low-down:
+‘Following the latest trend of adding bootkit functionalities to classic file infectors or trojans (such as Ramnit and Yurn) Xpaj, the code-mingling file infector, now comes accompanied by such a  module.  Both x86 and x64 systems are affected by this new e-threat.
+The MBR infection was spotted by Bitdefender about two weeks ago and is detected as Rootkit.MBR.Xpaj.A . On infected systems, files infected with the Xpaj virus were also present and the source of both file infection and MBR infection was identified in the same dropper.
+The dropper first checks for a network connection and reports to the Command Center: nor******to.com . Then it proceeds to infect the MBR.
+All the bootkit data is kept at the end of the disk and generally is organized in compressed entries. Each entry starts with a 4 byte signature “ARCH”,  followed by a DWORD representing the decompressed size, a DWORD representing the entry(compressed) size, 1 reserved DWORD , and finally the compressed stream. APLIB compression is used:
+Xpaj entry at the disk end. Signature highlighted with red, decompressed size(0x3600) with green, compressed size with blue (0x1F32), yellow for the reserved DWORD; gray was used for the compressed stream
+Layout of an infected disk
+The dropper replaces the MBR withone of its own and also inserts the offsets needed for accessing the last sectors of the disk from the MBR malware code.
+Then, several additional code sectors will be loaded and the control will be transferred to them.
+The infector needs to know if the operating system is x86 or x64( on x64, the hooking mechanism is a bit different). In order to find this, it hooks int13 and monitors the access to an executable image, reading the Machine field. The field Name from the Export Directory is also checked, since the malware is waiting for the moment NTOSKRNL is loading.
+An in-line hook is then placed in the IoCreateDriver routine. When the first driver is loaded, it starts reading one entry and decompresses it. This entry contains the next layer of the malware. At this point, the role of this bootkit becomes obvious:
+The main functionality of the bootkit
+Each newly created process is searched in a hash list that the malware keeps (processes that are common to security products). If such a process is found, it is patched at the entry point with a ret instruction(0xC3):
+Blocking antivirus processes
+Another bootkit feature is the ability to inject code in user mode processes from the kernel mode. The processes targeted for injection are also kept in a hash list. The list contains hashes on process names of the popular browsers. Xpaj is known for having it’s payloads oriented to advertising.
+Finally, in order for the bootkit to hide itself, NtWriteFile and  NtReadFile are inline-hooked and  the attempts to access the areas reserved by the bootkit (MBR and the last few sectors on disk) are hijacked.
+Several techniques are used to ensure a good cover. Every string is hashed. Even after the code entries are decompressed, there are generally no meaningful strings that could provide a quick hint over the module purpose. The only “visible “ in-line hooks after the full operating system load are  those on NtWriteFile and  NtReadFile. The rest of them are unhooked as soon as they are no longer needed. Multi-layered code is used, in order to make the analysis harder.’
+Of course, Bitdefender detects Xpaj and successfully cleans the systems affected by this threat.
+UPDATED: In case anyone is wondering if they’ve caught this particular nasty, the file hash is d5c12fcfeebbe63f74026601cd7f39b2

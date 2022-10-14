@@ -1,0 +1,53 @@
+
+Reported by Dancho Danchev. Visiting a compromised Bulgarian website on an Android phone causes a redirect and download (if you have the option "Allow installation of apps from unknown sources" checked) of premium rate SMS Android malware.
+
+IP address involved in the campaign: 93.170.107.184
+
+Some domains resolving to 93.170.107.184:
+
+flashupdate.org
+mobiserver-russia.com
+flash-news-systems1.net
+bruser-2012.net
+erovideo2.net
+file-send09.net
+tankonoid.net
+oneiclick.net
+free3porn.net
+nashe9porevo.net
+filemoozo.net
+flashupdates.net
+yandexfilyes.net
+erovidoos.net
+yandexfiloys.net
+anindord-market.net
+api-md-new.net
+girlsexx.net
+1jan-unilo55.ru
+officemb56.ru
+brwsrupdate.ru
+android-mk.ru
+android-gt.ru
+
+
+Samples:
+
+MD5: 29e8db2c055574e26fd0b47859e78c0e
+Download sample: flash_player_installer.apk
+Download PCAP: 29e8db2c055574e26fd0b47859e78c0e.pcap
+
+MD5: e6be5815a05c309a81236d82fec631c8
+Download sample: Android_installer-1.apk
+Download PCAP: e6be5815a05c309a81236d82fec631c8.pcap
+
+Snort rule:
+alert tcp $HOME_NET any -> $EXTERNAL_NET $HTTP_PORTS (msg:"MALWARE-CNC Andr.Trojan.SMSsend variant outbound connection"; flow:established,to_server; content:"/rq.php"; fast_pattern:only; http_uri; content:"name="; depth:5; http_client_body; metadata:impact_flag red, policy security-ips drop, service http; reference:url,www.virustotal.com/file/2076cb718edae12fa641a6b28cc53aee8d9d495518836bcc24e8e8bd1172f892/analysis/; classtype:trojan-activity; sid:25512; rev:2;)
+
+
+
+
+
+
+ClamAV signature:
+Andr.Trojan.SMSsend-1;Engine:51-255,Container:CL_TYPE_ZIP,Target:3;0;68746d6c2375726c3d687474703a2f2f6b6c64617461{1}2e6e65742f3f753d
+

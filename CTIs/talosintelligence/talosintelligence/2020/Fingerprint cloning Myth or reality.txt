@@ -1,0 +1,295 @@
+
+
+Phone, computer fingerprint scanners can be defeated with 3-D printing
+
+
+
+By Paul Rascagneres and Vitor Ventura.
+
+
+
+
+Executive summary
+Passwords are the traditional authentication methods for computers and networks. But passwords can be stolen. Biometric authentication seems the perfect solution for that problem. There are several kinds of biometric authentication, including retina scanning, facial recognition and fingerprint authentication, the most common one. Everyone's fingerprints are unique, and it is commonly accepted that they can identify a person without being reproduced.
+
+Technological evolution expanded fingerprint authentication to all kinds of devices, from laptops to mobile phones, to padlocks and encrypted USB drives. Fingerprint authentication became commonly available on phones with the launch of Apple TouchID in the iPhone 5 in 2013. That technology was bypassed shortly after being released. Since then, the technology evolved into three main kinds of sensors: optic, capacitance and ultrasonic.
+
+Our tests showed that — on average — we achieved an ~80 percent success rate while using the fake fingerprints, where the sensors were bypassed at least once. Reaching this success rate was difficult and tedious work. We found several obstacles and limitations related to scaling and material physical properties. Even so, this level of success rate means that we have a very high probability of unlocking any of the tested devices before it falls back into the pin unlocking. The results show fingerprints are good enough to protect the average person's privacy if they lose their phone. However, a person that is likely to be targeted by a well-funded and motivated actor should not use fingerprint authentication.
+
+We developed three threat models use cases to match real world scenarios. As a result the reader should compare the result to a home security system. If you want it to stop well funded actors like national security agencies from spying on your house, this may not provide enough resistance to be effective. For a regular user, fingerprint authentication has obvious advantages and offers a very intuitive security layer. However, if the user is a potential target for funded attackers or their device contains sensitive information, we recommend relying more on strong passwords and token two-factor authentication.
+
+
+These results together with the recent leaks concerning a biometric company and the recent issue with the sensor used by Samsung on the Galaxy S10 smartphone, the understanding of this technology and the impact of fingerprint (or more generally biometric) data leaks raised some questions. As 3-D printing has evolved and a home resin printer has a resolution in micron. Can the average person create a fake fingerprint collected from glass using a 3-D printer? Or does it need to be a government agency? And can it be done while a user is at the border checkpoint?
+
+We translated these questions into three main goals:
+
+
+What are the security improvements in fingerprint scanning since it was first defeated on the iPhone 5?
+
+How does 3-D printing technology impact fingerprint authentication?
+
+Define a threat model to the attacks to provide a realistic context.
+
+We tested different brands and models of devices. To determine the threat model, we imposed budgetary restrictions, with the assumption that if it can be done on a low budget, it can be done by state-sponsored actors.
+
+The complexity of the process was also important to define the threat model. We wanted to know how hard it would be for the common user to reproduce our results.
+
+The third component of the threat model was the collection technique. We defined three collection techniques, each one associated with a threat model that includes its own characteristics. Some of them have the added complexity of acquiring the enrolled fingerprint, as most users won't use more than one finger.
+
+What's new? 3-D printing technologies made it possible for anyone to create fake fingerprints. But not only that it also made it possible, with the right resources, to be done at scale. Moreover, with the democratization of the usage of fingerprint authentication, the impact of biometric data copies is even bigger than in the past. We applied our threat models to mobile phones, laptops, padlocks and USB pen drives.
+
+How did it work? We created copies using three different methods, which were defined according to the defined threat profiles. A mold was created using a 3-D printer, which was then used to recreate the fingerprint with textile glue.
+
+So what? Fingerprint authentication is now in common usage, on all kinds of devices. However, its reliability is not the same on all devices. Organizations need to be aware that the security of fingerprint authentication is not secure, despite common assumptions. This means that depending on the threat profile of each user, it may not be advisable to use it. In reality, some companies have the same reliability as they had six years ago. This means that with the advances of technologies like 3-D printing, it's now even easier to defeat them.
+
+A video of presentation of this research.
+
+
+
+
+State-of-the-art
+Attackers exploited fingerprint authentication several times in the past, which lead to advances in sensor technology. Apple's TouchID was first publicly broken in 2013. A researcher called "Starbug" first demonstrated this technique on the iPhone 5s during the Chaos Computer Club conference. More recently, Samsung's flagship mobile phone, the S10, was inadvertently broken by a user when she was using a silicon cover. Samsung eventually fixed this problem with a software update. During the Geekpwn 2019 Cybersecurity competition, the X-Lab security research team from Tencent broke the fingerprint authentication from three different phones, but no details about the research were provided. However, according to a Forbes article, the team took a picture of a fingerprint on a glass and created a fake fingerprint. This whole process took 20 minutes and, according to the team leader, the hardware costs around 200 euros. However, the process is a black box and isn't documented. 
+
+
+Concept
+
+Fingerprint authentication design
+A fingerprint authentication can be divided in two steps. The first step is the capture, in which the sensor generates an image of the fingerprint. The second step is the analysis and comparison of the generated images. This task can be done by the sensor itself, for example, in embedded and autonomous devices such as a door lock, or it can be done by the Operating System. For example, on Microsoft Windows, the comparison is performed by "Windows Hello." The OS asks the sensor to capture the data and this data is forwarded to the OS with the ANSI INCITS 378-2004 format created by NIST. The OS does the comparison and chooses whether to approve the connection to the system. The comparison algorithm must include a certain level of tolerance. If the fingerprint is slightly altered, for example with a small cut-off, the authentication must work. The thresholds are not public, so some editors are more tolerant than others. The weakness can be found in the first and second steps. 
+
+
+Type of sensor
+In our tests, we found three main types of sensors: capacitive, optical and ultrasonic. Different sensors react differently to different materials and collection techniques. Most of the sensors are developed by third-party companies and then integrated into the device. The only exception is Apple, which builds its own sensors after acquiring company AuthenTec in 2012. 
+
+The most common type of sensor is the capacitive, while some are active or passive.
+
+
+
+ 
+Capacitive fingerprint sensor
+
+In simple terms, capacitive sensors use the body's natural capacitance to read the fingerprints. The ridges in touch with the reader will create a natural capacitor which will be detected by the sensor. Oppositely, the valleys will be too far away from the reader to create a natural capacitor. 
+
+
+
+Active capacitive fingerprint sensor
+
+The active capacitive sensors don't rely on the natural capacitance alone, they will inject a small signal that travels through the finger and finally reaches the sensor through the touch of the fingerprint ridges.
+
+
+
+Optical fingerprint sensor
+
+Optical fingerprint sensors actually read the image of the fingerprint. In this type of sensor, there is a light source that will illuminate the ridges in contact with the sensor. An image sensor reads these through a prism.
+
+
+
+Ultrasonic sensors
+
+Ultrasonic sensors types are the newest. Their usage is mainly on devices that have on-screen sensors. In these cases, the sensor emits an ultrasonic pulse whose echo will be read by the sensor. Ridges and valleys will have different echoes allowing the sensor to create a pseudo-image from a fingerprint.
+
+On average, the ultrasonic sensor seems to be least reliable, as these gave us better success rates. Goodix is one of the main vendors of the display optical sensor. Qualcomm developed the ultrasonic sensor for the Samsung S10 and Synaptics developed the majority of the capacitive sensors we tested.
+
+
+Creation based on threat scenarios
+Our process consists of two main stages: collection and creation. In the collection stage, we collected the targeted fingerprint and created a mold (see limitations section). The mold is used to cast the fake fingerprint by using different materials depending on our context. 
+
+The first step is to collect the fingerprint. In the collection techniques section, we will explain the different methods we tried. Each method matches a specific context and a specific threat model.
+
+
+Direct collection: This method represents an attack scenario where the victim is either unconscious or in a state where he doesn't have full control over their own actions (ex. drunk). In this case, a mold is made in a soft material directly on the victim, which is then hardened. It is also used as our control method. In this method, the attacker could collect all the fingerprints or could observe the target to collect the enrolled one.
+Fingerprint sensor: This method represents a collection made at the border/customs at the airport or by a private security company with a fingerprint reader. Most borders/customs collect all fingerprints, which would eliminate this problem.
+Third-party approach: In this scenario, the collection is done via a third-party object. It can be a glass, a bottle, etc. by taking a picture of the object. The concept is that an attacker will collect the fingerprint from the victim, and afterward prepare the fake fingerprint. In this approach, having the enrolled finger might be a problem since the attacker does not control the source of the collection. However, a fingerprint mold can be created from several pieces of the same finger.
+
+The second step is to create a mold based on the previously collected information. This is no easy task, as we will explain in detail in the limitations section. We used a 3-D printer to create the molds. The precision of a domestic UV LED printer is 25 microns. The dermal fingerprint ridges are ~500 microns wide and 20-50 microns deep. The resolution of the printer fits perfectly our needs. The last step is to cast the fingerprint. We tried a lot of different materials, the most relevant were silicon and fabric glue.
+
+Here's an example of the materials we used for the molds, using infamous gangster Al Capone's publicly available fingerprints as an example.
+
+
+
+
+Fake fingerprint creation
+
+The different collection techniques
+
+Direct Collection 
+The first approach is the "direct collection" approach. The purpose is to use the real finger to create a negative (aka a mold) of the fingerprint. For this technique, we use Plastiline, a clay used by sculptors. The advantage of this clay is the fact that it is hard on standard temperature and it becomes soft and even liquid if the temperature is high enough. In our case, we have heated the clay with a hot air blower to soften it and allow a fingerprint imprint.
+
+
+
+Creating a mold using Plastiline
+
+
+Fingerprint sensor approach — Low-cost fingerprint reader to obtain a BMP
+The second approach we took is to get a bitmap image from a fingerprint reader. For the test we used a low-cost UART sensor connected to an Arduino UNO (or a CP2102 USB to TTL convertor).
+
+
+
+You can use SYNODemo application to perform this task. Here is a screenshot of the application:
+
+
+
+The fingerprint can be downloaded by the software or our script. The image is a 256x288 pixel bitmap.
+
+
+Third-party approach — High-resolution picture to obtain a raw image
+The last approach we took consisted of taking a picture of a fingerprint on glass. Here is an example:
+
+
+
+To increase the contrast on the ridges, we used graphite powder with a brush:
+
+
+
+We do not want to leak fingerprints of our researchers, so we used a palm on a glass as an illustration.
+
+
+Fingerprint collection optimization
+
+Photo optimization
+The pictures were not directly actionable. We discovered two issues depending on the collection methodology. 
+
+In the fingerprint sensor approach, we discovered that the obtained picture is too small for several sensors such as the Samsung S10 sensor. In this case, we need to merge a couple of pictures to have a larger picture. Here is an example using Al Capone's fingerprint from the FBI database.
+
+
+
+In the glass approach, we needed to apply a couple of filters in order to increase the contrast and optimize the lines. The 3-D software works on alpha (shades of grey):
+
+
+
+
+3-D enhancement
+
+The 3-D design is created with a 3-D digital sculpting software (ex. ZBrush). We used the black and white image as an Alpha brush in order to extrude the fingerprint from an oval blank mold:
+
+
+
+The size of the mold is 32x24mm. You can see the picture and the 3-D object.
+
+
+The different replication techniques
+
+3D printing the mold —  Tested 0.025 mm and 0.05 mm precision in our molds
+During our test, our biggest constraint was the size of the mold. The fake fingerprint needs to have an exact size. However, the models designed with ZBrush do not have a size option. So we had to play a lot with the object size during the creation. One percent too small or too large and the fake fingerprint did not work. In addition to this issue, the resin used by a 3-D printer needs to be cured after the printing. The curing is mandatory to make the object solid and remove the toxicity of the resin. The cure is performed in a UV chamber over a few minutes. We discovered that this process generates retraction and the mold's size varied depending on the curing time. The same behavior occurs if we expose the mold directly to sunlight. Due to this parameter, we need to print more than 50 molds, create a fake fingerprint with them and compare the results and sizes with a fingerprint sensor in order to have a valid mold and, by consequence, a valid fake fingerprint.
+
+Picture of molds after printing:
+
+
+
+
+
+
+
+
+The next step is UV Curing. Out of the printer, the object is not hard enough and toxic. We used a UV chamber for three minutes to make it solid and remove the toxicity of the final mold:
+
+
+
+Here's a picture of all the attempts and the fake fingerprint before we made an exploitable object:
+
+
+
+During our test, we obtained better results with a 25-micron resolution printing. However, the printing time was longer: one hour per mold. With a 50-micron resolution printing, the time is halved.
+
+As explained in the limitation section, the size of the mold was our biggest challenge during this research and the most time consuming, more than 50 molds were created during this project. This is one of the reasons it is complicated to reproduce the mold creation on demand.
+
+
+Different filling materials
+
+During our tests, it became clear that the material used is a determining factor depending on the kind of sensor, especially when comparing sonic with capacitive sensors. To increase our success rate, we used silicon and different kinds of glue, mixed with conductive (graphite and aluminum) powder.
+
+The two main constraints are resolution and conductivity for capacitive sensors. 
+
+Indeed, the definition of the fingerprint is crucial as we have shown above. Achieving a good resolution depends on two parameters: the collection method and the material used to create the replica. While creating the cloned fingerprints we discovered that fabric glue allows better definition than silicone. 
+
+One of the challenges in the capacitive sensors, especially the active kind, is to ensure that there is a certain amount of conductivity in the fingerprint. The silicon is insulating so it's impossible to use on capacitive sensors. However, thin fabric glue with a real finger behind is conductive enough to enable the sensor.
+
+Finally, the silicon is good enough for the tested sonic sensor but the best global choice in our research is a low-cost fabric glue:
+
+
+
+
+The tested platforms
+
+
+
+
+
+Mobile devices
+Mobile phones have been the biggest motivator for the evolution of fingerprint authentication. These are the devices that have more variety of sensors. In fact, the development of the ultrasonic sensors was due to the need of having in-display sensors on mobile phones. This is also the reason why optical sensors are being used on recent devices. 
+
+Our fake fingerprints didn't work on the Samsung A70, however, even with a real fingerprint, the authentication rate was way lower than on the other devices. These devices were also the targets of some of the first research into fingerprint authentication, which should give this platform more maturity in the technology. However, the results show that mobile phone fingerprint authentication has weakened compared to when it was first broken in 2013. 
+
+We also discovered that there is a lack of a clear advantage between the different types of sensors.
+
+
+Laptops
+Contrary to mobile devices, we found a clear advantage from one platform to the other on the laptops we tested. We had no success against the Windows Hello framework, which is only available on Windows 10. We tested five different Windows platforms and the results were all the same. As a control, we tested the same clone on the MacBook Pro and we got the same 95 percent unlocked success rate. The reason for the better and recurrent results from the Windows platforms is the fact that on all platforms the comparison algorithm resides on the OS, thus is shared among all platforms. 
+
+
+Other devices
+We also tested smart devices: a padlock and two USB-encrypted pen drives. 
+
+The fingerprint sensor of this padlock is a capacitive one that requires a conductive fingerprint. The results showed that it can be bypassed with a success rate similar to the previously tested devices. 
+
+For the USB devices, we tested two, a Verbatim Fingerprint Secure and a Lexar Jumpdrive Fingerprint F35.
+
+
+
+
+
+In both cases we were not able to bypass the fingerprint authentication. All attempts returned a wrong reading. As a control during these tests we used the same fake fingerprint on a MacbookPro which confirmed a success rate of 95 percent.
+
+
+Integrated tests and results 
+
+
+
+The orange lines are the percent of success with the direct collection method, the blue lines with the image sensor method and finally the yellow line with the picture on the third party method.
+
+The percent is calculated based on 20 attempts for each device with the best fake fingerprint we were able to create.
+
+The USB keys — Verbatim and Lexar — were only tested via the direct collection method. Since this was the most effective collection method, and it never worked, there was no value added in testing the other two methods.
+
+
+Limitations and mitigations
+
+We would like to reinforce that this is an intentionally low-budget project. 
+
+We did not have any limitations for the direct collection approach. The mitigations mentioned here only concern the approach using 3-D printing (sensor picture and picture on a glass).
+
+Our first approach was to use a 3-D printer to directly create a fake fingerprint. This did not work out, mainly due to resin-related problems. Although the definition of the printer was good enough, the printed results were fragile, non-conductive and were too rigid. These problems may be solved with alternative resins. 
+
+The alternative was to create a 3-D printed mold that would then be used to create the fake fingerprint using different materials.
+
+During our research we discovered a few limitations. The biggest one is the size of the mold. To create a good fingerprint, the mold must have the same dimensions as expected by the fingerprint recognition system: 0.5mm too big or too small and the mold is not usable. 
+
+There is no direct mapping from the size of a digitized object to the size of a real-world object. This became a problem for us when we printed our digital representation of the mold. We also didn't have a high-resolution microscope that would allow us to measure micron-based distances. The mitigation for this problem could be a software that can scale the digital size into the 3-D printing sizes, ensuring micron-based accuracy, would solve this problem. 
+
+As explained previously, direct exposure to UV altered the size of the object, due to resin contraction. During our research, we had to create more than 50 molds to get the exact size, which cost us weeks of work. For each fake fingerprint, tests on a real sensor were necessary to confirm the exact size. A resin mold (or more precisely the selected resin) is not the best choice and alternative material with no retraction constraint would be better to create a mold. 
+
+Finally, the devices running Microsoft Windows 10 (and using Windows Hello) posed us real difficulties no matter the brand of the device. Our approach did not work. From our research, the authentication and the fingerprint comparison is performed by the operating system following the "Biometric Devices Design Guide." All our attempts failed.
+
+The best mitigation for the manufacturers is to limit the number of attempts. For example, Apple limits users to five attempts before asking for the PIN on the device. The number of attempts was quickly reached during our tests. Samsung implemented the same mitigation but the users must wait 30 seconds after five failed attempts and we can do that 10 times, making the final number of attempts 50, which is too high for proper security. We tested the fingerprint scanner on the Honor device more than 70 times so we assume you could do this an unlimited number of times. We have the same behaviour on the tested padlock where we do not reach any attempts limit.
+
+
+Conclusion
+
+We started this project with a couple of goals in mind:
+
+What are the security improvements since it was first broken on the iPhone 5?
+
+How does the 3-D printing technology impact fingerprint authentication?
+
+Define a threat model for the attacks to provide a realistic context.
+
+Clearly, our results show that fingerprint technology has not evolved enough to be generally considered safe for all the proposed threat models. Think about this like a home security system. If you want it to stop secret agencies from spying on your house, it won't work. But if you want to stop petty crime, it's good enough. For a regular user, fingerprint authentication the advantages are obvious and should be used. However, if the user is a more high-profile user or their device contains sensitive information, we recommend relying more on strong passwords and token two-factor authentication.
+
+We defined the threat models starting from the collection methods. The creation process is time-consuming and complex. We had to create more than 50 molds and test it manually. It took months. Once we created an accurate mold, the fake fingerprint creation was easy. Today, by using our methodology and our budget it is not possible to create a fingerprint copy on-demand and quickly. 
+
+We did not find an ultimate approach that would allow us to bypass all fingerprint sensors. For example, we were not able to bypass sensors managed by Microsoft Windows and "Windows Hello." More research is needed to understand exactly why. However, we were able to create fake fingerprints that bypassed a large number of fingerprint authentication on phones, laptops and padlocks. 
+
+The 3-D printing technology definitely has an impact on fingerprint authentication. Using alternative materials and different resins with less retraction, along with specialized software to ensure the correct scaling and printing, would contribute highly to a massification of the fingerprint cloning process. In addition, it would also allow fingerprint cloning on a large scale for whoever has the biometric databases. The usage of high-end tools like electronic microscopes to measure micron-based differences in the fingerprint, or high-precision laser engraving tools can also contribute to great improvements in the whole process. These kinds of tools put the threat model back into highly funded and motivated teams, rather than the average person.
+
+Finally, it is important to reinforce that, just because we had no success defeating the Windows platform and the USB pen drives, that does not mean they are necessarily safer. An even more special case is the Samsung A70, which according to our tests, fails a lot with real fingerprints. We estimate that with a larger budget, more resources and a team dedicated to this task, it is possible to bypass these systems, too.
+
+

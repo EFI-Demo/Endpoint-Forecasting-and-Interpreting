@@ -1,0 +1,435 @@
+
+
+
+Introduction
+A few weeks ago I received a PE file (MD5: 34105EF38CEA1B4B2ABADD0CB3404E69) and was asked to figure out if it is related to the Betabot malware family. It didn’t take long to figure out that this file is Betabot, but this seemed like an excellent sample to cover methods of obfuscation and code injection.
+
+This sample was executed on a 32bit version of Windows XP SP3. For anybody following along there are going to be differences between different versions of Windows. 
+  
+
+Initial Execution
+
+This section covers the initial execution of the dropper up to the point that a copy of itself is spawned. 
+
+
+
+Process Creation
+
+
+
+
+The malware uses CreateProcessW() to call itself. Since the CreationFlag CREATE_SUSPENDED (0x4) is passed as a parameter the process starts in a suspended state. 
+
+
+
+
+
+Process Injection
+
+
+
+
+Inside the PE file is a hex encoded copy of itself starting at offset 0x4013EC. This embedded PE is copied to a buffer and decoded. The decoded copy is UPX packed and stored at 0x180FA8. I selected the PE and did a binary copy and paste into a hex editor. Saved the file and opened it up in PEview:
+
+
+
+
+
+
+
+
+
+
+After calling CreateProcess, NtWriteVirtualMemory is used to write the UPX packed PE file into the spawned process’s memory at 0x400000. 
+
+
+
+
+
+Debugging the Spawned Process
+
+
+
+
+In order to debug the created process I had to locate and modify the original entry point (OEP) of the packed binary and create an infinite loop to prevent the process from executing after the parent process calls NtResume. This is specified at offset 0xE0 of the NT_HEADER section of the PE file. Here is what the code looks like at OEP:
+
+
+
+
+
+
+
+
+
+
+
+This is the start of the UPX unpacking routine to unpack the binary. I need to modify this code to create an infinite loop. There is a simple two byte instruction to accomplish this task EB FE. This will cause the application to jump to the line that is currently being executed. Here is what the code looks like after attaching to the modified process:
+
+
+
+
+
+
+
+
+
+
+
+After attaching to the process restore the original instructions and the debugger is ready to go.
+
+
+
+
+
+
+
+
+
+
+
+This process will need to be replicated (in some fashion) three more times to fully cover how this sample injects Betabot. Once the spawned process starts executing the parent process throws an Index Exception, it’s not important, continue on with debugging the child process.
+
+
+
+
+
+
+
+
+Stage Two
+
+Stage two is similar to the previous stage but it starts out by having to unpack the binary. After it is unpacked, it copy of the file is made, and a new process is created.
+
+
+
+
+
+Unpacking the Binary in Memory
+
+
+
+
+Because the packer is UPX, unpacking the binary is simple. There is a corresponding POPAD for the initial PUSHAD instruction (see previous diagram). After locating the POPAD instruction via searching with OllyDbg, I set a breakpoint, and continued execution up to that point. 
+
+
+
+
+
+
+
+
+
+
+
+After hitting F8 to step through a few more times the JMP instruction is executed and the instruction pointer now points to OEP of the unpacked binary.
+
+
+
+
+
+Dropped Files
+
+
+
+
+The malware sample is copied from the initial start path to the “Local Settings\Temp” directory for the current user. It is renamed to tmp#####.exe, where each # is a digit.
+
+
+
+
+
+Process Creation
+
+
+
+
+A new process is created and another embedded PE is written to the child process. I located the PE in the memory of the parent process and modified the OEP of the binary to create an infinite loop. I connected Ollydbg up to the child process and restored the original code.
+
+
+
+
+  
+
+
+
+
+Stage Three
+
+
+
+
+At this point the new process is spawned and the next thing the malware sample does is decoded the encoded Betabot code and store it in another area of memory. In this sample, the encoded Betabot starts at address 0x330000. Virtualloc() is called to allocate a 0x4B000 size chunk at address 0x430000. The code is decoded and saved section by section. The layout in memory looks like this:
+
+
+
+
+               PE Header          0x430000
+
+
+
+
+       Section Headers    0x4301C8
+
+
+
+
+       .text              0x430400
+
+
+
+
+       .rdata             0x460000
+
+
+
+       .data              0x467000
+
+
+       .rsrc              0x475000
+
+       .reloc             0x476000
+
+
+After the code is decoded and moved to address 0x430000 the encoded section is zeroed out. At this point, the PE file is fully reconstructed and the code can be executed. This is triggered with the following function call 0x401698(0x454876). This ends up being nothing more than a jump to address 0x454876 located in Betabot’s .rsrc section.
+
+
+
+Betabot Initialization
+
+Rather than walking through the entire initialization this section is going to cover some of the highlights of how Betabot starts up and injects itself into the created process.
+
+AV Detection
+
+Starting at function 0x43ff36 the malware checks for evidence of anti-virus products: Symantec, AVP, McAfee, Avira, ESET, ArcaBit, Trend Micro, Avast!, MSC, BullGuard, Sophos, Rising, and a number of others. It accomplishes this by checking various registry keys (primarily the Run key). 
+
+Anti-Debugging
+
+At several points throughout the application ZwQueryInformationProcess() procedure is called with the ProcessDebugPort (0x7) flag set. This checks to see if the current process is being debugged. Unfortunately, I forgot to download plugins that prevent debug detection in OllyDbg and didn’t feel like restarting the process. I modified the parameters on the stack to use 0x6(ProcessRaisePriority) rather than 0x7 (ProcessDebugPort). I chose 0x6 because it returned an error. 
+
+The instruction at the address for DbgBreakPoint in ntdll.dll (0x7C90120E)  is overwritten with a NOP. Anytime DbgBreakPoint is called it is effectively neutralized. The original routine looks like this:
+
+           CC INT3
+
+     C3 RETN
+
+It is now:
+
+           90 NOP
+
+     C3 RETN
+
+
+When debuggers attach to an already running process the DbgBreakPoint() function is called. Instead of the INT3 breakpoint a NOP will be executed. This prevents debuggers from attaching to the already running process. There are methods around this, I just happened to connect to the process before DbgBreakPoint was modified.
+
+For more information about anti-debugging, check out The Ultimate Anti-Debugging Reference.
+
+Sandbox Detection
+
+The malware reads the HKLM\Software\Microsoft\Windows NT\CurrentVersion\ProductID key and grabs the product ID for this Windows version. It then compares this with the following list of product IDs:
+
+     
+
+
+76487-640-1457236-23837
+
+
+76487-337-8429955-22614
+
+
+76487-644-3177037-23510
+
+
+76497-640-6308873-23835
+
+
+55274-640-2673064-23950
+
+
+76487-640-8834005-23195
+
+
+76487-640-0716662-23535
+
+
+76487-644-8648466-23106
+
+
+00426-293-8170032-85146
+
+
+76487-341-5883812-22420
+
+
+76487-OEM-0027453-63796
+
+
+
+Googling these values will lead to sites that discuss sandbox detection methods. The above values are all linked to specific Windows installations in different sandboxes (Joebox, GFI, Kasperksy, CWSandbox, Anubis, etc). If it is detected the malware will stop execution. 
+
+Process Creation
+
+Betabot attempts to launch explorer.exe and if that fails it uses wuaudclt.exe. For this walkthrough, Explorer.exe is used. The process is launched by making a direct call to CreateProcessItnernal().
+
+Dropped Files
+
+Function 0x4523E0 is the start of the file dropping code. This takes a copy of the binary that created the initial process (initialization phase) from earlier and moves it to “C:\Program Files\common files\SysWOW64 office\<filename>”.
+
+
+SYSENTER Table
+
+Instead of jumping into ntdll.dll there are a series of routines within this malware sample various system calls using SYSENTER (rather than jumping to ntdll.dll) in process memory.  The routines are located in memory at memory addresses 0x9C0000, 0x9D0000, 0x9E0000. The following system calls are in memory:
+
+
+0x6C - ZwMapViewOfSection
+
+
+0x10B - NtUnmapViewOfSection 
+
+
+0xB4 -NtQueueApcThread
+
+
+0x25 - NtCreateFile
+
+
+0x74 - NtOpenFile
+
+
+0x3E - NtDeleteFile
+
+
+0x71 - ZwOpenDirectoryObject
+
+
+0x47 - zwEnumerateKey
+
+
+49 - NtEnumerateValueKey
+
+
+29 - ZwCreateKey
+
+
+77 - ZwOpenKey
+
+
+f7 - ZwSetValueKey
+
+
+41 - NtDeleteValueKey
+
+
+7a - ZwOpenProcess
+
+
+101 - ZwTerminateProcess
+
+
+fd - ZwSuspendProcess
+
+
+35 - NtCreateThread
+
+
+ce - ZwResumeThread
+
+
+fe - ZwSuspendThread
+
+
+d5 - ZwSetContextThread
+
+
+55 - NtGetContextThread
+
+
+89 - NtProtectVirtualMemory
+
+
+11 – NtAllocateVirtualMemory
+
+
+115 - NtWriteVirtualMemory
+
+
+db - NtSetEvent
+
+
+8a – ZwPulseEvent
+
+
+
+Only a handful of them are used for the process injection (in bold) portion of the code. These calls are used all throughout the following section anytime one of the four procedures is called.
+
+
+
+Betabot Injection
+
+
+The malware creates a section by calling ZwCreateSection() procedure. The purpose of this is to create a section (of memory) object and returns a handler. This section object represents an area of memory that can be shared. It is accessed through the returned handler. . 
+
+This handler is used to map views of the memory sections using ZwMapViewOfSection() procedure. This procedure maps a view of the memory section in a process. This procedure is called twice using the same handler. Once for the current process and once for the remote process (explorer.exe). Now that the memory is mapped it is now possible to read/write to that section. 
+
+Using the same section handler allows for simultaneous writing to both sections of memory. This means that writing to the section of memory in the local process will also write to the remote process. This avoids the use of functions that raise red flags for anybody that is analyzing the sample. 
+
+The Betabot code is written to the mapped section of memory in the local process, thus writing it to explorer.exe. Of course, this isn’t enough, something needs to be done to have this code executed in the process. To get code execution ntdll.dll is hooked in the explorer.exe process using the same method.
+
+NTDLL Hook
+
+Following the code being injected into the explorer.exe process I came across the current process opening ntdll.dll and creating/mapping a section of memory to store the file. Well, that’s interesting. The following happens:
+
+
+The address for ZwContinue is grabbed from ntdll.dll
+
+
+The offset (last two bytes)  of ZwContinue is calculated based on the address
+
+
+Using the offset the address of ZwContinue from the ntdll.dll mapped in memory is calculated
+
+
+
+The code at that offset is modified with the following instructions
+
+ 
+These instructions will push 0xF313D8 onto the stack and then jump to that address  when the RETN instruction is executed.
+
+
+
+This means that as soon as ZwContinue is called, once NtResume is called, then control will be given to the Betabot code. 
+
+After the mapped version of ntdll.dll is modified ZwUnmapViewOfSection is called to unmap the address 0x7C900000 in the explorer.exe process. So what resides at 0x7C900000? Ntdll.dll. So Betabot unmaps ntdll.dll in explorer.exe and then maps the hooked version using the same ZwMapViewOfSection trick covered in the previous section.
+
+Betabot Execution Routine
+
+There has to be a point to execute the Betabot code and explorer.exe without raising suspicion. This can be completed by executing a thread within the explorer.exe process to start up the malicious code.
+
+Starting at 0x465690 in Betabot there is a routine to accomplish this task. However, this code is not ready to be executed. There are portions of the code that need to be filled in at runtime. Here is the code:
+
+
+
+
+The 11111111, 22222222, 33333333, etc are not opcodes, but placeholders to be overwritten with memory addresses at runtime. This is necessary because prior to code execution Betabot has no way to know the needed addresses. So, the payloads are overwritten (via functions 0x448188 and 0x450745). The code now looks like:
+
+
+
+
+The memory address on the left are different. The code at 0x465690 is stored in a buffer, modified, and then written to 0x21813D8. Because this section of memory is mapped using the same section handler for both processes the code is written to the remote process at address 0xF313D8 (the address to jump to for the ntdll.dll hook).
+
+ZwResumeThread
+
+After the process injection is complete, ZwResumeThread() is called to start execution of explorer.exe. Inside explorer.exe NtContinue is called and then execution is passed to the Betabot code at 0xF313D8. 
+ 
+Injected Process Betabot Code Execution
+
+Using the code in the previous screenshot I’ll walkthough what happens inside explorer.exe up to the point that we get past that routine. 
+
+Instruction 0x2183D9 moves NtContinue into EAX. The next six instructions replace the modified short trampoline in NTContinue of the ntdll.dll moduled mapped in explorer.exe with the original NTContinue code.
+
+The rest of the code creates and executes a thread to start execution of the main Betabot code.
+
+Summary
+
+This write-up highlighted some of the methods that malware authors use to both obfuscate and inject code. It also covered how to handle the problems once they come up. There is a broad range of functionality that was not covered (registry modification, persistence, server communication, etc). If we can come back around to this sample I'd like to highlight those as well.
+
+

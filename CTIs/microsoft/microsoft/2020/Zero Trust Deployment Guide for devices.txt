@@ -1,0 +1,50 @@
+
+		The modern enterprise has an incredible diversity of endpoints accessing their data. This creates a massive attack surface, and as a result, endpoints can easily become the weakest link in your Zero Trust security strategy.
+Whether a device is a personally owned BYOD device or a corporate-owned and fully managed device, we want to have visibility into the endpoints accessing our network, and ensure we’re only allowing healthy and compliant devices to access corporate resources. Likewise, we are concerned about the health and trustworthiness of mobile and desktop apps that run on those endpoints. We want to ensure those apps are also healthy and compliant and that they prevent corporate data from leaking to consumer apps or services through malicious intent or accidental means.
+Get visibility into device health and compliance
+Gaining visibility into the endpoints accessing your corporate resources is the first step in your Zero Trust device strategy. Typically, companies are proactive in protecting PCs from vulnerabilities and attacks, while mobile devices often go unmonitored and without protections. To help limit risk exposure, we need to monitor every endpoint to ensure it has a trusted identity, has security policies applied, and the risk level for things like malware or data exfiltration has been measured, remediated, or deemed acceptable. For example, if a personal device is jailbroken, we can block access to ensure that enterprise applications are not exposed to known vulnerabilities.
+
+To ensure you have a trusted identity for an endpoint, register your devices with Azure Active Directory (Azure AD). Devices registered in Azure AD can be managed using tools like Microsoft Endpoint Manager, Microsoft Intune, System Center Configuration Manager, Group Policy (hybrid Azure AD join), or other supported third-party tools (using the Intune Compliance API + Intune license). Once you’ve configured your policy, share the following guidance to help users get their devices registered—new Windows 10 devices, existing Windows 10 devices, and personal devices.
+Once we have identities for all the devices accessing corporate resources, we want to ensure that they meet the minimum security requirements set by your organization before access is granted. With Microsoft Intune, we can set compliance rules for devices before granting access to corporate resources. We also recommend setting remediation actions for noncompliant devices, such as blocking a noncompliant device or offering the user a grace period to get compliant.
+
+Restricting access from vulnerable and compromised devices
+Once we know the health and compliance status of an endpoint through Intune enrollment, we can use Azure AD Conditional Access to enforce more granular, risk-based access policies. For example, we can ensure that no vulnerable devices (like devices with malware) are allowed access until remediated, or ensure logins from unmanaged devices only receive limited access to corporate resources, and so on.
+
+To get started, we recommend only allowing access to your cloud apps from Intune-managed, domain-joined, and/or compliant devices. These are baseline security requirements that every device will have to meet before access is granted.
+Next, we can configure device-based Conditional Access policies in Intune to enforce restrictions based on device health and compliance. This will allow us to enforce more granular access decisions and fine-tune the Conditional Access policies based on your organization’s risk appetite. For example, we might want to exclude certain device platforms from accessing specific apps.
+Finally, we want to ensure that your endpoints and apps are protected from malicious threats. This will help ensure your data is better-protected and users are at less risk of getting denied access due to device health and/or compliance issues. We can integrate data from Microsoft Defender Advanced Threat Protection (ATP), or other Mobile Threat Defense (MTD) vendors, as an information source for device compliance policies and device Conditional Access rules. Options below:
+
+Enable Mobile Threat Defense connectors in Intune.
+Configure Microsoft Defender ATP as part of your Intune compliance policy,
+Configure third-party Mobile Threat Defense for mobile devices using Intune.
+Configure third-party Mobile Threat Defense for mobile apps using Intune
+
+
+
+Enforcing security policies on mobile devices and apps
+We have two options for enforcing security policies on mobile devices: Intune Mobile Device Management (MDM) and Intune Mobile Application Management (MAM). In both cases, once data access is granted, we want to control what the user does with the data. For example, if a user accesses a document with a corporate identity, we want to prevent that document from being saved in an unprotected consumer storage location or from being shared with a consumer communication or chat app. With Intune MAM policies in place, they can only transfer or copy data within trusted apps such as Office 365 or Adobe Acrobat Reader, and only save it to trusted locations such as OneDrive or SharePoint.
+Intune ensures that the device configuration aspects of the endpoint are centrally managed and controlled. Device management through Intune enables endpoint provisioning, configuration, automatic updates, device wipe, or other remote actions. Device management requires the endpoint to be enrolled with an organizational account and allows for greater control over things like disk encryption, camera usage, network connectivity, certificate deployment, and so on.
+
+
+First, using Intune, let’s apply Microsoft’s recommended security settings to Windows 10 devices to protect corporate data (Windows 10 1809 or later required).
+Ensure your devices are patched and up to date using Intune—check out our guidance for Windows 10 and iOS.
+Finally, we recommend ensuring your devices are encrypted to protect data at rest. Intune can manage a device’s built-in disk encryption across both macOS and Windows 10.
+
+Meanwhile, Intune MAM is concerned with management of the mobile and desktop apps that run on endpoints. Where user privacy is a higher priority, or the device is not owned by the company, app management makes it possible to apply security controls (such as Intune app protection policies) at the app level on non-enrolled devices. The organization can ensure that only apps that comply with their security controls, and running on approved devices, can be used to access emails or files or browse the web.
+With Intune, MAM is possible for both managed and unmanaged devices. For example, a user’s personal phone (which is not MDM-enrolled) may have apps that receive Intune app protection policies to contain and protect corporate data after it has been accessed. Those same app protection policies can be applied to apps on a corporate-owned and enrolled tablet. In that case, the app-level protections complement the device-level protections. If the device is also managed and enrolled with Intune MDM, you can choose not to require a separate app-level PIN if a device-level PIN is set, as part of the Intune MAM policy configuration.
+
+
+To protect your corporate data at the application level, configure Intune MAM policies for corporate apps. MAM policies offer several ways to control access to your organizational data from within apps:
+
+Configure data relocation policies like save-as restrictions for saving organization data or restrict actions like cut, copy, and paste outside of organizational apps.
+Configure access policy settings like requiring simple PIN for access or blocking managed apps from running on jailbroken or rooted devices.
+Configure automatic selective wipe of corporate data for noncompliant devices using MAM conditional launch actions.
+If needed, create exceptions to the MAM data transfer policy to and from approved third-party apps.
+
+
+Next, we want to set up app-based Conditional Access policies to ensure only approved corporate apps access corporate data.
+Finally, using app configuration (appconfig) policies, Intune can help eliminate app setup complexity or issues, make it easier for end users to get going, and ensure better consistency in your security policies. Check out our guidance on assigning configuration settings.
+
+Conclusion
+We hope the above helps you deploy and successfully incorporate devices into your Zero Trust strategy. Make sure to check out the other deployment guides in the series by following the Microsoft Security blog. For more information on Microsoft Security Solutions visit our website. Bookmark the Security blog to keep up with our expert coverage on security matters. Also, follow us at @MSFTSecurity for the latest news and updates on cybersecurity.
+	

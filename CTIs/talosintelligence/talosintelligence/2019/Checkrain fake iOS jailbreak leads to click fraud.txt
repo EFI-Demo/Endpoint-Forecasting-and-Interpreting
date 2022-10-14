@@ -1,0 +1,106 @@
+
+By Warren Mercer and Paul Rascagneres.
+
+
+Introduction
+
+Attackers are capitalizing on the recent discovery of a new vulnerability that exists across legacy iOS hardware. Cisco Talos recently discovered a malicious actor using a fake website that claims to give iPhone users the ability to jailbreak their phones. However, this site just prompts users to download a malicious profile which allows the attacker to conduct click-fraud.
+
+Checkm8 is a vulnerability in the bootrom of some legacy iOS devices that allows users to control the boot process. The vulnerability impacts all legacy models of the iPhone from the 4S through the X. The campaign we'll cover in this post tries to capitalize off of checkra1n, a project that uses the checkm8 vulnerability to modify the bootrom and load a jailbroken image onto the iPhone. Checkm8 can be exploited with an open-source tool called "ipwndfu" developed by Axi0mX.
+
+The attackers we're tracking run a malicious website called checkrain[.]com that aims to draw in users who are looking for checkra1n. 
+
+This discovery made headlines and caught the attention of many security researchers. Jailbreaking a mobile device can be attractive to researchers, average users and malicious actors. A researcher or user may want to jailbreak phones to bypass standard restrictions put in place by the manufacturer to download additional software onto the device or look deeper into the inner workings of the phone. However, an attacker could jailbreak a device for malicious purposes, eventually obtaining full control of the device.
+
+This new malicious actor Talos discovered claims to provide the checkra1n jailbreak. The site even claims to be working with popular jailbreaking researchers such as “CoolStar” and Google Project Zero’s Ian Beer. The page attempts to look legitimate, prompting users to seemingly download an application to jailbreak their phone. However, there is no application, this is an attempt to install malicious profile onto the end-user device
+
+Jailbreaking iOS devices has been around since the launch of the first iPhone in 2007. These are a rare commodity in the iOS world, with Apple moving to patch most software defects swiftly. This can mean a user remains on older versions of iOS at the cost of security to keep their jailbreak — a dangerous proposition. Some users want to jailbreak their devices because it allows them to perform a lot of additional actions on their devices that Apple has locked down. This can be simple tasks like SSHing (remotely accessing) the iOS device, changing icons and themes on the iOS device, and also for illegitimate use such as pirated software and games.
+
+
+
+Checkrain fake website and iOS profile
+
+When a user visits the fake website, they are first presented with a download button.
+
+
+
+
+
+The checkm8 exploit (and, by consequence, the checkra1n jailbreak) only impacts iOS devices running on the A5 to A11 chipsets. The fact that the website mentions the A13 device is the first indicator that this website is not legitimate. Additionally, the website proposes the user can install the checkra1n jailbreak without a PC, when in reality, the checkm8 exploit requires the iOS device to be in DFU mode and is exploitable via the Apple USB cable.
+
+With this fake Checkrain[.]com iOS jailbreak, the user is asked to install a "mobileconfig" profile on their iOS device obtained from hxxps://checkrain[.]com/checkra1n.mobileconfig note the SSL certificate used is LetsEncrypt generated certificate and also the name "checkra1n" is the real name of the available jailbreak. The real checkra1n website does not use an SSL certificate. This is another step the actor has most likely employed in an attempt to draw the user in.
+
+Once the app is downloaded and installed, a checkrain icon appears on the user's iOS springboard. The icon is in fact a kind of bookmark to connect on a URL. This icon may look like an app from the user's perspective, but it actually doesn't work like one at all on the system level. Here is the installed profile:
+
+
+
+
+
+This is to allow the user to "click" the jailbreak app and thus prepare the iOS jailbreak. This is just a fake jailbreak being used via the profile the user just installed. When we look into the profile, we can identify the malicious activity:
+
+
+
+
+
+This is making use of the Apple developer function "Apple Web Clip," which causes a web page to load in full screen with no search bar, no address/URL bar and no bookmarks. This merely displays the hxxps://checkrain[.]com/jb webpage which provides a fake jailbreak experience.
+
+
+
+
+
+
+Fake jailbreak experience
+
+Take a look at the video below to see the full actions of this webpage.
+
+
+
+This webpage is also configured to fingerprint users to ensure they are accessing it from an iOS device. If you visit the website using a desktop browser, it delivers the following error message:
+
+
+
+
+
+The video shows the whole process, and in the end, you will notice multiple redirects occurring on the user's iOS device. This ultimately occurs in click-fraud, resulting in multiple verification chains and then finishing on an iOS game install, with in-app purchases available.
+
+The chain used in this processes through several ad-tracking, verification, geolocation and, finally, campaign delivery. In this case, it downloads from the Apple store an iOS app called "POP! Slots," a slot machine game.
+
+The fake jailbreak process tells the user to have fun for seven days to ensure their unlock completes.
+
+
+
+
+
+This is obviously nonsense — the user will merely provide more interactive sessions through the gameplay, which may result in additional revenue for this attacker.
+
+
+Domain information
+
+We identified several countries that could have fallen for this fake website using Cisco Umbrella. The main concentration was in the U.S., but with many other countries throughout the world being potentially targeted. 
+
+
+
+
+
+The U.S., U.K., France, Nigeria, Iraq, Vietnam, Venezuela, Egypt, Georgia, Australia, Canada, Turkey, Netherlands and Italy were all targeted nations for this campaign.
+
+The domains were all registered within 24 hours of the checkra1n[.]com official website. The attacker even clearly followed information on popular sites like Reddit, ensuring they remained vigilant and updated their website.
+
+
+
+
+
+
+Conclusion
+
+This malicious website simply leads to click fraud. But the same technique could be used for more malicious and critical actions. Instead of a "web clip" profile, the attackers could implant their own MDM enrolment. We previously discovered iOS malicious MDM campaigns here, here and here. We strongly recommend to never install an unknown profile from the internet. 
+
+Talos recommend the following methods to check if your phone has additional profiles or is enrolled in an MDM platform:
+
+1. Users can view restrictions set by MDM profiles in Settings > General > Profiles & Device Management > [MDM configuration] > Restrictions
+
+2. Users can also check which applications have an MDM profile installed on their device in Settings > General > Profiles & Device Management > [MDM configuration] > Apps.
+
+Note: If you do not have any PROFILE & DEVICE MANAGEMENT menu option available, this means the phone is currently not enrolled in an MDM, nor are there any additional profiles trusted on the phone.
+
+

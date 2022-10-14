@@ -1,0 +1,106 @@
+
+		The traditional perimeter-based network defense is obsolete. Perimeter-based networks operate on the assumption that all systems within a network can be trusted. However, today’s increasingly mobile workforce, the migration towards public cloud services, and the adoption of Bring Your Own Device (BYOD) model make perimeter security controls irrelevant. Networks that fail to evolve from traditional defenses are vulnerable to breaches: an attacker can compromise a single endpoint within the trusted boundary and then quickly expand foothold across the entire network.
+Zero Trust networks eliminate the concept of trust based on network location within a perimeter. Instead, Zero Trust architectures leverage device and user trust claims to gate access to organizational data and resources. A general Zero Trust network model (Figure 1) typically comprises the following:
+
+Identity provider to keep track of users and user-related information
+Device directory to maintain a list of devices that have access to corporate resources, along with their corresponding device information (e.g., type of device, integrity etc.)
+Policy evaluation service to determine if a user or device conforms to the policy set forth by security admins
+Access proxy that utilizes the above signals to grant or deny access to an organizational resource
+
+
+Figure 1. Basic components of a general Zero Trust network model
+Gating access to resources using dynamic trust decisions allows an enterprise to enable access to certain assets from any device while restricting access to high-value assets on enterprise-managed and compliant devices. In targeted and data breach attacks, attackers can compromise a single device within an organization, and then use the “hopping” method to move laterally across the network using stolen credentials. A solution based on Zero Trust network, configured with the right policies around user and device trust, can help prevent stolen network credentials from being used to gain access to a network.
+Zero Trust is the next evolution in network security. The state of cyberattacks drives organizations to take the “assume breach” mindset, but this approach should not be limiting. Zero Trust networks protect corporate data and resources while ensuring that organizations can build a modern workplace using technologies that empower employees to be productive anytime, anywhere, any which way.
+Zero Trust networking based on Azure AD conditional access
+Today, employees access their organization’s resources from anywhere using a variety of devices and apps. Access control policies that focus only on who can access a resource is not sufficient. To master the balance between security and productivity, security admins also need to factor in how a resource is being accessed.
+Microsoft has a story and strategy around Zero Trust networking. Azure Active Directory conditional access is the foundational building block of how customers can implement a Zero Trust network approach. Conditional access and Azure Active Directory Identity Protection make dynamic access control decisions based on user, device, location, and session risk for every resource request. They combine (1) attested runtime signals about the security state of a Windows device and (2) the trustworthiness of the user session and identity to arrive at the strongest possible security posture.
+Conditional access provides a set of policies that can be configured to control the circumstances in which users can access corporate resources. Considerations for access include user role, group membership, device health and compliance, mobile applications, location, and sign-in risk. These considerations are used to decide whether to (1) allow access, (2) deny access, or (3) control access with additional authentication challenges (e.g., multi-factor authentication), Terms of Use, or access restrictions. Conditional access works robustly with any application configured for access with Azure Active Directory.
+
+Figure 2. Microsoft’s high-level approach to realizing Zero Trust networks using conditional access.
+To accomplish the Zero Trust model, Microsoft integrates several components and capabilities in Microsoft 365: Windows Defender Advanced Threat Protection, Azure Active Directory, Windows Defender System Guard, and Microsoft Intune.
+Windows Defender Advanced Threat Protection
+Windows Defender Advanced Threat Protection (ATP) is an endpoint protection platform (EPP) and endpoint detection response (EDR) technology that provides intelligence-driven protection, post-breach detection, investigation, and automatic response capabilities. It combines built-in behavioral sensors, machine learning, and security analytics to continuously monitor the state of devices and take remedial actions if necessary. One of the unique ways Windows Defender ATP mitigates breaches is by automatically isolating compromised machines and users from further cloud resource access.
+For example, attackers use the Pass-the-Hash (PtH) and the “Pass the ticket for Kerberos” techniques to directly extract hashed user credentials from a compromised device. The hashed credentials can then be used to make lateral movement, allowing attackers to leapfrog from one system to another, or even escalate privileges. While Windows Defender Credential Guard prevents these attacks by protecting NTLM hashes and domain credentials, security admins still want to know that such an attack occurred.
+Windows Defender ATP exposes attacks like these and generates a risk level for compromised devices. In the context of conditional access, Windows Defender ATP assigns a machine risk level, which is later used to determine whether the client device should get a token required to access corporate resources. Windows Defender ATP uses a broad range of security capabilities and signals, including:
+
+Rich machine learning and behavioral detection library
+Exploit protection
+Credential protection
+Application isolation
+Antivirus
+Network protection 
+Web protection
+
+Windows Defender System Guard runtime attestation
+Windows Defender System Guard protects and maintains the integrity of a system as it boots up and continues running. In the “assume breach” mentality, it’s important for security admins to have the ability to remotely attest the security state of a device. With the Windows 10 April 2018 Update, Windows Defender System Guard runtime attestation contributes to establishing device integrity. It makes hardware-rooted boot-time and runtime assertions about the health of the device. These measurements are consumed by Windows Defender ATP and contribute to the machine risk level assigned to the device.
+The single most important goal of Windows Defender System Guard is to validate that the system integrity has not been violated. This hardware-backed high-integrity trusted framework enables customers to request a signed report that can attest (within guarantees specified by the security promises) that no tampering of the device’s security state has taken place. Windows Defender ATP customers can view the security state of all their devices using the Windows Defender ATP portal, allowing detection and remediation of any security violation.
+Windows Defender System Guard runtime attestation leverages the hardware-rooted security technologies in virtualization-based security (VBS) to detect attacks. On virtual secure mode-enabled devices, Windows Defender System Guard runtime attestation runs in an isolated environment, making it resistant to even a kernel-level adversary.
+Windows Defender System Guard runtime attestation continually asserts system security posture at runtime. These assertions are directed at capturing violations of Windows security promises, such as disabling process protection.
+Azure Active Directory
+Azure Active Directory is a cloud identity and access management solution that businesses use to manage access to applications and protect user identities both in the cloud and on-premises. In addition to its directory and identity management capabilities, as an access control engine Azure AD delivers:
+
+Single sign-on experience: Every user has a single identity to access resources across the enterprise to ensure higher productivity. Users can use the same work or school account for single sign-on to cloud services and on-premises web applications. Multi-factor authentication helps provide an additional level of validation of the user.
+Automatic provisioning of application access: Users’ access to applications can be automatically provisioned or de-provisioned based on their group memberships, geo-location, and employment status.
+
+As an access management engine, Azure AD makes a well-informed decision about granting access to organizational resources using information about:
+
+Group and user permissions
+App being accessed
+Device used to sign in (e.g., device compliance info from Intune)
+Operating system of the device being used to sign in
+Location or IP ranges of sign-in
+Client app used to sign in
+Time of sign-in
+Sign-in risk, which represents the probability that a given sign-in isn’t authorized by the identity owner (calculated by Azure AD Identity Protection’s multiple machine learning or heuristic detections)
+User risk, which represents the probability that a bad actor has compromised a given user (calculated by Azure AD Identity Protection’s advanced machine learning that leverages numerous internal and external sources for label data to continually improve)
+More factors that we will continually add to this list
+
+Conditional access policies are evaluated in real-time and enforced when a user attempts to access any Azure AD-connected application, for example, SaaS apps, custom apps running in the cloud, or on-premises web apps. When suspicious activity is discovered, Azure AD helps take remediation actions, such as block high-risk users, reset user passwords if credentials are compromised, enforce Terms of Use, and others.
+The decision to grant access to a corporate application is given to client devices in the form of an access token. This decision is centered around compliance with the Azure AD conditional access policy. If a request meets the requirements, a token is granted to a client. The policy may require that the request provides limited access (e.g., no download allowed) or even be passed through Microsoft Cloud App Security for in-session monitoring.
+Microsoft Intune
+Microsoft Intune is used to manage mobile devices, PCs, and applications in an organization. Microsoft Intune and Azure have management and visibility of assets and data valuable to the organization, and have the capability to automatically infer trust requirements based on constructs such as Azure Information Protection, Asset Tagging, or Microsoft Cloud App Security.
+Microsoft Intune is responsible for the enrollment, registration, and management of client devices. It supports a wide array of device types: mobile devices (Android and iOS), laptops (Windows and macOS), and employees’ BYOD devices. Intune combines the machine risk level provided by Windows Defender ATP with other compliance signals to determine the compliance status (“isCompliant”) of the device. Azure AD leverages this compliance status to block or allow access to corporate resources. Conditional access policies can be configured in Intune in two ways:
+
+App-based: Only managed applications can access corporate resources
+Device-based: Only managed and compliant devices can access corporate resources
+
+More on how to configure risk-based conditional access compliance check in Intune.
+Conditional access at work
+The value of conditional access can be best demonstrated with an example. (Note: The names used in this section are fictitious, but the example illustrates how conditional access can protect corporate data and resources in different scenarios.)
+SurelyMoney is one of the most prestigious financial institutions in the world, helping over a million customers carry out their business transactions seamlessly. The company uses Microsoft 365 E5 suite, and their security enterprise admins have enforced conditional access. 
+An attacker seeks to steal information about the company’s customers and the details of their business transactions. The attacker sends seemingly innocuous e-mails with malware attachments to employees. One employee unwittingly opens the attachment on a corporate device, compromising the device. The attacker can now harvest the employee’s user credentials and try to access a corporate application.
+Windows Defender ATP, which continuously monitors the state of the device, detects the breach and flags the device as compromised. This device information is relayed to Azure AD and Intune, which then denies the access to the application from that device. The compromised device and user credentials are blocked from further access to corporate resources. Once the device is auto-remediated by Windows Defender ATP, access is re-granted for the user on the remediated device.
+This illustrates how conditional access and Windows Defender ATP work together to help prevent the lateral movement of malware, provide attack isolation, and ensure protection of corporate resources.
+Azure AD applications such as Office 365, Exchange Online, SPO, and others
+The executives at SurelyMoney store a lot of high-value confidential documents in Microsoft SharePoint, an Office 365 application. Using a compromised device, the attacker tries to steal these documents. However, conditional access’ tight coupling with O365 applications prevents this from taking place.
+Office 365 applications like Microsoft Word, Microsoft PowerPoint, and Microsoft Excel allow an organization’s employees to collaborate and get work done. Different users can have different permissions, depending on the sensitivity or nature of their work, the group they belong to, and other factors. Conditional access facilitates access management in these applications as they are deeply integrated with the conditional access evaluation. Through conditional access, security admins can implement custom policies, enabling the applications to grant partial or full access to requested resources.
+
+Figure 3. Zero Trust network model for Azure AD applications
+Line of business applications
+SurelyMoney has a custom transaction-tracking application connected to Azure AD. This application keeps records of all transactions carried out by customers. The attacker tries to gain access to this application using the harvested user credentials. However, conditional access prevents this breach from happening.
+Every organization has mission-critical and business-specific applications that are tied directly to the success and efficiency of employees. These typically include custom applications related to e-commerce systems, knowledge tracking systems, document management systems, etc. Azure AD will not grant an access token for these applications if they fail to meet the required compliance and risk policy, relying on a binary decision on whether access to resources should be granted or denied.
+
+Figure 4. Zero Trust network model expanded for line of business apps
+On-premises web applications
+Employees today want to be productive anywhere, any time, and from any device. They want to work on their own devices, whether they be tablets, phones, or laptops. And they expect to be able to access their corporate on-premises applications. Azure AD Application Proxy allows remote access to external applications as a service, enabling conditional access from managed or unmanaged devices.
+SurelyMoney has built their own version of a code-signing application, which is a legacy tenant application. It turns out that the user of the compromised device belongs to the code-signing team. The requests to the on-premises legacy application are routed through the Azure AD Application Proxy. The attacker tries to make use of the compromised user credentials to access this application, but conditional access foils this attempt.
+Without conditional access, the attacker would be able to create any malicious application he wants, code-sign it, and deploy it through Intune. These apps would then be pushed to every device enrolled in Intune, and the hacker would be able to gain an unprecedented amount of sensitive information. Attacks like these have been observed before, and it is in an enterprise’s best interests to prevent this from happening.
+
+Figure 5. Zero Trust network model for on-premises web applications
+Continuous innovation
+At present, conditional access works seamlessly with web applications. Zero Trust, in the strictest sense, requires all network requests to flow through the access control proxy and for all evaluations to be based on the device and user trust model. These network requests can include various legacy communication protocols and access methods like FTP, RDP, SMB, and others.
+By leveraging device and user trust claims to gate access to organizational resources, conditional access provides comprehensive but flexible policies that secure corporate data while ensuring user productivity. We will continue to innovate to protect the modern workplace, where user productivity continues to expand beyond the perimeters of the corporate network.
+ 
+ 
+Sumesh Kumar, Ashwin Baliga, Himanshu Soni, Jairo Cadena
+Enterprise & Security
+ 
+ 
+ 
+ 
+
+
+Talk to us
+Questions, concerns, or insights on this story? Join discussions at the Microsoft community and Windows Defender Security Intelligence.
+Follow us on Twitter @WDSecurity and Facebook Windows Defender Security Intelligence.
+	

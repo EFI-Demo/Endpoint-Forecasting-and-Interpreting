@@ -1,0 +1,72 @@
+A new spam campaign has hit Romanian speaking Internet users during the past week. Bundled with apparently innocuous Word attachments, the spam wave is one of the largest and most complex efforts to install the banker Trojan Dridex on victims’ computers.
+
+
+Fig. 1: Infection breakdown in Romania.
+Almost 90% of all the infected hosts are based in Romania according to our telemetry.
+The infection rates in other countries are so small that it is very possible that the clients in those countries might also have connections to Romania.
+
+A primer on Dridex
+Dridex is a relatively new strain of banking malware that has evolved from the Cridex malware, which in its turn, is the successor of the notorious Zeus Trojan. Dridex infections have originally showed up in late 2014 and its campaigns focus on different regions of the world, one at a time.
+Every Dridex campaign appears to be different: it spreads either as a malicious binary linked in the spam message, or by spammed links that reference an external JJEncoded JavaScript. Once this JavaScript piece of code executes in the browser, it triggers the download on the users’ computer. This specific spam campaign makes use of Word or Excel files rigged with macro codes that trigger the download of a generic, highly obfuscated downloader. This downloader, in its turn, downloads and executes the Dridex binary.
+We received spam samples rigged with macro-enabled Word documents during August 10-17 both via our honeypot system and via user reports from the market. The offending message features a randomly-generated subject that tries to appeal victims’ curiosity: order request, fake accounting messages, orders or requests from Romanian companies and so on.
+The sender of these message is also spoofed and appears like they are coming from compromised e-mail servers belonging to real companies located worldwide.
+
+Figure 2. The spam message bundled with an apparently innocuous DOC file
+While it looks harmless, the attached DOC file is responsible for triggering the infection process. This is possible with the help of Macros – a series of commands and instructions that you group together as a single command to accomplish a task automatically. These macros are written in Visual Basic for Applications (VBA) and lets an advanced users extend the functionality of Word. In our case, the VBA script embedded in the document downloads and executes a generic installer that would later bring the Dridex Banker Trojan to the user’s computer.
+
+Figure 3. Word automatically disables Macros for documents coming as attachments since they are a security risk.
+If the user enables the Macro functionality, the embedded, obfuscated VBA script starts executing.
+Technical note:
+The macro contents is stored into the Word Document in base64 encoding. Once decoded, this data snippet appears as an ActiveMIME object (which is in fact ZLIB-compressed information starting from offset 0x32). It decompresses to a standard OLE file with the VBA macro project.
+
+Figure 4. Base64-encoded macro
+Decryption of the ActiveMIME container reveals that it connects to a web address formatted like hxxp://<ipaddress>/bt/bt/ppt.php, downloads a file and saves it in the temporary directory using a random name (in our case, VCXXMKHF.exe). This file is subsequently executed in a command prompt that sometimes is briefly visible to the user. This file is written in C# and is signed with a valid digital certificate issued to one Afet@mail.ua. It acts as a downloader for the Dridex Trojan.
+When executed, this highly obfuscated file decrypts itself, launches a second copy of itself and injects the decrypted code into the second process. The decrypted code no longer contain MSIL bytes, but x86 instructions.
+The new process contains additional encrypted sections in which configuration data is stored.  Among this, there is also a list of servers that the downloader contacts in order to download the final Dridex component. All the configuration settings are stored in XML format. The list of servers can be seen below:
+
+The Dridex downloader will contact each of the servers in the configuration file and will try to download a DLL file (the final Dridex component). The DLL is then executed with the following command:
+Rundll32 <downloaded_file> NotifierInit
+The main Dridex component
+Once executed, the DLL file injects itself into explorer.exe from which it will monitor browsing and banking activity. All common browsers are monitored: Firefox, Chrome and Internet Explorer.
+After it starts running in explorer.exe, it adds a firewall rule with the name “Core Networking Multicast Listener Done (ICMPv4-In)” in order to allow itself to contact the C&C servers.
+The malware contacts the C&C servers and sends, in an encrypted format, an XML file containing its version, a unique identifier build derived from the computer name and a public key.
+
+During the communication with the server we have intercepted different configuration files in which the malware tries to update its list of C&C servers, to request other modules and also a configuration file that contains the commands regarding to what and how to intercept.
+The configuration data containing the list of C&C nodes is listed below:
+
+The configuration data where the malware requests a certain module from the server is listed below:
+
+We were also able to intercept a full list of modules that Dridex can use. The configuration is given below:
+
+The main configuration file
+Dridex downloads the main configuration file and stores in registry at
+HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\CLSID\<some CLSID>\ShellFolder\<value name>
+Ex: HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\CLSID\{EF4CF352-2909-3DEC-C35C-A5798D45EC66}\ShellFolder\01D0D73E8320D103
+The configuration file contains different sections:
+– nodes: contains the IP addresses of the C&C servers
+– settings: contains information regarding what website to monitor and how to extract data from each of the target URLs
+– commands: additional commands to be run by the malware (download of files, list of processes to be killed, etc.)
+
+The settings subsections:
+The following types of commands can be viewed in the settings part:
+– httpshots: what data to grab and what not to grab from certain websites
+– httpinjectblock: web pages that the malware will inject code into:
+– httpblock: web pages to allow or to deny access
+– formgrabber: webpages from which data submited in a form will be extracted
+– clickshots: webpages where screenshoots get taken when the user performs a click. (this is especially used when authentificating using a virtual keyboard on a banking website).
+– redirects: the webpage from where the user will be redirected as well as the destination address
+– httpinject: web pages that the bot will monitor in order to inject code
+Since the current campaing targets Romanian clients, we have extracted the romanian banks from the configuration file. Two romanian banks seem to be affected.
+The configuration file for the first bank is given below. For it, the malware uses one of the clickshots configuration. This is because authentification on the first banking website is done using a virtual keyboard.
+
+For the second target bank, the malware uses a httpinject configuration. The script to be injected gets downloaded from one of the servers.
+
+The interesting part of the Dridex malware is that it is very difficult to notice on a compromised machine. This is because the malware doesn’t set a persistence registry that allows a researcher to easily identify it. In order to achieve persistence, the malware goes the extra mile and hooks some system functions such as those used for shutdown and restart.  When the user triggers a shutdown, the malware process dumps the code from the memory to a file and only then it creates a registry entry in order to start itself after reboot. Immediately after the computer start and the malware begins running it will remove the registry entry. However, there is also an advantage in this behavior. In case of a power drop or an unexpected shutdown, the system will no longer be infected
+However it is still possible to see if the computer is infected by looking for other registry keys, especially the one in which malware stores the configuration data:
+HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\CLSID\{some clsid}\ShellFolder\<value name> where a large amount of data is stored.
+Also, since the malware runs from the explorer.exe process, the user might notice an unexpected rise in the resources assigned to this process. The explorer.exe process has no reason to connect to the internet so this is another way for the user to notice the infection.
+The firewall rule mentioned earlier can be another clue that that system is infected.
+The malware also creates a mutex when run from explorer.exe. The mutex, even though is different for each user, has the following format: Global\<md5>, where md5 is computed on specific information regarding each computer.
+How to stay safe?
+First and foremost, use an up-to-date antimalware solution on your Windows computer. Bitdefender detects this threat as Gen:Variant.Kazy.675711 and blocks the infection before it is executed. Secondly, if you have any doubts that your computer has been infected, you may use the cold reboot feature (either by unplugging the system or by powering off from the hardware button) in order to prevent the malicious instance from rebooting. If your computer has been infected already with a piece of Banker Trojan, please notify your bank and have the card and the e-banking credentials changed immediately.
+The information in this article was made available courtesy to Bitdefender malware researchers Răzvan Benchea, Alexandru Maximciuc and Victor Luncașu

@@ -1,0 +1,63 @@
+
+0.2 Release CandidateThis week we’re putting out the Razorback 0.2 release candidate.  You can find it here:
+
+http://sourceforge.net/projects/razorbacktm/files/Razorback/razorback-0.2.0-rc.tbz/download
+
+This release, and the 0.2 final release scheduled for next week, contains all the major functionality for the dispatcher. The dispatcher in 0.2 now has the following capabilities:
+Data acquisition and submission API
+Alerting and judgment API
+Queue based messaging system
+Data blocks stored to disk
+Support for local (shared file system) and over-the-wire data block transmission
+Local and global caching services
+MySQL database back-end
+Remote management through the use of libcli
+
+We use several open source services and libraries, so you’ll need to have those set up. The quick list is:
+Apache's ActiveMQ
+memcached (and associated libraries)
+libcli
+mysql (and associated libraries)
+uuid libraries
+
+Tom "The Amish Hammer" Judge has done a great job of laying out the prerequisites and other installation information on the Sourceforge Trac site here: http://sourceforge.net/apps/trac/razorbacktm/. After you have the prerequisites for installation, getting setup with a basic setup goes something like this:
+tar -zxvf razorback-0.2rc.tar.gz
+cd razorback
+./configure --prefix=/home/myhome/02rc/ --enable-debug --disable-officeCat --enable-routing-stats --disable-snort --disable-clamavNugget --with-api=/home/myhome/02rc/lib/
+make; make install
+Use the .sql scripts in ./dispatcher/share to setup schema and populate key data fields
+cd /home/my home/02rc/etc/razorback
+Change the names of *.config.sample to *.config
+Change the name of magic.sample to magic
+Edit dispatcher.conf
+Modify database settings
+Modify GlobalCache settings to point to your memcached server
+Change username/password for the console
+For now, leave everything else at default
+Edit rzb.conf
+Modify MessageQueue to point to your ActiveMQ server
+cd /home/myhome/02rc/bin
+./dispatcher -d
+Dispatcher should start up in debug mode
+In another window, and in /home/myhome/02rc/bin:
+./masterNugget -d
+master nugget and any nuggets you configured should start up in debug mode
+In another window, and in /home/myhome/02rc/bin:
+Find a PDF file
+Inject it into the system: 
+/home/myhome/02rc/bin/fileInject  --type=PDF_FILE --file=monkey.pdf
+A copy should be in your /tmp directory called block-.  This is done by the File Log nugget.
+That test means your basic setup works.  We'll follow up with more information on the ClamAV and Snort-as-a-Collector nuggets in a future blog post, but both are functional for this build.  As always, you can get support from the Razorback trac site or from the Razorback mailing lists.
+
+Q3 -- Detection
+Now that we have the core of the system mostly in place, the Supreme High Royal Emperor Watchinski, head of the VRT, has declared that Q3 will be dedicated to building out the detection capability.  And there was much rejoicing.  (Seriously, the Dispatcher is awesome and all, but what we really want to do is detect bad things.  Its our thing.)
+
+To that end we'll be working towards several goals:
+Script interface so that detection can be build in any given scripting language
+A web portal so you can submit files to our Razorback deployment
+A "Defense Run" where each developer works on two new nuggets for collection or detection
+Improved configuration setup
+A set of ISOs and VMWare images so you can quickly get the system up for testing.
+
+We'll keep you up to date on the Q3 stuff and we hope you let us know how you are doing with the 0.2RC.  You can expect a final release of the 0.2 build sometime next week, provided all goes well.
+

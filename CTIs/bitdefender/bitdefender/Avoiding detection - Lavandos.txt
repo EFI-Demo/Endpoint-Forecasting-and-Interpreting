@@ -1,0 +1,104 @@
+“How to hide a malicious DLL? How about in plain sight?” One can easily imagine such thoughts going through the mind of whoever is churning out new versions of the Lavandos malware. After execution, the malware uses the Windows Registry to update the component files, keep the configuration data and store commands.
+The original file injects 3 dlls(setupapi.dll, dll.dll, lib.dll) and 1 driver(sfc.sys).
+In spoolsv.exe process it injects lib.dll, dll.dll and the driver and in iexplore.exe it injects dll.dll .
+The dropped files are:
+– depending on the browser on the infected computer: <%program file folder%> \ [IExplorer | Mozila Firefox | Opera] \ \setupapi.dll and
+– <%system folder%>\sfcfiles.dll (lib.dll).
+ 
+The clean sfcfiles.dll is cripted and packed in HKEY_LOCAL_MACHINE\SOFTWARE\SETTINGS\CryptoHash and also moved in sfcfiles.dat. The file sfcfiles.dat is deleted after a restart. The infected sfcfiles.dll has the same size and the same attributes(creation time, modification time) as the original file. This complicates disinfection, since the only way to recover the clean sfcfiles.dll after a cleanup and reboot is to decrypt it from the registry.
+ 
+Lavandos uses the registry for updates. Moreover, it seems that on the server it has more than one version for every file. At every request a random version of the file is chosen.
+– HKLM\SOFTWARE\SETTINGS\CoreSettings  -> crypted dll.dll;
+– HKLM\SOFTWARE\SETTINGS\ErrorControl  -> crypted shellcode;
+– HKLM\SOFTWARE\SETTINGS\DriveSettings -> crypted driver sfc.sys
+– HKLM\SOFTWARE\SETTINSG\PnPData  -> crypted 15 different dll.dl
+– HKEY_LOCAL_MACHINE\SOFTWARE\SETTINGS\CryptoHash->crypted lib.dll
+ 
+Lavandos accesses the server name from registry value HKLM\SOFTWARE\SETTINGS\HashSeed. This data is kept crypted :
+http://mv[remove]o/page.php
+http://atl[remove]to/page.php
+http://sub[remove]ge.php
+http://ser[remove]ge.php
+http://allw[remove]ge.php
+http://go[remove]ge.phpregedit view
+
+ 
+Saving commands:
+Lavandos receives data (InternetReadFile), 0x7d000 bytes maxim, and if the buffer starts with “0000” it stores the buffer in a registry value.
+ 
+The name of the command registry value is a hash computed on 9 bytes (“0000”, the marker of the dll and a “\x00” byte).
+The received buffer has the following structure: “[0000][marker][command]”;
+Exemple: “[0000][0012][0]” – the 12-th dll, command ‘0’, (“[” “]” were added just for better understanding ).
+ 
+The commands are similar for all the dlls:
+“HC” -> Deletes the value KLM\Software\Microsoft\Windows\CurrentVersion\AppData.
+“CS” -> It takes a screenshot and the bmp format is encoded in jpeg format. This picture is  crypted  and saved in HKLM\Software\Microsoft\Windows\hash_string.
+“BK” -> deletes the key  HKLM\Software\Settings
+-> crypts the string “BYE!” and sets the value  “SOFTWARE\Settings\Properties”
+-> decrypts the data from the value CryptoHash
+-> deletes the key  HKLM\Software\Settings
+-> moves the file “/sfcfiles.dll” in “/sfcfiles.dll.bak” and writes in “/sfcfiles.dll”  the decrypted data from the value CryptoHash(which is the original sfcfiles.dll file)
+“SK” -> it switches the desktop to “DefMainWin32XAWW”
+“SB” -> deletes the key  HKLM\Software\Settings
+-> crypts the string “BYE!” and sets the value  “SOFTWARE\Settings\Properties”
+-> decrypts the data from the value CryptoHash
+-> deletes the key  HKLM\Software\Settings
+-> moves the file “/sfcfiles.dll” in “/sfcfiles.dll.bak” and writes in “/sfcfiles.dll” the decrypted data from the value CryptoHash(which is the original sfcfiles.dll file)
+-> switches the desktop to “DefMainWin32XAWW” and file work
+“BE” -> it writes in ” Software\Microsoft\Windows\AWKeyData” value a part of the command
+“DU”and “LU” ->decrypts a part of the command and writes it in a temp file which is executed afterwards.
+After decrypting the data from the registry value DriveSettings :
+
+
+the data is then written in rivers\sfc.sys:
+
+
+the driver is loaded with LoadDriver() function:
+
+and the file is deleted:
+
+Keeping the stolen information
+For each information a buffer is created: [the marker of the dll ][info][400h zeros]. A hash is computed on this buffer and saved in HKLM\Software\Microsoft\Windows\CurrentVersion\AppData. After that the buffer is crypted and stored in HKLM\Software\Microsoft\Windows\hash_string (hash_string :if the hash is 0x1234abcd the hash_string is”1234abcd”).
+Example: storing information about a internet connection:
+storeInValue function: (pseudocode)
+{
+input:
+buffer = ip port swapcase(base64(hostname))| swapcase(base64(username))|
+swapcase(base64(password))
+ 
+size_buffer = strlen(buffer_2) + 8; buffer2 = swapcase(base64(hostname))| swapcase(base64(username))|swapcase(base64(password))
+flag_store_hash = 1; to store or not to store hash in HKLM\Software\Microsoft\Windows\ CurrentVersion\ AppData
+buffer = [marker][buffer][400h] # the marker is the dll id
+hash_buffer = hashfunction(buffer)
+hash_string = encode_hex(hash_buffer)
+if flag_store_hash:
+AppData_hashes = RegQueryValueEx( HKLM\ Software\ Microsoft\ Windows\ CurrentVersion\ AppData )
+if hash_buffer in AppData_hashes:
+return 0;
+else:
+RegSetValueEx( HKLM\Software\Microsoft\Windows\CurrentVersion\AppData, AppData_hashes + hash_buffer )
+}
+# first rol cript
+index = 0
+for x in buffer:
+ 
+buffer[index] = rol(x, hash_string[index%len_hash_string])
+index += 1
+ 
+ # second xor cript
+ 
+index = 0
+ 
+for x in buffer:
+ 
+buffer[index] = x ^ hash_string[index%len_hash_string]
+ 
+index += 1
+ 
+RegSetValueEx( HKLM\Software\Microsoft\Windows\hash_string, buffer )
+ 
+In our experience, a lot of viruses use the registry to store configuration values or decryption keys, but it’s the first time we’ve come across one that uses it as a file store. The technique is clearly used to evade detection, as code that is injected into running processes is read and decrypted directly from the registry as well.
+ 
+All in all, Lavandos is a rather complicated virus to analyze in any detail, since there are no less than 18 components at the time of writing and what we’ve seen suggests that it’s under active development and may add more at any time.
+For more details, including an interesting targets list, go look at the full description.
+ 

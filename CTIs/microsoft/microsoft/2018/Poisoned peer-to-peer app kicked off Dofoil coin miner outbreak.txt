@@ -1,0 +1,139 @@
+
+		On March 7, we reported that a massive Dofoil campaign attempted to install malicious cryptocurrency miners on hundreds of thousands of computers. Windows Defender Antivirus, with its behavior monitoring, machine learning technologies, and layered approach to security detected and blocked the attack within milliseconds. Windows 10 S, a special configuration of Windows 10 providing Microsoft-verified security, was not vulnerable to this attack.
+A new capability in Windows Defender AV, Emergency Dynamic Intelligence Update (EDIU), helped push protections from the cloud directly to endpoints within 15 minutes after the outbreak was identified. This feature, currently in preview, is designed specifically for these kinds of outbreaks and delivers protections in near real time. In addition, client endpoints automatically downloaded definition packages (VDM) from Windows SUS servers and Microsoft Update servers.*
+Immediately upon discovering the attack, we looked into the source of the huge volume of infection attempts. Traditionally, Dofoil (also known as Smoke Loader) is distributed in multiple ways, including spam email and exploit kits. In the outbreak, which began in March 6, a pattern stood out: most of the malicious files were written by a process called mediaget.exe.
+This process is related to MediaGet, a BitTorrent client that we classify as potentially unwanted application (PUA). MediaGet is often used by people looking to download programs or media from websites with dubious reputation. Downloading through peer-to-peer file-sharing apps like this can increase the risk of downloading malware.
+During the outbreak, however, Dofoil didn’t seem to be coming from torrent downloads. We didn’t see similar patterns in other file-sharing apps. The process mediaget.exe always wrote the Dofoil samples to the %TEMP% folder using the file name my.dat. The most common source of infection was the file %LOCALAPPDATA%\MediaGet2\mediaget.exe (SHA-1: 3e0ccd9fa0a5c40c2abb40ed6730556e3d36af3c).
+Recommended reading: For campaign statistics, payload details, and the Windows Defender response, read:
+
+Behavior monitoring combined with machine learning spoils a massive Dofoil coin mining campaign
+Hunting down Dofoil with Windows Defender ATP
+
+Tracing the infection timeline
+Our continued investigation on the Dofoil outbreak revealed that the March 6 campaign was a carefully planned attack with initial groundwork dating back to mid-February. To set the stage for the outbreak, attackers performed an update poisoning campaign that installed a trojanized version of MediaGet on computers. The following timeline shows the major events related to the Dofoil outbreak.
+
+Figure 1. MediaGet-related malware outbreak timeline (all dates in UTC).
+MediaGet update poisoning
+The update poisoning campaign that eventually led to the outbreak is described in the following diagram. A signed mediaget.exe downloads an update.exe program and runs it on the machine to install a new mediaget.exe. The new mediaget.exe program has the same functionality as the original but with additional backdoor capability.
+Figure 2. Update poisoning flow
+The malicious update process is recorded by Windows Defender Advanced Threat Protection (Windows Defender ATP). The following alert process tree shows the original mediaget.exe dropping the poisoned signed update.exe.
+Figure 3. Windows Defender ATP detection of malicious update process
+Poisoned update.exe
+The dropped update.exe is a packaged InnoSetup SFX which has an embedded trojanized mediaget.exe, update.exe. When run, it drops a trojanized unsigned version of mediaget.exe.
+
+Figure 4. Certificate information of the poisoned update.exe
+Update.exe is signed by a third-party software company that is unrelated to MediaGet and is probably a victim of this plot. The executable was code signed with a different cert just to pass the signing requirement verification as seen in the original mediaget.exe. The update code will check the certificate information to verify whether it is valid and signed. If it is signed, it will check that the hash value matches the value retrieved from the hash server located in mediaget.com infrastructure. The figure below shows a code snippet that checks for valid signatures on the downloaded update.exe.
+Figure 5. mediaget.exe update code
+Trojanized mediaget.exe
+The trojanized mediaget.exe file, detected by Windows Defender AV as Trojan:Win32/Modimer.A, shows the same functionality as the original one, but it is not signed by any parties and has additional backdoor functionality. This malicious binary has 98% similarity to the original, clean MediaGet binary. The following PE information shows the different PDB information and its file path left in the executable.
+Figure 6. PDB path comparison of signed and trojanized executable
+When the malware starts, it builds a list of command-and-control (C&C) servers.
+
+Figure 7. C&C server list
+One notable detail about the embedded C&C list is that the TLD .bit is not an ICANN-sanctioned TLD and is supported via NameCoin infrastructure. NameCoin is a distributed name server system that adopts the concept of blockchain model and provides anonymous domains. Since .bit domains can’t be resolved by ordinary DNS servers, the malware embeds a list of 71 IPv4 addresses that serve as NameCoin DNS servers.
+The malware then uses these NameCoin servers to perform DNS lookups of the .bit domains. From this point these names are in the machine’s DNS cache and future lookups will be resolved without needing to specify the NameCoin DNS servers.
+The first contact to the C&C server starts one hour after the program starts.
+
+Figure 8. C&C connection start timer
+The malware picks one of the four C&C servers at random and resolves the address using NameCoin if it’s a .bit domain. It uses HTTP for command-and-control communication.
+
+Figure 9. C&C server connection
+The backdoor code collects system information and sends them to the C&C server through POST request.
+
+Figure 10. System information
+The C&C server sends back various commands to the client. The following response shows the HASH, IDLE, and OK commands. The IDLE command makes the process wait a certain time, indicated in seconds (for example, 7200 seconds = 2 hours), before contacting C&C server again.
+Figure 11. C&C commands
+One of the backdoor commands is a RUN command that retrieves a URL from the C&C server command string. The malware then downloads a file from the URL, saves it as %TEMP%\my.dat, and runs it.
+Figure 12. RUN command processing code
+This RUN command was used for the distribution of the Dofoil malware starting March 1 and the malware outbreak on March 6. Windows Defender ATP alert process tree shows the malicious mediaget.exe communicating with goshan.online, one of the identified C&C servers. It then drops and runs my.dat (Dofoil), which eventually leads to the CoinMiner component.
+Figure 13. Dofoil, CoinMiner download and execution flow
+Figure 14. Windows Defender ATP alert process tree
+The malware campaign used Dofoil to deliver CoinMiner, which attempted to use the victims’ computer resources to mine cryptocurrencies for the attackers. The Dofoil variant used in the attack showed advanced cross-process injection techniques, persistence mechanisms, and evasion methods. Windows Defender ATP can detect these behaviors across the infection chain.
+Figure 15. Windows Defender ATP detection for Dofoil’s process hollowing behavior
+We have shared details we uncovered in our investigation with MediaGet’s developers to aid in their analysis of the incident.
+We have shared details of the malicious use of code-signing certificate used in update.exe (thumbprint: 5022EFCA9E0A9022AB0CA6031A78F66528848568) with the certificate owner.
+Real-time defense against malware outbreaks
+The Dofoil outbreak on March 6, which was built on prior groundwork, exemplifies the kind of multi-stage malware attacks that are fast-becoming commonplace. Commodity cybercrime threats are adopting sophisticated methods that are traditionally associated with more advanced cyberattacks. Windows Defender Advanced Threat Protection (Windows Defender ATP) provides the suite of next-gen defenses that protect customers against a wide range of attacks in real-time.
+Windows Defender AV enterprise customers who have enabled the potentially unwanted application (PUA) protection feature were protected from the trojanized MediaGet software that was identified as the infection source of the March 6 outbreak.
+Windows Defender AV protected customers from the Dofoil outbreak at the onset. Behavior-based detection technologies flagged Dofoil’s unusual persistence mechanism and immediately sent a signal to the cloud protection service, where multiple machine learning models blocked most instances at first sight.
+In our in-depth analysis of the outbreak, we also demonstrated that the rich detection libraries in Windows Defender ATP flagged Dofoil’s malicious behaviors throughout the entire infection process. These behaviors include code injection, evasion methods, and dropping a coin mining component. Security operations can use Windows Defender ATP to detect and respond to outbreaks. Windows Defender ATP also integrates protections from Windows Defender AV, Windows Defender Exploit Guard, and Windows Defender Application Guard, providing a seamless security management experience.
+For enhanced security against Dofoil and others similar coin miners, Microsoft recommends Windows 10 S. Windows 10 S exclusively runs apps from the Microsoft Store, effectively blocking malware and applications from unverified sources. Windows 10 S users were not affected by this Dofoil campaign.
+To test how Windows Defender ATP can help your organization detect, investigate, and respond to advanced attacks, sign up for a free trial.
+ 
+Windows Defender Research team
+
+ 
+*Updated 4/30/2018 – Emergency Dynamic Intelligence Update (EDIU) and other new features in Windows Defender AV and the rest of the Windows Defender ATP defense stack are now available with Windows 10 version 1803, also known as the Windows 10 April 2018 Update. Read more: What’s new in the Windows 10 April 2018 Update.
+ 
+ 
+Indicators of compromise (IOCs)
+
+
+
+File name
+SHA-1
+Description
+Signer
+Signing date
+Detection name
+
+
+mediaget.exe
+1038d32974969a1cc7a79c3fc7b7a5ab8d14fd3e
+Offical mediaget.exe executable
+GLOBAL MICROTRADING PTE. LTD.
+2:04 PM 10/27/2017
+PUA:Win32/MediaGet
+
+
+mediaget.exe
+4f31a397a0f2d8ba25fdfd76e0dfc6a0b30dabd5
+Offical mediaget.exe executable
+GLOBAL MICROTRADING PTE. LTD.
+4:24 PM 10/18/2017
+PUA:Win32/MediaGet
+
+
+update.exe
+513a1624b47a4bca15f2f32457153482bedda640
+Trojanized updater executable
+DEVELTEC SERVICES SA DE CV
+–
+Trojan:Win32/Modimer.A
+
+
+mediaget.exe
+3e0ccd9fa0a5c40c2abb40ed6730556e3d36af3c,
+fda5e9b9ce28f62475054516d0a9f5a799629ba8
+Trojanized mediaget.exe executable
+Not signed
+–
+Trojan:Win32/Modimer.A
+
+
+my.dat
+d84d6ec10694f76c56f6b7367ab56ea1f743d284
+Dropped malicious executable
+ –
+ –
+TrojanDownloader:Win32/Dofoil.AB
+
+
+wuauclt.exe
+88eba5d205d85c39ced484a3aa7241302fd815e3
+Dropped CoinMiner
+ –
+ –
+Trojan:Win32/CoinMiner.D
+
+
+
+ 
+ 
+ 
+
+
+Talk to us
+Questions, concerns, or insights on this story? Join discussions at the Microsoft community and Windows Defender Security Intelligence.
+Follow us on Twitter @WDSecurity and Facebook Windows Defender Security Intelligence.
+	

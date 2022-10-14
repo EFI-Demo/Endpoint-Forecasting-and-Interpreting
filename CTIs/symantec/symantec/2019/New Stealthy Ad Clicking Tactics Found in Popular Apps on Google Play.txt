@@ -1,0 +1,34 @@
+We recently spotted a new tactic being used by apps on the Google Play Store to stealthily perform ad-clicking on users’ devices. A developer known as Idea Master has published two popular apps on the Play Store in the past year, with a collective download count of approximately 1.5 million. Symantec has informed Google of the observed behavior and the apps have now been removed from the Play Store.
+
+The two apps, a notepad app (Idea Note: OCR Text Scanner, GTD, Color Notes) and a fitness app (Beauty Fitness: daily workout, best HIIT coach), are packed using legitimate packers originally developed to protect the intellectual property of Android applications. Android packers can change the entire structure and flow of an Android Package Kit (APK) file, which complicates things for security researchers who want to decipher the APK’s behavior. This also explains the developer’s ability to remain on the Play Store performing malicious acts under the radar for nearly a year before being detected.
+.The attack starts with a notification in the notification drawer on the user’s device.
+.Upon clicking on the notification, Toast is used to display a hidden view containing advertisements (Toast messages are commonly used to display unobtrusive notifications that appear on the current activity UI screen, such as when the volume is adjusted).
+.Unlike hidden views where the view is set to transparent in order to hide content from the user, this threat actor deploys a much more cunning way of running the advertisements while keeping them hidden from the user. This is done by first creating a Canvas outside the device’s viewable display such that, technically, the advertisements are drawn on the device. By using the translate() and dispatchDraw() methods (see Figure 4) the position of the drawings are beyond the device’s viewable screen area and the user is unable to see the advertisements on their device. Using this tactic allows advertisements, and any other potentially malicious content, to be displayed freely. The app can then initiate an automated ad-clicking process that produces ad revenue.
+.As threat actors generate ghost clicks and ad revenue, impacted devices will suffer from drained batteries, slowed performance, and a potential increase in mobile data usage due to frequent visits to advertisement websites.
+
+These apps went unnoticed on the Google Play Store for nearly a year, affecting roughly 1.5 million users before we uncovered their sneaky behavior. The apps’ use of Android packers and the unusual method of hiding advertisements adds a level of complexity for security researchers.
+
+A special thank you to Tommy Dong for his dedicated contribution in analyzing this sample.
+
+Protection
+
+Symantec and Norton products detect these apps as the following:
+
+
+	Android.MalApp
+
+
+Mitigation
+
+Since the applications are still available on Google Play, we strongly encourage users to manually uninstall them from their devices. Additionally, we advise users to take the following precautions:
+
+
+	Keep your software up to date.
+	Do not download apps from unfamiliar sites.
+	Only install apps from trusted sources.
+	Pay close attention to the permissions requested by apps.
+	Install a suitable mobile security app, such as Norton or Symantec Endpoint Protection Mobile, to protect your device and data.
+	Make frequent backups of important data.
+
+
+Indicators of compromise

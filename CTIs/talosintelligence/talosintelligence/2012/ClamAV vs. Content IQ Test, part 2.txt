@@ -1,0 +1,296 @@
+
+This is the second post in a series of blog posts about the Content IQ Test. Please see ClamAV vs. Content IQ Test, part 1.
+
+Let's see how ClamAV does with test files that contain auto-executing embedded active content.
+
+Test file 10 contains the target string in an obfuscated, auto-executing Javascript object embedded in a PDF file.
+
+
+azidouemba@ubuntu:~/Downloads$ cat test.ndb 
+TestSig1:7:*:6576616c{-200}756e657363617065{-200}282725363525373625363925366325323825323927
+azidouemba@ubuntu:~/Downloads$ clamscan -d test.ndb Test_File_10_Target_String_in_JS_in_PDF.pdf 
+Test_File_10_Target_String_in_JS_in_PDF.pdf: TestSig1.UNOFFICIAL FOUND
+
+----------- SCAN SUMMARY -----------
+Known viruses: 1
+Engine version: 0.97.3
+Scanned directories: 0
+Scanned files: 1
+Infected files: 1
+Data scanned: 0.00 MB
+Data read: 0.00 MB (ratio 0.00:1)
+Time: 0.010 sec (0 m 0 s)
+azidouemba@ubuntu:~/Downloads$ clamscan -d test.ndb Test_File_10_Negative_Control.pdf 
+Test_File_10_Negative_Control.pdf: OK
+
+----------- SCAN SUMMARY -----------
+Known viruses: 1
+Engine version: 0.97.3
+Scanned directories: 0
+Scanned files: 1
+Infected files: 0
+Data scanned: 0.00 MB
+Data read: 0.00 MB (ratio 1.00:1)
+Time: 0.010 sec (0 m 0 s)
+
+
+ClamAV generates an alert because it's able to parse some PDF objects. In this particular case, it's able to "see":
+
+
+
+
+It's worth noting that official ClamAV signatures would have flagged this file:
+
+
+azidouemba@ubuntu:~/Downloads$ clamscan Test_File_10_Target_String_in_JS_in_PDF.pdf 
+Test_File_10_Target_String_in_JS_in_PDF.pdf: Heuristics.PDF.ObfuscatedNameObject FOUND
+
+----------- SCAN SUMMARY -----------
+Known viruses: 1151473
+Engine version: 0.97.3
+Scanned directories: 0
+Scanned files: 1
+Infected files: 1
+Data scanned: 0.00 MB
+Data read: 0.00 MB (ratio 1.00:1)
+Time: 10.331 sec (0 m 10 s)
+
+
+
+Test file 11 contains the target string in an obfuscated, auto-executing Javascript object embedded in a PDF file compressed with Zip.
+
+
+azidouemba@ubuntu:~/Downloads$ cat test.ndb 
+TestSig1:7:*:6576616c{-200}756e657363617065{-200}282725363525373625363925366325323825323927
+azidouemba@ubuntu:~/Downloads$ clamscan -d test.ndb Test_File_11_Target_String_in_JS_in_PDF_in_ZIP.zip
+Test_File_11_Target_String_in_JS_in_PDF_in_ZIP.zip: TestSig1.UNOFFICIAL FOUND
+
+----------- SCAN SUMMARY -----------
+Known viruses: 1
+Engine version: 0.97.3
+Scanned directories: 0
+Scanned files: 1
+Infected files: 1
+Data scanned: 0.00 MB
+Data read: 0.00 MB (ratio 0.00:1)
+Time: 0.013 sec (0 m 0 s)
+azidouemba@ubuntu:~/Downloads$ clamscan -d test.ndb Test_File_11_Negative_Control.rar 
+Test_File_11_Negative_Control.rar: OK
+
+----------- SCAN SUMMARY -----------
+Known viruses: 1
+Engine version: 0.97.3
+Scanned directories: 0
+Scanned files: 1
+Infected files: 0
+Data scanned: 0.00 MB
+Data read: 0.00 MB (ratio 0.00:1)
+Time: 0.012 sec (0 m 0 s)
+
+
+
+Archives are treated  like the containers they are. Here, ClamAV extracted the contents of the ZIP file and scanned its content.
+
+Test file 12 contains the target string in ActionScript code in an auto-executing Flash (SWF) file. To detect this string, we use a feature of ClamAV that is current undergoing testing and is not available in the latest stable release. You will need to download the development release, and uncomment the following in libclamav/scanners.c before compiling:
+
+
+case CL_TYPE_SWF:
+            if(DCONF_DOC & DOC_CONF_SWF)
+                ret = cli_scanswf(ctx);
+
+            break;
+
+
+We run clamav-devel/clamscan/clamscan with the option --leave-temps. ClamAV "sees":
+
+
+
+
+We go ahead and scan Test file 12:
+
+
+azidouemba@ubuntu:~/Downloads$ cat test.ndb 
+TestSig1:7:*:6576616c{-200}756e657363617065{-200}282725363525373625363925366325323825323927
+azidouemba@ubuntu:~/Downloads$ ~/Programs/clamav-devel/clamscan/clamscan -d test.ndb Test_File_12_Target_String_in_Swf.swf
+Test_File_12_Target_String_in_Swf.swf: OK
+
+----------- SCAN SUMMARY -----------
+Known viruses: 1
+Engine version: devel-clamav-0.97-434-gd510390
+Scanned directories: 0
+Scanned files: 1
+Infected files: 0
+Data scanned: 0.00 MB
+Data read: 0.00 MB (ratio 0.00:1)
+Time: 0.012 sec (0 m 0 s)
+
+
+
+ClamAV did NOT alert on the file. That's because, in this case, it did not treat the code that contains the evil string as ASCII normalized text. Therefore, we need to change our signature to make it all files, not just ASCII normalized text file. We do so by changing that target type from 7 to 0:
+
+
+azidouemba@ubuntu:~/Downloads$ cat test.ndb 
+TestSig1:0:*:6576616c{-200}756e657363617065{-200}282725363525373625363925366325323825323927
+azidouemba@ubuntu:~/Downloads$ ~/Programs/clamav-devel/clamscan/clamscan -d test.ndb Test_File_12_Target_String_in_Swf.swf
+Test_File_12_Target_String_in_Swf.swf: TestSig1.UNOFFICIAL FOUND
+
+----------- SCAN SUMMARY -----------
+Known viruses: 1
+Engine version: devel-clamav-0.97-434-gd510390
+Scanned directories: 0
+Scanned files: 1
+Infected files: 1
+Data scanned: 0.00 MB
+Data read: 0.00 MB (ratio 0.00:1)
+Time: 0.030 sec (0 m 0 s)
+azidouemba@ubuntu:~/Downloads$ ~/Programs/clamav-devel/clamscan/clamscan -d test.ndb Test_File_12_Negative_Control.swf 
+Test_File_12_Negative_Control.swf: OK
+
+----------- SCAN SUMMARY -----------
+Known viruses: 1
+Engine version: devel-clamav-0.97-434-gd510390
+Scanned directories: 0
+Scanned files: 1
+Infected files: 0
+Data scanned: 0.00 MB
+Data read: 0.00 MB (ratio 0.00:1)
+Time: 0.026 sec (0 m 0 s)
+
+
+
+Success!
+
+Test file 13 contains the target string in ActionScript code in an auto-executing Flash (SWF) file embedded in an Excel file.
+
+
+azidouemba@ubuntu:~/Downloads$ cat test.ndb 
+TestSig1:0:*:6576616c{-200}756e657363617065{-200}282725363525373625363925366325323825323927
+azidouemba@ubuntu:~/Downloads$ ~/Programs/clamav-devel/clamscan/clamscan -d test.ndb Test_File_13_Target_String_in_Swf_in_Excel.xlsm 
+Test_File_13_Target_String_in_Swf_in_Excel.xlsm: TestSig1.UNOFFICIAL FOUND
+
+----------- SCAN SUMMARY -----------
+Known viruses: 1
+Engine version: devel-clamav-0.97-434-gd510390
+Scanned directories: 0
+Scanned files: 1
+Infected files: 1
+Data scanned: 0.02 MB
+Data read: 0.02 MB (ratio 1.50:1)
+Time: 0.072 sec (0 m 0 s)
+azidouemba@ubuntu:~/Downloads$ ~/Programs/clamav-devel/clamscan/clamscan -d test.ndb Test_File_13_Negative_Control.xlsm 
+Test_File_13_Negative_Control.xlsm: OK
+
+----------- SCAN SUMMARY -----------
+Known viruses: 1
+Engine version: devel-clamav-0.97-434-gd510390
+Scanned directories: 0
+Scanned files: 1
+Infected files: 0
+Data scanned: 0.04 MB
+Data read: 0.02 MB (ratio 2.50:1)
+Time: 0.040 sec (0 m 0 s)
+
+
+The Flash file is extracted from the Excel file. Then, the Actionscript code is extracted from the Flash file and ClamAV alerts on the target string.
+
+Test file 14 contains the target string in ActionScript code in an auto-executing Flash (SWF) file embedded in an Excel file compressed with Zip.
+
+
+azidouemba@ubuntu:~/Downloads$ cat test.ndb 
+TestSig1:0:*:6576616c{-200}756e657363617065{-200}282725363525373625363925366325323825323927
+azidouemba@ubuntu:~/Downloads$ ~/Programs/clamav-devel/clamscan/clamscan -d test.ndb Test_File_14_Target_String_in_Swf_in_Excel_in_Zip.zip 
+Test_File_14_Target_String_in_Swf_in_Excel_in_Zip.zip: TestSig1.UNOFFICIAL FOUND
+
+----------- SCAN SUMMARY -----------
+Known viruses: 1
+Engine version: devel-clamav-0.97-434-gd510390
+Scanned directories: 0
+Scanned files: 1
+Infected files: 1
+Data scanned: 0.02 MB
+Data read: 0.01 MB (ratio 2.00:1)
+Time: 0.043 sec (0 m 0 s)
+azidouemba@ubuntu:~/Downloads$ ~/Programs/clamav-devel/clamscan/clamscan -d test.ndb Test_File_14_Negative_Control.zip 
+Test_File_14_Negative_Control.zip: OK
+
+----------- SCAN SUMMARY -----------
+Known viruses: 1
+Engine version: devel-clamav-0.97-434-gd510390
+Scanned directories: 0
+Scanned files: 1
+Infected files: 0
+Data scanned: 0.05 MB
+Data read: 0.01 MB (ratio 4.33:1)
+Time: 0.024 sec (0 m 0 s)
+
+
+The Excel file is extracted from the Zip file. Then the Flash file is extracted from the Excel file. Next, the Actionscript code is extracted from the Flash file and ClamAV alerts on the target string.
+
+Test file 15 contains the target string in ActionScript code in an auto-executing Flash (SWF) file embedded in a Powerpoint file.
+
+
+azidouemba@ubuntu:~/Downloads$ cat test.ndb 
+TestSig1:0:*:6576616c{-200}756e657363617065{-200}282725363525373625363925366325323825323927
+azidouemba@ubuntu:~/Downloads$ ~/Programs/clamav-devel/clamscan/clamscan -d test.ndb Test_File_15_Ts_in_Swf_in_Ppt.pptx 
+Test_File_15_Ts_in_Swf_in_Ppt.pptx: TestSig1.UNOFFICIAL FOUND
+
+----------- SCAN SUMMARY -----------
+Known viruses: 1
+Engine version: devel-clamav-0.97-434-gd510390
+Scanned directories: 0
+Scanned files: 1
+Infected files: 1
+Data scanned: 0.07 MB
+Data read: 0.03 MB (ratio 2.25:1)
+Time: 0.032 sec (0 m 0 s)
+azidouemba@ubuntu:~/Downloads$ ~/Programs/clamav-devel/clamscan/clamscan -d test.ndb Test_File_15_Negative_Control.pptx 
+Test_File_15_Negative_Control.pptx: OK
+
+----------- SCAN SUMMARY -----------
+Known viruses: 1
+Engine version: devel-clamav-0.97-434-gd510390
+Scanned directories: 0
+Scanned files: 1
+Infected files: 0
+Data scanned: 0.11 MB
+Data read: 0.03 MB (ratio 3.38:1)
+Time: 0.053 sec (0 m 0 s)
+
+
+The Flash file is extracted from the Powerpoint file. Then, the Actionscript code is extracted from the Flash file and ClamAV alerts on the target string.
+
+Test file 16 contains the target string in ActionScript code in an auto-executing Flash (SWF) file embedded in a PDF file.
+
+
+azidouemba@ubuntu:~/Downloads$ cat test.ndb 
+TestSig1:0:*:6576616c{-200}756e657363617065{-200}282725363525373625363925366325323825323927
+azidouemba@ubuntu:~/Downloads$ ~/Programs/clamav-devel/clamscan/clamscan -d test.ndb Test_File_16_Ts_in_Swf_in_Pdf.pdf 
+Test_File_16_Ts_in_Swf_in_Pdf.pdf: TestSig1.UNOFFICIAL FOUND
+
+----------- SCAN SUMMARY -----------
+Known viruses: 1
+Engine version: devel-clamav-0.97-434-gd510390
+Scanned directories: 0
+Scanned files: 1
+Infected files: 1
+Data scanned: 0.00 MB
+Data read: 0.01 MB (ratio 0.00:1)
+Time: 0.030 sec (0 m 0 s)
+azidouemba@ubuntu:~/Downloads$ ~/Programs/clamav-devel/clamscan/clamscan -d test.ndb Test_File_16_Negative_Control.pdf 
+Test_File_16_Negative_Control.pdf: OK
+
+----------- SCAN SUMMARY -----------
+Known viruses: 1
+Engine version: devel-clamav-0.97-434-gd510390
+Scanned directories: 0
+Scanned files: 1
+Infected files: 0
+Data scanned: 0.01 MB
+Data read: 0.01 MB (ratio 1.00:1)
+Time: 0.037 sec (0 m 0 s)
+
+
+The Flash file is extracted from the PDF. Then, the Actionscript code is extracted from the Flash file and ClamAV alerts on the target string.
+
+ In the next post I'll take a look at how ClamAV does against polymorphic test files.
+

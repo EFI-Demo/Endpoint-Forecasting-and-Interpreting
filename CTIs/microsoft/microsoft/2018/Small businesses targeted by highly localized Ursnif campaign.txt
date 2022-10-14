@@ -1,0 +1,146 @@
+
+		Cyber thieves are continuously looking for new ways to get people to click on a bad link, open a malicious file, or install a poisoned update in order to steal valuable data. In the past, they cast as wide a net as possible to increase the pool of potential victims. But attacks that create a lot of noise are often easier to spot and stop. Cyber thieves are catching on that we are watching them, so they are trying something different. Now we’re seeing a growing trend of small-scale, localized attacks that use specially crafted social engineering to stay under the radar and compromise more victims.
+In social engineering attacks, is less really more?
+A new malware campaign puts that to the test by targeting home users and small businesses in specific US cities. This was a focused, highly localized attack that aimed to steal sensitive info from just under 200 targets. Macro-laced documents masqueraded as statements from legitimate businesses. The documents are then distributed via email to target victims in cities where the businesses are located.
+With Windows Defender AV’s next gen defense, however, the size of the attack doesn’t really matter.
+Several cloud-based machine learning algorithms detected and blocked the malicious documents at the onset, stopping the attack and protecting customers from what would have been the payload, info-stealing malware Ursnif.
+The map below shows the location of the targets.
+Figure 1. Geographic distribution of target victims
+Highly localized social engineering attack
+Here’s how the attack played out: Malicious, macro-enabled documents were delivered as email attachments to target small businesses and users. Each document had a file name that spoofed a legitimate business name and masqueraded as a statement from that business. In total, we saw 21 unique document file names used in this campaign.
+The attackers sent these emails to intended victims in the city or general geographic area where the businesses are located. For example, the attachment named Dolan_Care_Statement.doc was sent almost exclusively to targets in Missouri. The document file name spoofs a known establishment in St. Louis. While we do not believe the establishment itself was affected or targeted by this attack, the document purports to be from the said establishment when it’s really not.
+The intended effect is for recipients to get documents from local, very familiar business or service providers. It’s part of the social engineering scheme to increase likelihood that recipients will think the document is legitimate and take the bait, when in reality it is a malicious document.
+
+
+
+Most common lure document file names
+Top target cities
+
+
+Dockery_FloorCovering_Statement
+Johnson City, TN
+Kingsport, TN
+Knoxville, TN
+
+
+Dolan_Care_Statement
+St. Louis, MO
+Chesterfield, MO
+Lee’s Summit, MO
+
+
+DMS_Statement
+Omaha, NE
+Wynot, NE
+Norwalk, OH
+
+
+Dmo_Statement
+New Braunfels, TX
+Seguin, TX
+San Antonio, TX
+
+
+DJACC_Statement
+Miami, FL
+Flagler Beach, FL
+Niles, MI
+
+
+Donovan_Construction_Statement
+Alexandria, VA
+Mclean, VA
+Manassas, VA
+
+
+
+Table 1. Top target cities of most common document file names
+When recipients open the document, they are shown a message that tricks the person into enabling the macro.
+Figure 2. Document tricks victim into enabling the macro
+As is typical in social engineering attacks, this is not true. If the recipient does enable the macro, no content is shown. Instead the following process is launched to deobfuscate a PowerShell command.
+
+Figure 3. Process to deobfuscate PowerShell
+
+Figure 4. PowerShell command
+The PowerShell script connects to any of 12 different URLs that all deliver the payload.
+
+Figure 5. Deobfuscated PowerShell command
+The payload is Ursnif, info-stealing malware. When run, Ursnif steals information about infected devices, as well as sensitive information like passwords. Notably, this infection sequence (i.e., cmd.exe process deobfuscates a PowerShell that in turn downloads the payload) is a common method used by other info-stealing malware like Emotet and Trickbot.
+How machine learning stopped this small-scale, localized attack
+As the malware campaign got under way, four different cloud-based machine learning models gave the verdict that the documents were malicious. These four models are among a diverse set of models that help ensure we catch a wide range of new and emerging threats. Different models have different areas of expertise; they use different algorithms and are trained on their unique set of features.
+One of the models that gave the malicious verdict is a generic model designed to detect non-portable executable (PE) threats. We have found that models like this are effective in catching social engineering attacks, which typically use non-PE files like scripts and, as is the case for this campaign, macro-laced documents.
+The said non-PE model is a simple averaged perceptron algorithm that uses various features, including expert features, fuzzy hashes of various file sections, and contextual data. The simplicity of the model makes it fast, enabling it to give split-second verdicts before suspicious files could execute. Our analysis into this specific model showed that the expert features and fuzzy hashes had the biggest impact in the model’s verdict and the eventual blocking of the attack.
+Figure 6. Impact of features used by one ML model that detected the attack
+Next-generation protection against malware campaigns regardless of size
+Machine learning and artificial intelligence power Windows Defender Antivirus to detect and stop new and emerging attacks before they can wreak havoc. Every day, we protect customers from millions of distinct, first-seen malware. Our layered approach to intelligent, cloud-based protection employs a diverse set of machine learning models designed to catch the wide range of threats: from massive malware campaigns to small-scale, localized attacks.
+The latter is a growing trend, and we continue to watch the threat landscape to keep machine learning effective against attacks. In a recent blog post, we discussed how we continue to harden machine learning defenses.
+Windows Defender AV delivers the next-gen protection capabilities in the Windows Defender Advanced Threat Protection (Windows Defender ATP). Windows Defender ATP integrates attack surface reduction, next-gen protection, endpoint detection and response (EDR), automatic investigation and response, security posture, and advanced hunting capabilities. .
+Because of this integration, antivirus detections, such as those related to this campaign, are surfaced in Windows Defender Security Center. Using EDR capabilities, security operations teams can then investigate and respond to the incident. Attack surface reduction rules also block this campaign, and these detections are likewise surfaced in Windows Defender ATP. To test how Windows Defender ATP can help your organization detect, investigate, and respond to advanced attacks, sign up for a free trial.
+Across the whole Microsoft 365 threat protection, detections and other security signals are shared among Office 365 ATP, Windows Defender ATP, and Azure ATP. In this Ursnif campaign, the antivirus detection also enables the blocking of related emails in Office 365. This demonstrates how signal sharing and orchestration of remediation across solutions in Microsoft 365 results in better integrated threat protection.
+ 
+ 
+Bhavna Soman
+Windows Defender Research
+ 
+
+Indicators of compromise (IOCs)
+Infector:
+Hashes
+407a6c99581f428634f9d3b9ec4b79f79c29c79fdea5ea5e97ab3d280b2481a1
+77bee1e5c383733efe9d79173ac1de83e8accabe0f2c2408ed3ffa561d46ffd7
+e9426252473c88d6a6c5031fef610a803bce3090b868d9a29a38ce6fa5a4800a
+f8de4ebcfb8aa7c7b84841efd9a5bcd0935c8c3ee8acf910b3f096a5e8039b1f
+File names
+CSC_Statement.doc
+DBC_Statement.doc
+DDG_Statement.doc
+DJACC_Statement.doc
+DKDS_Statement.doc
+DMII_Statement.doc
+dmo_statement.doc
+DMS_Statement.doc
+Dockery_Floorcovering_Statement.doc
+Docktail_Bar_Statement.doc
+doe_statement.doc
+Dolan_Care_Statement.doc
+Donovan_Construction_Statement.doc
+Donovan_Engineering_Statement.doc
+DSD_Statement.doc
+dsh_statement.doc
+realty_group_statement.doc
+statement.doc
+tri-lakes_motors_statement.doc
+TSC_Statement.doc
+UCP_Statement.doc
+Payload (Ursnif)
+Hashes
+31835c6350177eff88265e81335a50fcbe0dc46771bf031c836947851dcebb4f
+bd23a2eec4f94c07f4083455f022e4d58de0c2863fa6fa19d8f65bfe16fa19aa
+75f31c9015e0f03f24808dca12dd90f4dfbbbd7e0a5626971c4056a07ea1b2b9
+070d70d39f310d7b8842f645d3ba2d44b2f6a3d7347a95b3a47d34c8e955885d
+15743d098267ce48e934ed0910bc299292754d02432ea775957c631170778d71
+URLs
+hxxp://vezopilan[.]com/tst/index[.]php?l=soho6[.]tkn
+hxxp://cimoselin[.]com/tst/index[.]php?l=soho2[.]tkn
+hxxp://cimoselin[.]com/tst/index[.]php?l=soho4[.]tkn
+hxxp://vedoriska[.]com/tst/index[.]php?l=soho6[.]tkn
+hxxp://baberonto[.]com/tst/index[.]php?l=soho3[.]tkn
+hxxp://hertifical[.]com/tst/index[.]php?l=soho8[.]tkn
+hxxp://hertifical[.]com/tst/index[.]php?l=soho6[.]tkn
+hxxp://condizer[.]com/tst/index[.]php?l=soho1[.]tkn
+hxxp://vezeronu[.]com/tst/index[.]php?l=soho2[.]tkn
+hxxp://vezeronu[.]com/tst/index[.]php?l=soho5[.]tkn
+hxxp://zedrevo[.]com/tst/index[.]php?l=soho8[.]tkn
+hxxp://zedrevo[.]com/tst/index[.]php?l=soho10[.]tkn
+*Note: The first four domains above are all registered in Russia and are hosted on the IP address 185[.]212[.]44[.]114. The other domains follow the same URL pattern and are also pushing Ursnif, but no registration info is available.
+ 
+ 
+ 
+ 
+ 
+
+
+Talk to us
+Questions, concerns, or insights on this story? Join discussions at the Microsoft community and Windows Defender Security Intelligence.
+Follow us on Twitter @WDSecurity and Facebook Windows Defender Security Intelligence.
+	

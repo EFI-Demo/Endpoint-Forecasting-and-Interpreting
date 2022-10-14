@@ -1,0 +1,270 @@
+
+
+
+
+This article provides a brief introduction to canned DTrace scripts for the purposes of analyzing the malware sample, Osx.Trojan.Leverage. For this sample, I only needed to use a few of the canned scripts to gather a significant amount of data about how this piece of malware impacts the system. 
+   
+
+
+DTrace
+
+ 
+
+DTrace provides a developer or analyst with the ability to trace any function or method within an application. It can provide details on memory consumption, filesystem activity, CPU usage, network resource consumption, etc.
+
+Rather than get into detail about how this works, I'm going to point you to The Nerd Blog. That link is the first of a very informative four part tutorial on DTrace and will walk you through building your own scripts. If creating scripts is not your thing, you can also download a graphical tool called Shark. It is part of the Xcode Developer Tools package.
+
+
+There is one main drawback to DTrace. Apple provided the developers with the ability to block it using the PT_ATTACH_DENY request type. There are methods to bypass this protection. Here is a method to patch Mac OSX 10.5 Leopard using kext. It is also possible to modify the arguments to the ptrace function using gdb (as documented in this blog post). Both of these methods may not be adaptable to newer versions of OSX.
+
+Osx.Trojan.Leverage 
+sha-256: 9bf2f2a273988a7e9b8318ae7a6aa26d23ea8e5c841468605443c1a9a1fac193
+
+Osx.Trojan.Leverage is a piece of malware that was first detected in the wild sometime in September 2013. The file appears to be a JPG image file and when clicked opens up a picture of two characters from the TV show Leverage, kissing. 
+
+
+  
+
+So far, so good. I close the picture. Of course, there is nothing on the surface to indicate that I just installed a trojan. 
+
+
+
+To dig a little deeper, I'm going to need to monitor process, file system, and network activity.
+
+
+
+
+
+Process and File System Activity
+
+Gathering details about how the process interacts with the filesystem is essential to analysis. I used the following built-in DTrace scripts to capture this activity:  
+
+   
+
+execsnoop  – snoop new process execution 
+
+newproc.d  – snoops new processes.
+
+opensnoop  – snoop file opens as they occur
+
+
+
+ 
+
+For a complete list of built-in DTrace scripts run the following command 'man -k DTrace'. For even more scripts head over to the DTrace book site. 
+
+Before opening the malware sample, each of the scripts were set up in a separate terminal window. As soon as I executed the application the terminals exploded in a flood of scrolling text.
+
+
+
+
+Starting with execsnoop I wanted to determine if the process is being spawned or if it is calling other system commands. 
+
+        UID    PID   PPID      ARGS 
+           0      1052     1         taskgated
+
+         501   1051    127      UserEvent
+
+         501   1053   1051     UserEvent
+
+         501   1051    127      UserEvent
+
+
+
+
+         501   1053   1051     ditto
+
+
+
+As you can see, UserEvent is called. It spawns itself (PID: 1053). Next, PID 1053 calls ditto – a tool that can be used to copy directory hierarchies. That's interesting. It would appear the application is, most likely, attempting to copy itself to another directory. Although the execsnoop script does not display the parameters of the command, newproc.d does:
+
+
+
+        453 64b bash -c ditto '/Users/User/Desktop/infected/unzipped/DSC00117.app' '/Users/Shared/UserEvent.app'
+
+
+Okay, so now we can see that UserEvent is making a copy of itself (DSC0117.app). The entire application bundle is being copied to '/Users/Shared/UserEvent.app'. 
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+According to newproc.d, the next process event is:
+
+
+
+     bash -c rm '/Users/Shared/UserEvent.app/Contents/Resources/UserEvent.icns'
+
+
+To prevent the UserEvent application from looking like an image, the UserEvent.icns file located in the resources folder of the application bundle is deleted.
+
+
+Next, the following commands are called:
+
+
+     mkdir /Users/User/Library/LaunchAgents
+
+
+
+
+     bash -c echo '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/Prop (…)
+
+
+
+
+     bash -c launchctl load ~/Library/LaunchAgents/UserEvent.System.plist
+
+
+
+
+
+These three commands are being used to make sure the application both survives a reboot and restarts if the UserEvent process is killed. First a LaunchAgents directory is created in the user's home directory. Next, a plist file is being created via echoing the text to a file. However, the data is cut off, so where is the file being created? From these three lines, it's pretty trivial to deduce the destination. However, we are going to use opensnoop and execsnoop to determine the location.
+
+
+
+
+
+     UID PID        PPID   ARGS
+
+
+
+
+     501 1056      1051    mkdir
+
+
+
+     501 1057      1051    UserEvent
+
+
+     
+
+     UID   PID    COMM     FD ERR    PATH
+
+     501 1056     mkdir       3     0         /dev/DTracehelper
+
+     501 1057     bash         3     0         /Users/User/Library/LaunchAgents/UserEvent.System.plist
+
+The top is execsnoop and the bottom is opensnoop. The second line is the action immediately followed by the mkdir command. Based on the opensnoop output, we see what file was opened by PID 1057 (UserEvent).
+
+Going back to the output of newproc.d, we have the third command (launchtrl). Launchctrl will now load UserEvent according to the parameters specified in the plist file. Here is the whole script:
+
+     <?xml version="1.0" encoding="UTF-8"?>
+
+     <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+
+    <plist version="1.0">
+
+       <dict>
+
+         <key>RunAtLoad</key><true/>
+
+         <key>KeepAlive</key><true/>
+
+         <key>Label</key><string>UserEvent.System</string>
+
+         <key>ProgramArguments</key>
+
+         <array>
+
+           <string>/Users/Shared/UserEvent.app/Contents/MacOS/UserEvent</string>
+
+         </array>
+
+       </dict>
+
+    </plist>
+
+As we can see, the RunAtLoad and KeepAlive keys are both set to true. This will ensure that UserEvent will continue to run both after a reboot and if the process is killed.
+
+To maintain cover, there is one last thing the process has to do to not make the user suspicious: open the picture.
+
+     bash -c open /Users/User/Desktop/infected/unzipped/DSC00117.app/Contents/MacOS/DSC00117.jpg
+
+This command opens the image file. Now the victim can look at two people from Leverage kiss while the attacker leverages their system to conduct shady business.
+
+Network Traffic
+
+For this section, I combined the efficiency of Wireshark with a pre-built script called soconnect_mac.d. This script gathers the PID, process name, address, port, latency, and result of network requests on the system. It is available here.
+
+After the install and the application forked, I noticed a DNS request attempting to resolve servicesmsc.sytes.net. The name no longer resolves and the site has been removed. After the failed DNS request, I didn't see anything else in Wireshark. I ran Tcpdump, although there was additional traffic, I couldn't tell if it was related the UserEvent process. I needed an efficient way to tell if the application is generating additional network traffic. I went with soconnect_mac.d:
+
+      Lions-Mac:MacOS User$ sudo DTrace -s soconnect_mac.d
+
+      PID   PROCESS  FAM    ADDRESS   PORT    LAT(us)      RESULT
+
+      283   UserEvent    2           0.0.0.0        7777      242             In progress
+
+      283   UserEvent    2           0.0.0.0        7777      377             In progress
+
+UserEvent is making multiple requests to 0.0.0.0 on TCP 7777. This seems a little confusing at first. This request to 0.0.0.0 isn't going to go anywhere. It turns out that when the DNS request fails, the application uses 0.0.0.0 rather than killing the network communication.What happens when I force the address to resolve to an IP address that I control?
+
+To find out, I added an entry in the hosts file (echo “192.168.0.254 servicesmsc.sytes.net”>>/etc/hosts), and then ran the command again: 
+
+
+ 
+
+
+
+
+Excellent. The traffic is now attempting to connect to 192.168.0.254 on port 7777.
+
+
+
+
+Next, I set up a netcat listener (nc -l -p 7777) on 192.168.0.254 and waited. Almost immediately, a request was made that contained the following payload: 
+
+       User@Vmware7,1
+
+        Mac OS X 10.7.5 11G63
+
+
+
+
+        2 GB RAM
+
+
+
+
+       235Gi/250Gi free (6% used)
+
+
+
+
+       VMWVk2CkXf+fgSGMZkL/dB0RQ
+
+
+
+This is system information gathered by the UserEvent application. I want to know which commands were run to gather this data. Earlier, we used the newproc.d script. It captured the commands as they were being executed:
+
+
+       logname
+
+       ioreg -l | grep "product-name" | awk -F'"' '{print $4}'
+
+       sw_vers | awk -F':' '{print $2}' | paste -d ' ' - - -;
+
+       sysctl -n hw.memsize | awk '{print $0/1073741824" GB RAM"}';
+
+       df -hl | grep 'disk0s2' | awk '{print $4"/"$2" free ("$5" used)"}'
+
+       ioreg -l | grep "IOPlatformSerialNumber" | awk -F'"' '{print $4}'
+
+Because there is no communication between the controller and the infected machine we are not going to see any additional activity through DTrace. From here, we can perform static analysis on the sample to identify the control commands. Once we can replicate the remote control commands we could continue to use DTrace to further understand how those commands interact with the system.
+
+Conclusion
+
+Although this is not a complete analysis of the sample, using some canned DTrace scripts I was able to build a solid profile on the behavior of Osx.Trojan.Leverage. This post was just a brief intro to another tool that can assist an analyst with dynamic analysis. In follow-up posts, I'll use this tool to dig a little deeper into the behavior of other malware samples.
+
+

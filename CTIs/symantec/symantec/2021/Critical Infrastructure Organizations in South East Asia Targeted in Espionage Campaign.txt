@@ -1,0 +1,83 @@
+Four critical infrastructure organizations in a South East Asian country were targeted in an intelligence-gathering campaign that continued for several months.  (Read the whitepaper here.)
+
+Among the organizations targeted were a water company, a power company, a communications company, and a defense organization, with evidence the attackers were interested in information about SCADA systems.
+
+The attacks were ongoing from at least November 2020 to March 2021, several months before the Colonial Pipeline attack that drew the attention of the world to the danger posed by attacks on critical infrastructure, and may have begun even earlier than that.
+
+An attacker gaining access to multiple critical infrastructure organizations in the same country could potentially give malicious actors access to a vast amount of sensitive information.
+
+There are numerous indications that the same attacker was behind all the attacks, including:
+
+
+	The geographic and sector links of the targeted organizations
+	The presence of certain artifacts on machines in the different organizations, including a downloader (found in two of the organizations), and a keylogger (found in three of the organizations)
+	The same IP address was also seen in attacks on two of the organizations
+
+
+There are some indications that the attacker behind this campaign is based in China, but with the current information available, Symantec cannot attribute the activity to a known actor.
+
+Credential theft and lateral movement across victim networks seemed to be a key aim of the attacker, who made extensive use of living-off-the-land tools in this campaign. Among the living-off-the-land or dual-use tools used were:
+
+
+	Windows Management Instrumentation (WMI)
+	ProcDump
+	PsExec
+	PAExec
+	Mimikatz
+
+
+The attacker was also seen exploiting a legitimate multimedia player to load a malicious DLL via search order hijacking, as well as exploiting another legitimate tool to load suspicious files onto victim machines.
+
+We did not see what the initial infection vector used by the attacker to get onto targeted networks was, but we did have good insight into how they moved through infected networks.
+
+Water company
+
+The first activity we saw in the attack on this organization was suspicious use of WMI. We then saw a legitimate free multimedia player called PotPlayer Mini being exploited to load a malicious DLL. It has previously been publicly documented that this player is susceptible to DLL search order hijacking, which is not a new technique but is one we see frequently leveraged by attackers to insert malicious files onto victim machines. We saw PotPlayer Mini added as a service to launch a file called potplayermini.exe, we then saw multiple dual-use and hacking tools launched, including:
+
+
+	ProcDump
+	PsExec
+	Mimikatz
+
+
+ProcDump was used for credential theft by abusing the LSASS.exe process, and domain shares were enumerated using net view. We then observed a suspected tunneling tool being launched on the system.
+
+We did not observe the attackers exfiltrating data from the infected machines. However, the machine the attackers were on did have tools on it that indicate it may have been involved in the design of SCADA systems, indicating this is something the attacker may have been interested in.
+
+Power company
+
+PotPlayer Mini was also exploited on the power company network to carry out DLL search order hijacking, and ProcDump was deployed alongside another payload that we suspect was malware. We also saw the attacker once again carrying out credential theft by using ProcDump of the LSASS.exe process.
+
+There were indications that the infected machine in this company may also have been involved in engineering design.
+
+File overlap, as well as the similar tactics used, point to the same actor being behind the attacks on the water and power companies.  
+
+Communications company
+
+Meanwhile, in the attack on the communications company the attacker exploited a different legitimate tool, Google Chrome Frame, with suspicious files appearing where chrome_frame_helper.exe was the parent file.
+
+Google Chrome Frame is a legitimate plugin for Internet Explorer that enables rendering of the full browser canvas using Google Chrome's rendering engine.
+
+It wasn’t clear if Google Chrome Frame was already present on the infected machine in this company or if it was introduced by the attacker, as it was the parent file of legitimate as well as suspicious files. PotPlayer Mini also appeared to be exploited on this machine by the attacker for malicious purposes.
+
+PAExec, a tool similar to PsExec, launched at.exe (a Windows task scheduler), in order to schedule execution of chrome_frame_helper.exe as a task. WMI was used to run chrome_frame_helper.exe and perform credential theft by dumping LSASS. PAExec and WMIC were also used for lateral movement and to launch chrome_frame_helper.exe against an internal IP address. PAExec also launched it to schedule execution of an unknown batch file as a daily task, and chrome_frame_helper.exe was also used to launch the SharpHound domain trust enumeration tool and other suspicious files. PAExec was also seen executing what appeared to be Mimikatz for suspected credential theft.
+
+WMI was also used to run chrome_frame_helper.exe to execute a net.exe command to connect a hidden C$ share. C$ shares are administrator shares that are not visible when viewing another computer's shares, but are accessible to those with administrator privileges on a machine. These types of shares are frequently used by malicious actors to stealthily transfer malware across a network and to collect stolen data. However, it is not clear what the C$ share was used for on this network.
+
+We also saw persistence created for chrome_frame_helper.exe as a scheduled task - GoogleUpdateTaskMachineCore4f23 - with the file disguised as chrome_proxy1.exe.
+
+A keylogger and several other files seen on the network of this organization were also seen on the network of the water company.
+
+Defense organization
+
+In the defense organization we once again saw PotPlayer Mini exploited for DLL search order hijacking, as well as seeing some file overlaps between this organization and the communications and water companies.
+
+Conclusion
+
+While we cannot definitively say what the end goal of the attacker was in these attacks, espionage seems like the likeliest motive. This is indicated by the activity we did see - credential stealing, lateral movement, keyloggers being deployed - and the types of machines targeted in some of the organizations - those involved in design and engineering.
+
+The ability of the attacker to maintain a stealthy presence on the targeted networks for a number of months indicates they were skilled. Certain artifacts found on the victim machines indicate the attacker may be based in China, though it is not possible with the information we have to definitively attribute these attacks to a named actor.
+
+A skilled malicious actor from a different country gaining a deep insight into a country’s critical infrastructure by compromising multiple critical infrastructure organizations, including a defense organization, could deliver a lot of valuable intelligence into the hands of adversaries. The Colonial Pipeline attack in the U.S. in May 2021 showed the serious repercussions attacks on critical infrastructure can have, and this campaign makes it clear that it is not just U.S. infrastructure that is under threat from malicious actors.  
+
+Indicators of Compromise (IoCs)

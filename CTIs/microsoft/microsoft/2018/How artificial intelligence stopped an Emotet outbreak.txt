@@ -1,0 +1,59 @@
+
+		At 12:46 a.m. local time on February 3, a Windows 7 Pro customer in North Carolina became the first would-be victim of a new malware attack campaign for Trojan:Win32/Emotet. In the next 30 minutes, the campaign tried to attack over a thousand potential victims, all of whom were instantly and automatically protected by Windows Defender AV.
+How did Windows Defender AV uncover the newly launched attack and block it at the outset? Through layered machine learning, including use of both client-side and cloud machine learning (ML) models. Every day, artificial intelligence enables Windows Defender AV to stop countless malware outbreaks in their tracks. In this blog post, we’ll take a detailed look at how the combination of client and cloud ML models detects new outbreaks.
+
+Figure 1. Layered detected model in Windows Defender AV
+Client machine learning models
+The first layer of machine learning protection is an array of lightweight ML models built right into the Windows Defender AV client that runs locally on your computer. Many of these models are specialized for file types commonly abused by malware authors, including, JavaScript, Visual Basic Script, and Office macro. Some models target behavior detection, while other models are aimed at detecting portable executable (PE) files (.exe and .dll).
+In the case of the Emotet outbreak on February 3, Windows Defender AV caught the attack using one of the PE gradient boosted tree ensemble models. This model classifies files based on a featurization of the assembly opcode sequence as the file is emulated, allowing the model to look at the file’s behavior as it was simulated to run.
+
+Figure 2. A client ML model classified the Emotet outbreak as malicious based on emulated execution opcode machine learning model.
+The tree ensemble was trained using LightGBM, a Microsoft open-source framework used for high-performance gradient boosting.
+
+Figure 3a. Visualization of the LightBGM-trained client ML model that successfully classified Emotet’s emulation behavior as malicious. A set of 20 decision trees are combined in this model to classify whether the file’s emulated behavior sequence is malicious or not.
+
+Figure 3b. A more detailed look at the first decision tree in the model. Each decision is based on the value of a different feature. Green triangles indicate weighted-clean decision result; red triangles indicate weighted malware decision result for the tree.
+When the client-based machine learning model predicts a high probability of maliciousness, a rich set of feature vectors is then prepared to describe the content. These feature vectors include:
+
+Behavior during emulation, such as API calls and executed code
+Similarity fuzzy hashes
+Vectors of content descriptive flags optimized for use in ML models
+Researcher-driven attributes, such as packer technology used for obfuscation
+File name
+File size
+Entropy level
+File attributes, such as number of sections
+Partial file hashes of the static and emulated content
+
+This set of features form a signal sent to the Windows Defender AV cloud protection service, which runs a wide array of more complex models in real-time to instantly classify the signal as malicious or benign.
+Real-time cloud machine learning models
+Windows Defender AV’s cloud-based real-time classifiers are powerful and complex ML models that use a lot of memory, disk space, and computational resources. They also incorporate global file information and Microsoft reputation as part of the Microsoft Intelligent Security Graph to classify a signal. Relying on the cloud for these complex models has several benefits. First, it doesn’t use your own computer’s precious resources. Second, the cloud allows us to take into consideration the global information and reputation information from the Microsoft Intelligent Security Graph to make a better decision. Third, cloud-based models are harder for cybercriminals to evade. Attackers can take a local client and test our models without our knowledge all day long. To test our cloud-based defenses, however, attackers have to talk to our cloud service, which will allow us to react to them.
+The cloud protection service is queried by Windows Defender AV clients billions of times every day to classify signals, resulting in millions of malware blocks per day, and translating to protection for hundreds of millions of customers. Today, the Windows Defender AV cloud protection service has around 30 powerful models that run in parallel. Some of these models incorporate millions of features each; most are updated daily to adapt to the quickly changing threat landscape. All together, these classifiers provide an array of classifications that provide valuable information about the content being scanned on your computer.
+Classifications from cloud ML models are combined with ensemble ML classifiers, reputation-based rules, allow-list rules, and data in the Microsoft Intelligent Security Graph to come up with a final decision on the signal. The cloud protection service then replies to the Windows Defender client with a decision on whether the signal is malicious or not – all in a fraction of a second.
+
+Figure 4. Windows Defender AV cloud protection service workflow.
+In the Emotet outbreak, one of our cloud ML servers in North America received the most queries from customers; corresponding to where the outbreak began. At least nine real-time cloud-based ML classifiers correctly identified the file as malware. The cloud protection service replied to signals instructing the Windows Defender AV client to block the attack using two of our ML-based threat names, Trojan:Win32/Fuerboos.C!cl and Trojan:Win32/Fuery.A!cl.
+This automated process protected customers from the Emotet outbreak in real-time. But Windows Defender AV’s artificial intelligence didn’t stop there.
+Deep learning on the full file content
+Automatic sample submission, a Windows Defender AV feature, sent a copy of the malware file to our backend systems less than a minute after the very first encounter. Deep learning ML models immediately analyzed the file based on the full file content and behavior observed during detonation. Not surprisingly, deep neural network models identified the file as a variant of Trojan:Win32/Emotet, a family of banking Trojans.
+While the ML classifiers ensured that the malware was blocked at first sight, deep learning models helped associate the threat with the correct malware family. Customers who were protected from the attack can use this information to understand the impact the malware might have had if it were not stopped.
+Additionally, deep learning models provide another layer of protection: in relatively rare cases where real-time classifiers are not able to come to a conclusive decision about a file, deep learning models can do so within minutes. For example, during the Bad Rabbit ransomware outbreak, Windows Defender AV protected customers from the new ransomware just 14 minutes after the very first encounter.
+Intelligent real-time protection against modern threats
+Machine learning and AI are at the forefront of the next-gen real-time protection delivered by Windows Defender AV. These technologies, backed by unparalleled optics into the threat landscape provided by Microsoft Intelligent Security Graph as well as world-class Windows Defender experts and researchers, allow Microsoft security products to quickly evolve and scale to defend against the full range of attack scenarios.
+Cloud-delivered protection is enabled in Windows Defender AV by default. To check that it’s running, go to Windows Settings > Update & Security > Windows Defender. Click Open Windows Defender Security Center, then navigate to Virus & threat protection > Virus &threat protection settings, and make sure that Cloud-delivered protection and Automatic sample submission are both turned On.
+In enterprise environments, the Windows Defender AV cloud protection service can be managed using Group Policy, System Center Configuration Manager, PowerShell cmdlets, Windows Management Instruction (WMI), Microsoft Intune, or via the Windows Defender Security Center app.
+Windows Defender Advanced Threat Protection (Windows Defender ATP) integrates protections from Windows Defender AV, Windows Defender Exploit Guard, and Windows Defender Application Guard, providing a seamless security management experience.
+To test how Windows Defender ATP can help your organization detect, investigate, and respond to advanced attacks, sign up for a free trial.
+The intelligent real-time defense in Windows Defender AV is part of the next-gen security technologies in Windows 10 that protect against a wide spectrum of threats. Of particular note, Windows 10 S is not affected by this type of malware attack. Threats like Emotet won’t run on Windows 10 S because it exclusively runs apps from the Microsoft Store. Learn more about Windows 10 S. To know about all the security technologies available in Windows 10, read Microsoft 365 security and management features available in Windows 10 Fall Creators Update.
+ 
+Geoff McDonald, Windows Defender Research
+with Randy Treit and Allan Sepillo
+ 
+ 
+ 
+
+
+Talk to us
+Questions, concerns, or insights on this story? Join discussions at the Microsoft community and Windows Defender Security Intelligence.
+Follow us on Twitter @WDSecurity and Facebook Windows Defender Security Intelligence.
+	

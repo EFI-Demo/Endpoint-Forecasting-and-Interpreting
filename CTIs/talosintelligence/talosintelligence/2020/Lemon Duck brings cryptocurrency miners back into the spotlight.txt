@@ -1,0 +1,331 @@
+
+
+By Vanja Svajcer, with contributions from Caitlin Huey.
+
+
+
+We are used to ransomware attacks and big-game hunting making headlines, but there are still methods adversaries use to monetize their efforts in less intrusive ways.
+
+Cisco Talos recently recorded increased activity of the Lemon Duck cryptocurrency-mining botnet using several techniques likely to be spotted by defenders, but are not immediately obvious to end-users.
+
+These threats demonstrate several techniques of the MITRE ATT&CK framework, most notably T1203 (Exploitation for Client Execution), T1089 (Disabling Security Tools), T1105 (Remote File Copy), T1027 (Obfuscated Files or Information), T1086 (PowerShell),  T1035 (Service Execution), T1021.002 (Remote Services: SMB/Windows Admin Shares), T1053 (Scheduled Task), T1562.004 (Impair Defenses: Disable or Modify System Firewall) and T1218.005 (Signed Binary Proxy Execution: Mshta).
+
+
+
+Attackers are constantly reinventing ways of monetizing their tools. Cisco Talos recently discovered a complex campaign employing a multi-modular botnet with multiple ways to spread. This threat, known as "Lemon Duck," has a cryptocurrency mining payload that steals computer resources to mine the Monero virtual currency. The actor employs various methods to spread across the network, like sending infected RTF files using email, psexec, WMI and SMB exploits, including the infamous Eternal Blue and SMBGhost threats that affect Windows 10 machines. Some variants also support RDP brute-forcing. In recent attacks we observed, this functionality was omitted. The adversary also uses tools such as Mimikatz, that help the botnet increase the amount of systems participating in its mining pool.
+
+What's new?
+
+Although this threat has been active since at least the end of December 2018, we have noticed an increase in its activity at the end of August 2020. 
+
+How did it work?
+
+The infection starts with a PowerShell loading script, which is copied from other infected systems with SMB, email or external USB drives. The actor also employs several exploits for vulnerabilities such as SMBGhost and Eternal Blue. The code exploiting the Bluekeep vulnerability is also present but it is disabled in the version we analysed.
+
+The botnet has executable modules that get downloaded and driven by the main module, which communicates with the command and control (C2) server over HTTP. 
+
+The email-spreading module uses COVID-19-related subject lines and text, with an infected attachment sent using Outlook automation to every contact in the affected user's address book. 
+
+So what?
+
+Defenders need to be constantly vigilant and monitor the behavior of systems within their network to spot new resource-stealing threats such as cryptominers. Cryptocurrency-mining botnets can be costly in terms of the stolen computing cycles and power consumption costs. While organizations need to be focused on protecting their most valuable assets, they should not ignore threats that are not particularly targeted toward their infrastructure.
+
+
+Technical case overview
+
+Introduction
+
+Lemon Duck is a botnet with automated spreading capabilities. Its final delivered payload is a variant of the Monero cryptocurrency mining software XMR. It is one of the more complex mining botnets with several interesting tricks up its sleeve. Although it has been documented before, we have recently seen a resurgence in the number of DNS requests connected with its command and control and mining servers.   
+
+We have decided to take a deeper look at its functionality with a particular emphasis on previously less documented modules such as the Linux branch and C# modules reflectively loaded by the main PowerShell component.
+
+Infection vectors
+
+The Lemon Duck botnet has more ways to spread across a network than most malware we see. During our research, we recorded 12 independent infection vectors, ranging from standard copying over SMB shares to attempts using vulnerabilities in Redis and the YARN Hadoop resource manager and job scheduler.
+
+Lemon Duck infection vectors
+
+Talos researchers noticed an increase in the amount of DNS requests connected with Lemon Duck C2 and mining servers toward the end of August 2020.
+
+Increase of activity to t.amynx.com C2, caused by Lemon Duck activity.
+
+The requests are geographically spread but the majority originates in Asia as it is visible in the map, with the top five countries being Iran, Egypt, Philippines, Vietnam and India. 
+Geographic distribution of requests for t.amynx.com as seen by Cisco Umbrella.
+
+We decided to drill down into our endpoint telemetry and quickly spotted one of the culprits, a system with a mshta.exe LoLBin command line quickly switching to PowerShell, referencing the Lemon Duck C2 server. 
+AMP telemetry showing suspicious mshta.exe invocation
+
+The DownloadString function call downloads PowerShell containing script with function 'bpu' which is later called to download and execute the main PowerShell installer component. The function bpu is a wrapper to download and execute functionality coupled with disabling of Windows Defender real-time detection and putting powershell.exe on the list of processes excluded from scanning. The function first checks if the script is running with administrative privileges and, if it does, the payload is downloaded and run using the Invoke-Expression cmdlet. 
+
+If the script is not running with the administrative privileges, it leverages existing system executables to launch the next stage. The loader modifies the registry value under HKCU\Software\Classes\ms-settings\shell\open\command or HKCU\Software\Classes\mscfile\shell\open\command to launch the PowerShell payload so that the payload is executed indirectly by launching either "ComputerDefaults.exe" (for Windows 10) or "CompMgmtLauncher.exe" for earlier Windows versions, which may bypass the UAC. LoLBin-style side loading of PowerShell payload as a UAC bypass.
+
+This is a good starting point for analysis and retrieval of additional modules. Almost all PowerShell modules are obfuscated with four or five layers of obfuscation likely generated by the Invoke-Obfuscation module. Although they are relatively easy to remove, they still slow down the analysis process and make detection using regular signatures more difficult. 
+
+Main modules
+
+The majority of Lemon Duck functionality is delivered as PowerShell scripts, with multiple levels of loaders which eventually install one or more of cryptocurrency-mining payloads, the main spreading module, the Pyinstaller spreading module or the email-spreading module. 
+
+PowerShell components
+
+The initial stage is a simple downloader that first downloads the code containing the function required to download and execute the main loader as described above. 
+
+The main loader is also simple and conducts several checks for the type of infected system, the level of user privileges and components relevant for mining, such as the type of the available graphic card. If the name of the card contains one of the following strings, the load downloads and launches the xmrig-cuda variant for mining using the GPU: 
+
+
+
+GTX
+
+NVIDIA
+
+GEFORCE
+
+AMD
+
+RADEON
+
+
+
+If not, the standard xmrig for CPU based mining will be downloaded and run.
+
+Apart from the mining payload the loader will attempt to download and launch other modules, including the main spreading module, the email sending module, the Python-based module packaged using Pyinstaller and the killer module designed to disable known competing mining botnets.
+
+  Lemon Duck Infection stages and modules.
+
+Before downloading and activating the mass mailing module, the loader attempts to modify the Microsoft Outlook security configuration in the registry to enable the botnet to send emails without the warning message from Outlook. For that, several registry paths are checked for the value ObjectModelGuard and the value is changed to dword 2, which corresponds to the setting "Never warn me about suspicious activity." 
+
+The registry paths checked are:
+
+HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Office\{OfficeVersionNumber}\Outlook\Security
+HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\Microsoft\Office\{OfficeVersionNumber}\Outlook\Security
+HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Office\ClickToRun\REGISTRY\MACHINE\Software\Microsoft\Office\{OfficeVersionNumber}\Outlook\Security
+HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Office\ClickToRun\REGISTRY\MACHINE\Wow6432Node\Software\Microsoft\Office\{OfficeVersionNumber}\Outlook\Security
+
+
+Changing Outlook security settings
+
+The PowerShell spreading module is a rather ambitious piece of code containing myriad functions that allow the bot to spread around the network. Overall, there are more than 10,000 lines of code. The code is partially copied from various open-source projects and partially custom-made, which shows a moderate level of the author's programming skills. 
+
+The code is a mix of PowerShell code and C# source code that gets compiled into DLL-based assemblies just-in-time and loaded into memory for convenience and execution speed. 
+
+Mimikatz is downloaded as mimi.dat in the user's temporary folder. The downloaded Mimikatz is DLL-encoded with base64, which is then decoded and executed using a modified variant of Invoke-Mimikatz module, with results saved and added to the list of hardcoded passwords for brute-forcing SMB, RDP and SSH. 
+Initial list of passwords used to brute force access to MSSQL, SSH and SMB.
+
+Apart from password brute-forcing, the main spreading module contains the functionality to spread using several vulnerabilities. Internal private networks are scanned using a hard-coded list of subnets.
+Hardcoded list of subnets used for lateral spreading.
+
+Eternal Blue vulnerability (CVE-2017-0144) was disclosed in a Shadow Brokers leak more than three years ago, but it remains a staple of malware attempting to laterally spread over SMB protocol. The Lemon Duck spreader contains a PowerShell variant of the exploit. 
+
+The SSH spread is driven by the list of known passwords to attempt with the addition of the Plink component of the Putty SSH client. Plink is a scriptable command-line SSH client used to target Linux-based SSH servers using the root username. Plink can often be detected as a potentially unwanted application by antimalware software. Lemon Duck appends 100 randomly generated bytes to the downloaded Plink executable, likely to break the cryptographic checksum based detections.  
+
+The remote command will download and launch the first stage of the bash script Lemon Duck loader for Linux systems. 
+
+A similar strategy is used for targeting systems running YARN and Redis. With YARN, the actors attempt to exploit a vulnerability from 2018 that does not have a CVE number attached. If the exploitation is successful, a script to download and launch the Linux loader is executed. 
+
+Lemon Duck targets incorrectly configured Redis key-value database installations that do not require a password for connections. Once successfully connected, the spreader creates a cron job to automatically run the same Linux download and execute code for the main Linux loader module.  
+
+The malware then attempts to connect to a Microsoft SQL database using the list of hardcoded candidate passwords and passwords retrieved by Mimikatz using the username "sa" (System Administrator). If the login is successful, the database server will be configured to allow execution of the xp_cmdshell stored procedure and launch the procedure to download and run the main Lemon Duck spreader. 
+
+A new .NET assembly, evilclr, will also be added to the database server together with a new stored procedure dbo.execcommand, which is called to download the initial Lemon Duck loader. This newly added assembly and the procedure may allow the attacker to connect to the compromised database server even if it is reconfigured to prevent the usage of xp_cmdshell. 
+
+Last but not least, the spreader connects to remote systems using the list of passwords. The connection is first made to the system using a list of precalculated NTLM hashes from the available passwords. If the connection is successful, the spreader will find all the users by listing the contents of the folder c:\users on the remote drive and  create a batch file run.bat in the AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\ of each user so that the script is launched when a user logs into the system. The batch file downloads and runs a PowerShell script that attempts to disable various anti-malware products and then creates scheduled tasks to download and run the main loader module. 
+
+Mailer module
+
+The email spreader module is another PowerShell script that uses COM Automation to automate Microsoft Outlook and send an email message to every contact in the user address book as well as all email addresses from which the current user received messages and all email addresses to which the current user has already sent messages. 
+
+For all collected email addresses only a single combination of email subject and the body text is chosen. Note: All spelling and grammar mistakes are intentional and copied directly from the infection documents.
+
+
+
+
+
+Subject
+Text
+
+
+The Truth of COVID-19
+Virus actually comes from United States of America
+
+
+COVID-19 nCov Special info WHO
+very important infomation for Covid-19see attached document for your action and discretion.
+
+
+HALTH ADVISORY:CORONA VIRUS
+the outbreak of CORONA VIRUS is cause of concern especially where forign personal have recently arrived or will be arriving at various intt in near future.see attached document for your action and discretion.
+
+
+WTF
+what's wrong with you?are you out of your mind!!!!!
+
+
+What the fcuk
+are you out of your mind!!!!!what 's wrong with you?
+
+
+good bye
+good bye, keep in touch
+
+
+farewell letter
+good bye, keep in touch
+
+
+broken file
+can you help me to fix the file,i can't read it
+
+
+This is your order?
+file is brokened, i can't open it
+
+
+
+  
+
+Generated email messages will have two attachments. The first one is an RTF document with the name readme.doc exploiting the remote code execution vulnerability in Microsoft Office, CVE-2017-8570, and the second is the file readme.zip. Readme.zip contains a JScript that downloads and runs the first-stage Lemon Duck loader. 
+An example of a Lemon Duck-generated email message.
+
+Like other Lemon Duck modules, we can also see the usage of the embedded C# code compiled and loaded in real-time by msbuild.exe. The code in the email spreader module is used only if the mailer is running with administrative privileges. The module contains the functionality to enumerate Windows Terminal Services sessions and impersonate the user running the session. 
+
+This functionality is most likely implemented in case the affected system is an RDP server. For every session, a listening named pipe "\\.\pipe\HHyeuqi7" is created. Its server-side code calls the PowerShell Invoke-Expression cmdlet for the supplied string sent by the named pipe client, which is the full mailer code for automating Outlook.  
+
+Competition Killer module
+
+The killer module is downloaded by the main Lemon Duck Loader as kr.bin. It contains a list of service names and process names to terminate as well as a list of scheduled task names to delete. A hardcoded list of service names is used to stop competing cryptocurrency miners.
+
+The killer also makes sure that it does not terminate any processes connected with any of the IP addresses used for mining by Lemon Duck and other associated cryptocurrency miners. Before checking for potential mining proxies, the killer module first downloads a clean variant of the OpenSSL executable and uses it as a tool for connecting over TLS. 
+
+Executable dropper
+
+We identified an older version of the Lemon Duck executable dropper developed using the .NET framework. The main spreading module is stored as a resource in the executable file, dropped on the hard drive and loaded as a PowerShell script vip.ps1. 
+
+The script is obfuscated with Invoke-Obfuscation as all other modules but it is also encrypted 100 times using AES. Of course, this is done to make analysis more difficult rather than protecting the malicious content. The layer decryption key is stored in a randomly named variable, while the next layer is stored as a Base64-encoded DeflateStream assigned to another randomly named variable.  
+
+Removing 100 layers of encryption when the decryption keys are available within each layer is just a matter of writing a script which automates the task of decryption to the point when there are no additional decryption layers. 
+One of the hundred AES decryption layers.
+
+Python pyinstaller executable
+
+The Python module is downloaded by the main loader and its functionality is similar to the main spreading module. The executable is created with Pyinstaller, which packages a Python distribution including all the required binaries, Python modules compiled into the Python p-code and user-defined components. 
+
+The main Python component of Lemon Duck contains the functionality to spread within the local network by attempting to exploit the Eternal Blue vulnerability and by copying the Pyinstaller executable to the target system. The Python code creates a scheduled task on the remote system to launch the copied executable on schedule. 
+
+The shellcode used in SMB exploits with both Python and PowerShell spreaders is the same shellcode which attempts to download and execute the initial Lemon Duck loader from hxxp://t[.]amynx[.]com/gim[.]jsp and to change the administrator's password to "k8d3j9SjfS7."  SMB exploit shellcode string detail — download and execute the initial PowerShell loader.
+
+The Python spreader also attempts to connect to the IPC share of the computers in local networks with a combination of hardcoded passwords combined with the credentials retrieved by running an embedded copy of Mimikatz, dropped and launched using PowerShell. 
+Mimikatz reloaded by the Python spreader with results saved into mkatz.ini.
+
+Additional functionality includes the Microsoft SQL database spreading code which is a Python implementation of the code described above in the PowerShell main spreader section. The script attempts to add a new .NET assembly evilclr to the database system to allow the attacker to run commands remotely through a newly stored procedure.
+
+Linux modules
+
+Lemon Duck bash scripts are executed after a successful compromise of a Linux host through Redis, YARN or SSH. There are two main bash scripts. The first one collects some information about the infected host and attempts to download a Linux version of the XMRig miner to launch it to connect to lplp[.]ackng[.]com:444. Finally, it attempts to delete various system logs. DNS requests for the Lemon Duck Linux mining server lplp[.]ackng[.]com.
+
+The other script is more complex, with the focus on terminating and removing competing cryptocurrency miners already present on the system. The script attempts to find processes with connections to known mining hosts, processes with known miner process names and files associated with these processes. 
+
+The script also attempts to terminate and uninstall processes related to Alibaba and Tencent cloud security agents. The script seems to be shared between several Linux-based cryptomining botnets. 
+
+Runtime compiled C# assemblies compiled 
+
+Lemon Duck makes an extensive use of C# modules that get compiled and run by the bot as required. Some of the modules are taken from the open source repositories while some, such as the module for spreading over external USB storage devices and the module for Windows Terminal Services enumeration and user impersonation seem to be programmed specifically for Lemon Duck. 
+
+The C# components are:
+
+
+
+Ping Castle Eternal Blue vulnerability scanner used in PowerShell spreader.
+
+RDP Brute forcer with passwords, not used in this variant, otherwise in PowerShell spreader.
+
+LZNT1 implementation, taken likely from public LZNT1 source code.
+
+USB Spreader, with creation of .lnk files used with a CVE-2017-8464 exploit.
+
+BCrypt wrapper for password hashing - used in the PowerShell spreader.
+
+WTSEnumerateSessions, used in the PowerShell mailer module for Outlook automation in Windows Remote Desktop services.
+
+
+
+USB spreader
+
+The USB spreader drops a 32 or 64-bit variant of a malicious DLL, an associated .LNK file with CVE-2017-8464 exploit that launches the DLL without user interaction on vulnerable systems. 
+
+The module also creates a readme.js file whose contents are identical to the readme.js file that is spread by the email spreading module. 
+
+USB spreader enumerates all removable and network drives and attempts to infect them. If the infection is successful, a file inf_data will be created to prevent future reinfections with the same mechanism. 
+
+The malicious DLLs create a named mutex "MGYnGYPf" used to ensure only a single copy is running in memory. After creating the mutex, the DLL code launches runDLL32.exe and injects code into its process space. 
+
+The initial thread context is then changed so that the shellcode runs when the thread continues its execution. The shell code's functionality is to download and run the first PowerShell Loader stage using mshta.exe in the same fashion as seen in our initial telemetry entry. This indicates that the infection source was likely a removable drive. USB DLL shellcode fragment for downloading the initial loader using mshta.exe.
+
+Origins of Lemon Duck code
+
+Lemon Duck is a combination of the code taken from the open-source projects and the code specifically crafted for the botnet. By combining the two, the author shows a moderate level of technical skills and understanding of security issues in Windows and various network protocols. This approach yields code that's more difficult to maintain but the objectives can be achieved very quickly. 
+
+The list of open-source PowerShell projects code included in Lemon Duck includes:
+
+
+
+Invoke-TheHash by Kevin Robertson
+
+Invoke-EternalBlue PowerShell EternalBlue port 
+
+BlueKeep RCE exploit (CVE- 2019-0708) PowerShell  port 
+
+Powersploit's reflective loader by Matt Graeber
+
+Modified Invoke-Mimikatz PowerShell module
+
+Payloads
+
+Whether considering Linux or Windows branches of Lemon Duck botnet, the final goal is the same, which is to mine Monero using a Linux or a Windows variant of the XMRig miner. We are only mentioning the payloads for the sake of completeness of the analysis. 
+
+Observed activity and overlap with other crypto mining botnets
+
+Cisco Talos has identified activity in our endpoint telemetry associated with Lemon Duck cryptocurrency mining malware affecting three different companies in the government, retail, and technology sectors. We observed the activity spanning from late March 2020 to present. 
+
+Through the course of our research, we identified a number of overlaps between Lemon Duck and another cryptocurrency mining malware dubbed, Beapy (aka Pcastle). According to Cisco Umbrella, awcna[.]com was registered with the email address robertcooper1983[@]protonmail[.]com, which also registered only one other domain, bddp[.]net, a part of infrastructure leveraged by Beapy targeting East Asia in June 2019.
+
+Most of the Lemon Duck modules make HTTP GET requests to URLs to a subdomain ackng[.]com, which was also observed in the Beapy infrastructure. Based on previous malware analysis by Talos, Lemon Duck exhibits propagation methods that are similar to Beapy. 
+
+We will continue to monitor our data for additional activity pointing to similarities between these botnets. Our findings also suggest several more similarities in infrastructure and behavior, namely between Beapy, DLTMiner and MyKings. These campaigns share similar tactics, techniques, and procedures (TTPs), making it difficult to distinguish between them. 
+
+The Lemon Duck activity we recorded is consistent with a general uptick in cryptocurrency miners observed by Talos over the last several months, including a resurgence in PowerGhost, Prometei and Tor2Mine.
+
+Coverage
+
+Ways our customers can detect and block this threat are listed below.
+
+Advanced Malware Protection (AMP) is ideally suited to prevent the execution of the malware used by these threat actors. Exploit Prevention present within AMP is designed to protect customers from unknown attacks such as this automatically.
+
+Cisco Cloud Web Security (CWS) or Web Security Appliance (WSA) web scanning prevents access to malicious websites and detects malware used in these attacks.
+
+Email Security can block malicious emails sent by threat actors as part of their campaign.
+
+Network Security appliances such as Next-Generation Firewall (NGFW), Next-Generation Intrusion Prevention System (NGIPS), Cisco ISR, and Meraki MX can detect malicious activity associated with this threat.
+
+AMP Threat Grid helps identify malicious binaries and build protection into all Cisco Security products.
+
+Umbrella, our secure internet gateway (SIG), blocks users from connecting to malicious domains, IPs, and URLs, whether users are on or off the corporate network.
+
+Open Source Snort Subscriber Rule Set customers can stay up to date by downloading the latest rule pack available for purchase on Snort.org.OSQueryCisco AMP users can use Orbital Advanced Search to run complex OSqueries to see if their endpoints are infected with this specific threat. For specific OSqueries on this threat, click below:Lemon Duck OSQuerySNORT[SID] 55926-55928
+
+IOCs
+Windows samples
+
+605ac25ebe8ab41ba291b467281e4f361e87df26fb0085636060d4972725958d - 32 bit Dlle783b5235868d8f32f8656218f89ee24138a52e13d91ab5d5950cce1fa25f673 - 64 bit DLLdf154c314609c61ab33eea7f5d3d959fe3dacee35c8575741e96dfe27b2bd55e - earlier executable .NET droppere72b656b15dca5b2dde4784bb113ca7c9768eeb731264fe10d057fc7909ef9c4 - xmrig-cuda38ffc65ba9896583ba8c8f98dd36c0b391ee590e2011be7f715351965b7bed8c - evilclr module5dd1c44610d038e0e8e3f572964f4be09ee3e7718d73bcd4c8684c3efea8ff2b - lnk exploitaea17e712d9a25e37d0ce3af6adff733e89edd6416b5c4a6a9b95dd5faf13612 - RTF exploit (readme.doc)27040edd4917b6963f89d1d80073d20713dcea439a5b0f9a0cdaca655c1b4322 - earlier version of the main PowerShell spreader1d6153f93539fbc7bdd2389120c9f8967197ea81fffaf3df28417bdf2fe1252b - main Powershell spreader5beb8128b269067186c5ce002423e1de33fd52986bf0696d5664ac278eae1993 - killer module80eb16604550f9a115470acfa300b95d62ae856245666637afa00f8fb9e4808d - mailing moduled7d0f18071899c81ee90a7f8b266bd2cf22e988da7d0e991213f5fb4c8864e77 - Pyinstaller moduleb660aa7aca644ba880fdee75f0f98b2db3b9b55978cc47a26b3f42e7d0869fff - Powershell miner dropperce4ba5d544e566a4a83b5edd7e42e6783c2b03187f834913cdd185b3d453fb10 - Mimikatz27e94c3f27539d0ed5c5267914860ff97a438acd1ace560e0a746a6d04b39718 - readme.js Javascript 
+
+Linux (Bash and ELF)
+9e0c65e28bf2539966364468a5fba8bf8bbcbc76b84aa37348b3bad19047c73a - xmrig7850f7ccba97d37bb89447f04dac93757b96d7270d1ee9797c12034f22363038 - Linux killer script7de4497ed46e9e96f66ad0135c018d006a85bbd0c0202da6f0f1bd2030932a30 - Linux miner downloader
+
+Hostnames
+
+t[.]amynx[.]comt[.]zer9g[.]comp[.]b69kq[.]comlplp[.]ackng[.]comd[.]ackng[.]comw[.]zz3r0[.]cominfo[.]amynx[.]cominfo[.]ackng[.]cominfo[.]zz3r0[.]comt[.]jdjdcjq[.]topp[.]awcna[.]comt[.]zer2[.]comt[.]tr2q[.]com
+
+IP Addresses
+
+172[.]104[.]7[.]8566[.]42[.]43[.]37207[.]154[.]225[.]82161[.]35[.]107[.]193167[.]99[.]154[.]202139[.]162[.]80[.]221128[.]199[.]183[.]160128[.]199[.]188[.]255167[.]71[.]158[.]207
+
+
+

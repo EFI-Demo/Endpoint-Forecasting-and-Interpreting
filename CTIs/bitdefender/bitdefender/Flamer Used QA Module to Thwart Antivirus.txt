@@ -1,0 +1,42 @@
+“Customer Feedback” is always important, even when they are victims of state-sponsored attacks
+Although the Flamer Trojan has “committed suicide” quite a while ago, we continue the malware forensics saga with a new episode. Today, we will be describing a less-documented feature of Flamer called advnetcfg.ocx – a module that acts both as an antivirus activity monitor and a debugging component.
+
+This module has been specifically tailored to collect data that would have been used to improve the functionality of Flamer. Our analysis points to the fact that it has been used by the group behind Flamer to see if Flamer was detected by an antivirus solution or if Flamer’s activity would have been brought to a grinding halt by software bugs.
+Whenever Flamer finds a window referencing a file name that belongs to it, or if it contains strings such as “injected” or “File mssecmgr.exe looks suspicious”, this debugging module takes a screenshot. The screenshot is then sent to the command and control center, where it is analyzed by Flamer’s programmers. Based on this analysis, they are able to add code or improve the currently existing one for the next “update”. We believe that this is one of the features that made it possible for Flamer to stay undetected for at least 5 years.
+This module may have also played a key role in defeating AV detection for this period of time. Although its creators definitely used multi-engine scan services to check if their samples were detected, they most likely needed feedback from the actual “production environment” as every single system is unique and heuristic detection is influenced by parameters that they could not reproduce in lab conditions.
+It may be true that modern malware can report errors to their C&C servers, but Flamer takes this to a whole new level: it sends complex reports even when these errors are displayed on screen or if they are detected by locally-installed AV solutions.
+How is everything happening?
+The advnetcfg.ocx component decrypts ccalc32.sys (RC4 algorithm) using the 128 bit key passed as parameter to the EnableTBS export. When decrypted, the ccalc32.sys database file contains strings used in the whole process of debugging and data gathering.
+String categories found in ccalc32.sys:
+The module extracts from calc32.sys the file names used for storage (HighSeverity=~KWI989.tmp and LowSeverity=~KWI988.tmp), as well as the following lists:
+* CrashStrings
+* DangerousProcesses
+* ExcludeProcesses
+* ExposureIndicating
+* MonitoredStrings
+* RegsKeys
+CrashStrings.1  has encountered a problem and needs to close
+CrashStrings.2  This application has requested the Runtime to terminate it in an unusual way
+CrashStrings.3  This system is shutting down. Please save all work in progress and log off
+CrashStrings.4  terminated unexpectedly with status code
+CrashStrings.5  services.exe – Application Error
+CrashStrings.6  End Program – services.exe
+CrashStrings.7  services and controller
+Snippet from ExposureIndicating strings:
+ExposureIndicating.69    fib32.bat
+ExposureIndicating.7     dsmgr.ocx
+ExposureIndicating.70    sstab
+ExposureIndicating.71    scrcons.exe
+ExposureIndicating.72    wmiprvse.exe
+ExposureIndicating.73    services.exe
+ExposureIndicating.74    explorer.exe
+ExposureIndicating.75    inje
+ExposureIndicating.76    svchost
+ExposureIndicating.77    gppref32.exe
+ExposureIndicating.78    ~dfc855.tmp
+ExposureIndicating.79    SeCEdit
+Ccalc32.sys suspends its activity when some processes such as those listed below are running on the system:
+6spywareterminatorshield.exe, spywareterminator.exe, sp_rsser.exe, rtt_crc_service.exe, nip.exe, licwiz.exe, elogsvc.exe, cclaw.exe, zlclient.exe
+Then it proceeds with enumerating desktops, windows and, for all the windows, their children. It sends the WM_GETTEXT message to every window and child, and compares the resulting strings with the ExposureIndicating, CrashStrings and RegKeys. If a string appears in ExposureIndicating or CrashStrings then the severity is set to High, a screen-shot gets taken (16 colors, full screen) and placed in the HighSeverityStorageFile.
+
+If no strings from its lists are present in window text, all text data gets saved in the LowSeverityStorageFile. All information in both files is compressed with PPMd, as both Storage Files have a size limit. These steps are continually repeated.

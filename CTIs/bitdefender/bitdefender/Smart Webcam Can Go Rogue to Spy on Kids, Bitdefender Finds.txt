@@ -1,0 +1,40 @@
+A new smart network camera can be hijacked and turned into a full-fledged spying tool, Bitdefender IoT & malware researchers have discovered.
+As part of their ongoing effort to raise awareness on the serious consequences of security-neglected IoT devices, Bitdefender researchers are constantly analyzing the security posture of various gadgets which may pose privacy and security risks to home users and their networks.
+Device and setup
+The analyzed network camera is a feature-rich monitoring device for homes and small businesses. It includes a motion & sound detection system, two-way audio, built-in microphone and speaker, built-in selectable lullabies to put children to sleep, temperature & humidity sensors and a microSD/SDHC card slot.
+It’s commonly used as a home surveillance system as well as a baby monitor and communication medium between parents and children.
+The device follows the standard setup routine, creating a hotspot during configuration via a wireless network. Once installed, the corresponding mobile application tries to establish a connection with the device’s hotspot and after it detects it, the app connects to it automatically. Next, the app asks the user to introduce the credentials of his home network, which it transmits to the device. The smart plug connects to the local network and the setup process is complete.
+
+Fig 1. Mobile application screenshot
+Vulnerabilities
+While scrutinizing the device in a controlled testing environment, Bitdefender researchers observed the following security oversights:
+The hotspot is open; no password is required.
+Data sent between application, device and server is simply encoded, not encrypted.
+Network credentials are sent in plain text from mobile app to device.
+
+Fig 2. Local network credentials sent in plain-text during configuration
+Possible Attacks
+When the mobile app connects remotely to the device, from outside the local network, it authenticates through a security mechanism known as a Basic Access Authentication. By today’s security standards, this is considered an insecure method of authentication, unless used in conjunction with an external secure system such as SSL. Usernames and passwords are passed over wire in an unencrypted format, encoded with a Base64 scheme in transit.
+ “Base64 is an encoding scheme, meaning it’s reversible and virtually useless for providing data security”, says Radu Basaraba, malware researcher at Bitdefender.
+Secondly, the device’s communication with the push servers is HTTPS secured, however, authentication of the device is based exclusively on the MAC address.
+Every time it starts and at regular intervals, the device sends an UDP message to the authentication server, containing device data, an ID number represented by the MAC address and a 36-character code.  However, the cloud server does not verify the code, it trusts the device’s MAC address to perform the authentication.
+Consequently, an attacker can register a different device, with the same MAC address, to impersonate the genuine one. The server will communicate with the device that registered last, even if it’s rogue. So will the mobile app. This way, attackers can capture the webcam’s new password, if the user changes the default one.
+To speed up the process and grab the password faster, an attacker can take advantage of the camera’s push notification feature. Users can opt to receive notifications on their smartphone, specifically video alerts, whenever the camera detects any suspicious sound or movement in their homes. When the user opens the app to view the alert, the app will authenticate on the device using Basic Access Authentication and, thus, send the new password unencrypted to the hacker-controlled webcam.
+Finally, attackers can enter the username, password and ID to get full control of the user’s webcam, through the mobile app.
+
+Fig 3. Push notification message as seen by the user
+
+Fig 4. Push notification commands
+
+Fig 5. Adding stolen user credentials
+“Anyone can use the app, just as the user would”, George Cabau, antimalware researcher says. “This means turning on audio, mic and speakers to communicate with children while parents aren’t around or having undisturbed access to real-time footage from your kids’ bedroom. Clearly, this is an extremely invasive device, and its compromise leads to scary consequences.”
+Advice for users
+This research shows how exploiting vulnerable IoT devices may have serious consequences for users. Bitdefender advises home users to:
+Perform a thorough research before buying an IoT device for their homes. Online reviews may reveal privacy issues other users have encountered.
+Test the gadget to understand how it works (if possible). How does it connect to the Internet, what data can it access, where is that data stored and under what circumstances? Proper research into the new device will help users weigh the risks and benefits – can this device turn into a privacy hazard? Using data collected from it, could someone infiltrate the home Wi-Fi network to snoop on private conversations and steal other personal information?
+Read the privacy statement before activating the device and connecting it to the web.
+Install a home cyber-security solution designed for IoTs. It will scan the whole network to provide anti-phishing protection, malicious-website alerts, detection and quarantining of any malware or rogue users.
+Responsible disclosure and status
+Bitdefender practiced reasonable disclosure with the vendor of the aforementioned IoT equipment. So, as a matter of course, the vulnerabilities were reported in accordance to Bitdefender’s vulnerability disclosure policy. According to this policy, vendors are officially informed of the findings and encouraged to solve the bugs/flaws in their products. 30 days after the initial reporting, the findings are published.
+The problems persist on the latest firmware version (2.02), however the vendor is currently working on a fix.
+Technical analysis performed by Bitdefender researchers Dragos GAVRILUT, Radu BASARABA and George CABAU.

@@ -1,0 +1,429 @@
+
+
+  In the last 3 months we have seen a lot of machines compromised by Uroburos (a
+  kernel-mode rootkit that spreads in the wild and specifically targets Windows 7 64-bit). Curiosity lead me to start
+  analyzing the code for Kernel Patch Protection on Windows 8.1. We will take a glance at its current implementation on
+  that operating system and find out why the Kernel Patch Protection modifications made by Uroburos on Windows 7 don’t
+  work on the Windows 8.1 kernel. In this blog post, we will refer to the technology known as “Kernel Patch Protection”
+  as “Patchguard”. Specifically, we will call the Kernel Patch Protection on Windows 7 “Patchguard v7”,  and the
+  more recent Windows 8.1 version “Patchguard v8”.
+
+
+
+  The implementation of Patchguard has slightly changed between versions of Windows. I would like to point out the
+  following articles that explain the internal architecture of older versions of Patchguard:
+
+
+
+  Skape, Bypassing PatchGuard on Windows x64, Uninformed,
+    December 2005
+  
+  Skywing, PatchGuard Reloaded - A Brief Analysis of
+    PatchGuard Version 3, Uninformed, September 2007
+  
+  Christoph Husse,
+    
+    Bypassing PatchGuard 3
+     - CodeProject, August 2008
+  
+
+
+
+Kernel Patch Protection - Old version attack methods
+
+
+  We have seen some attacks targeting older versions of the Kernel Patch Protection technology. Some of those (see
+  Fyyre’s website for examples) disarm Patchguard by preventing its
+  initialization code from being called. Patchguard is indeed initialized at Windows startup time, when the user
+  switches on the workstation. To do this, various technologies have been used: the
+  MBR Bootkit (PDF, in Italian), VBR Bootkit, and even a brand-new
+  UEFI
+    Bootkit.
+
+
+
+  These kind of attacks are quite easy to implement, but they have a big drawback: they all require the victim's machine
+  to be rebooted, and they are impossible to exploit if the target system implements some kind of boot manager digital
+  signature protection (like Secure Boot).
+
+
+
+  Other techniques relied on different tricks to evade Patchguard or to totally block it. These techniques involve:
+
+
+
+  x64 debug registers (DR registers) - Place a managed hardware breakpoint on every read-access in the modified code
+    region. This way the attacker can restore the modification and then continue execution
+  
+  Exception handler hooking - PatchGuard’s validation routine (the procedure that calls and raises the Kernel Patch
+    protection checks) is executed through exception handlers that are raised by certain Deferred Procedure Call (DPC)
+    routines; this feature gives attackers an easy way to disable PatchGuard.
+  
+  
+    Hooking KeBugCheckEx and/or other kernel key functions - System compromises are reported through the KeBugCheckEx
+    routine (BugCheck code 0x109); this is an exported function. PatchGuard clears the stack so there is no return point
+    once one enters KeBugCheckEx, though there is a catch. One can easily resume the thread using the standard “thread
+    startup” function of the kernel.
+  
+  
+    Patching the kernel timer DPC dispatcher - Another attack cited by Skywing (see references above). By design,
+    PatchGuard’s validation routine relies on the dispatcher of the kernel timers to kick in and dispatch the deferred
+    procedure call (DPC) associated with the timer. Thus, an obvious target for attackers is to patch the kernel timer’s
+    DPC dispatcher code to call their own code. This attack method is easy to implement.
+  
+  Patchguard code direct modification - Attack method described in a paper by McAfee. They located the encrypted
+    Patchguard code directly in the kernel heap, then manually decrypted it and modified its entry point (the decryption
+    code). The Patchguard code was finally manually re-encrypted.
+  
+
+
+
+  The techniques described above are quite ingenious. They disable Patchguard without rebooting the system or modify
+  boot code. It’s worth noting that the latest Patchguard implementation has rendered all these techniques obsolete,
+  because it has been able to completely neutralize them.
+
+
+
+  Now let’s analyse how the Uroburus rootkit implements the KeBugCheckEx hooks to turn off Kernel Patch Protection on a
+  Windows 7 SP1 64-bit system.
+
+
+
+Uroburus rootkit - KeBugCheckEx’ hook
+
+
+  Analysing an infected machine reveals that the Uroburos 64-bit driver doesn’t install any direct hook on the kernel
+  crash routine named “KeBugCheckEx”. So why doesn't it do any direct modification? To answer this question, an analysis
+  of Patchguard v7 code is needed. Patchguard copies the code of some kernel functions into a private kernel buffer. The
+  copied procedures are directly used by Patchguard to perform all integrity checks, including crashing the system if
+  any modification is  found.In the case of system modifications, it copies the functions back to their original
+  location and crashes the system. The problem with the implementation of Patchguard v7 lies in the code for the
+  procedures used by protected routines. That code is vulnerable to direct manipulation as there is only one copy (the
+  original one)
+
+
+
+  This is, in fact, the Uroburos strategy: KeBugCheckEx is not touched in any manner. Only a routine used directly by
+  KeBugCheckEx is forged: RtlCaptureContext. The Uroburos rootkit installs deviations in the original Windows Kernel
+  routines by registering custom software interrupt 0x3C. In the forged routines, the interrupt is raised using the x86
+  opcode “int”
+
+
+RtlCaptureContext
+
+  The related Uroburos interrupt service routine of the RtlCaptureContext routine (sub-type 1), is raised by the forged
+  code. The software interrupt is dispatched, the original routine called and finally the processor context is analysed.
+  A filter routine is called. It implements the following code:
+
+
+    /* Patchguard Uroburos Filter routine
+    * dwBugCheckCode - Bugcheck code saved on the stack by KeBugCheckEx routine
+    * lpOrgRetAddr - Original RtlCaptureContext call return address */
+    void PatchguardFilterRoutine(DWORD dwBugCheckCode, ULONG_PTR lpOrgRetAddr) {
+      LPBYTE pCurThread = NULL; // Current running thread
+      LPVOID lpOrgThrStartAddr = NULL; // Original thread
+      DWORD dwProcNumber = 0; // Current processor number
+      ULONG mjVer = 0, minVer = 0; // OS Major and minor version indexes
+      QWORD * qwInitialStackPtr = 0; // Thread initial stack pointer
+      KIRQL kCurIrql = KeGetCurrentIrql(); // Current processor IRQL
+
+    // Get Os Version
+    PsGetVersion(&mjVer, &minVer, NULL, NULL);
+
+    if (lpOrgRetAddr > (ULONG_PTR)KeBugCheckEx &&
+      lpOrgRetAddr < ((ULONG_PTR)KeBugCheckEx + 0x64) &&
+      dwBugCheckCode == CRITICAL_STRUCTURE_CORRUPTION) {
+      // This is the KeBugCheckEx Patchguard invocation
+      // Get Initial stack pointer
+      qwInitialStackPtr = (LPQWORD)IoGetInitialStack();
+
+      if (g_lpDbgPrintAddr) {
+        // DbgPrint is forged with a single "RETN" opcode, restore it
+        // DisableCR0WriteProtection();
+        // ... restore original code ...
+        // RestoreCR0WriteProtection(); // Revert CR0 memory protection
+      }
+
+      pCurThread = (LPBYTE)KeGetCurrentThread();
+      // Get original thread start address from ETHREAD
+      lpOrgThrStartAddr = *((LPVOID*)(pCurThread + g_dwThrStartAddrOffset));
+      dwProcNumber = KeGetCurrentProcessorNumber();
+
+      // Initialize and queue Anti Patchguard Dpc
+      KeInitializeDpc(&g_antiPgDpc, UroburusDpcRoutine, NULL);
+      KeSetTargetProcessorDpc(&g_antiPgDpc, (CCHAR)dwProcNumber);
+      KeInsertQueueDpc(&g_antiPgDpc, NULL, NULL);
+
+      // If target Os is Windows 7
+      if (mjVer >= 6 && minVer >= 1)
+        // Put stack base address in first stack element
+        qwInitialStackPtr[0] = ((ULONG_PTR)qwInitialStackPtr + 0x1000) & (~0xFFF);
+
+      if (kCurIrql > PASSIVE_LEVEL) {
+        // Restore original DPC context ("KiRetireDpcList" Uroburos interrupt plays
+        // a key role here). This call doesn't return
+        RestoreDpcContext(); // The faked DPC will be processed
+      } else {
+        // Jump directly to original thread start address (ExpWorkerThread)
+        JumpToThreadStartAddress((LPVOID)qwInitialStackPtr, lpOrgThrStartAddr, NULL);
+      }
+    }
+  }
+  
+
+  As the reader can see, the code is quite straightforward.
+  First it analyses the original context: if the return address lives in the prologue of the kernel routine KeBugCheckEx
+  and the bugcheck code equals to CRITICAL_STRUCTURE_CORRUPTION , then it means that Uroburos has intercepted a
+  Patchguard crash request. The initial thread start address and stack pointer is obtained from the ETHREAD structure
+  and a faked DPC is queued:
+
+
+
+  // NULL Uroburos Anti-Patchguard DPC
+  void UroburusDpcRoutine(struct _KDPC *Dpc, PVOID DeferredContext, PVOID SystemArgument1, PVOID SystemArgument2) {
+  return;
+  }
+
+
+
+  Code execution is resumed in one of two different places based on the current Interrupt Request Level (IRQL). If IRQL
+  is at the PASSIVE_LEVEL then a standard JMP opcode is used to return to the original start address of the thread from
+  which the Patchguard check originated (in this case, it is a worker thread created by the “ExpWorkerThread” routine).
+  If the IRQL is at a DISPATCH_LEVEL or above, Uroborus will exploit the previously acquired processor context using the
+  KiRetireDpcList hook. Uroburos will then restart code execution at the place where the original call to
+  KiRetireDpcList was made, remaining at the high IRQL level.
+
+
+
+  The faked DPC is needed to prevent a crash of the restored thread.
+
+
+KiRetireDpcList and RtlLookupFunctionEntry
+
+  As shown above, the KiRetireDpcList hook is needed to restore the thread context in case of a high IRQL. This hook
+  saves the processor context before the original call is made and then transfers execution back to the original
+  KiRetireDpcList Windows code.
+
+
+  Publicly available literature about Uroburos claims that the RtlLookupFunctionEntry hook is related to the
+  Anti-Patchguard feature. This is wrong. Our analysis has pinpointed that this hook is there only to hide and protect
+  the Uroburos driver’s RUNTIME_FUNCTION array (see my previous article about Windows 8.1 Structured Exception
+  Handling).
+
+
+Conclusion
+
+  The Uroburos anti-Patchguard feature code is quite simple but very effective. This method is practically able to
+  disarm all older versions of the Windows Kernel Patch protection without any issues or system crashes.
+
+
+Patchguard v8 - Internal architecture
+
+STARTUP
+
+  The Windows Nt Kernel startup is accomplished in 2 phases. The Windows Internals book describes the nitty-gritty
+  details of both phases. Phase 0 builds the rudimentary kernel data structures required to allow the services needed in
+  phase 1 to be invoked (page tables, per-processor Processor Control Blocks (PRCBs), internal lists, resources and so
+  on…). At the end of phase 0, the internal routine InitBootProcessor uses a large call stack that ends right at the
+  Phase1InitializationDiscard function. This function, as the name implies, discards the code that is part of the INIT
+  section of the kernel image in order to preserve memory. Inside it, there is a call to the KeInitAmd64SpecificState
+  routine. Analysing it reveals that the code is not related to its name:
+
+
+
+  int KeInitAmd64SpecificState() {
+  DWORD dbgMask = 0;
+  int dividend = 0, result = 0;
+  int value = 0;
+
+  // Exit in case the system is booted in safe mode
+  if (InitSafeBootMode) return 0;
+  // KdDebuggerNotPresent: 1 - no debugger; 0 - a debugger is attached
+  dbgMask = KdDebuggerNotPresent;
+  // KdPitchDebugger: 1 - debugger disabled; 0 - a debugger could be attached
+  dbgMask |= KdPitchDebugger;
+
+  if (dbgMask) dividend = -1; // Debugger completely disabled
+  else dividend = 0x11; // Debugger might be enabled
+
+  value = (int)_rotr(dbgMask, 1); // “value” is equal to 0 if debugger is enable
+  // 0x80000000 if debugger is NOT enabled
+  // Perform a signed division between two 32 bit integers:
+  result = (int)(value / dividend); // IDIV value, dividend
+  return result;
+  }
+
+
+
+  The routine’s code ends with a signed division: if a debugger is present the division is evaluated to 0 (0 divided by
+  0x11 is 0), otherwise a strange thing happens: 0x80000000 divided by 0xFFFFFFFF raises an overflow exception. To
+  understand why, let’s simplify everything and perform as an example an 8-bit signed division such as: -128 divided by
+  -1. The result should be +128. Here is the assembly code:
+
+
+
+  mov cl, FFh
+  mov ax, FF80h
+  idiv cl
+
+
+
+  The last instruction clearly raises an exception because the value +128 doesn’t fit in the destination 8-bit register
+  AL (remember that we are speaking about signed integers). Following the SEH structures inside of the Nt Kernel file
+  leads the code execution to the “KiFilterFiberContext” routine. This is another procedure with a misleading name: all
+  it does is disable a potential debugger, and prepare the context for the Patchguard Initialization routine. The
+  initialization routine of the Kernel Patch Protection technology is a huge function (95 KB of pure machine code)
+  inside the INIT section of Nt Kernel binary file. From now on, we will call it “KiInitializePatchguard”.
+
+
+INTERNAL ARCHITECTURE, A QUICK GLANCE
+
+
+  The initialization routine builds all the internal Patchguard key data structures and copies all its routines many
+  times. The code for KiInitializePatchguard is very hard to follow and understand because it contains obfuscation,
+  useless opcode, and repeated chunks. Furthermore, it contains a lot checks for the presence of debugger.
+  After some internal environment checks, it builds a huge buffer in the Kernel Nonpaged pool memory that contains all
+  the data needed by Patchguard. This buffer is surrounded by a random numbers of 8 bytes QWORD seed values repetitively
+  calculated with the “RDTSC” opcode.
+
+
+
+
+  As the reader can see from the above picture , the Patchguard buffer contains a lot of useful info. All data needed is
+  organized in 3 main sections:
+
+
+  Internal configuration data
+  
+    The first buffer area located after the TSC (time stamp counter) Seed values contains all the initial patchguard
+  related configuration data. Noteworthy are the 2 Patchguard Keys (the master one, used for all key calculation, and
+  the decryption key), the Patchguard IAT (pointers of some Nt kernel function) and all the needed Kernel data
+  structures values (for example the KiWaitAlways symbol, KeServiceDescriptorTable data structure, and so on…), the
+  Patchguard verification Work item, the 3 copied IDT entries (used to defeat the Debug registers attack), and finally,
+  the various Patchguard internal relocated functions offsets.
+   
+ 
+  
+  Patchguard and Nt Vital routines code
+    
+  This section is very important because it contains the copy of the pointers and the code of the most important Nt
+  routines used by Patchguard to crash the system in case of something wrong is found. In this way even if a rootkit
+  tries to forge or block the crash routines, Patchguard code can completely defeat the malicious patch and correctly
+  crash the system. Here is the list of the copied Nt functions: HaliHaltSystem, KeBugCheckEx, KeBugCheck2,
+  KiBugCheckDebugBreak, KiDebugTrapOrFault, DbgBreakPointWithStatus, RtlCaptureContext, KeQueryCurrentStackInformation,
+  KiSaveProcessorControlState, HalHaltSystem pointer
+  Furthermore the section contains the entire “INITKDBG” code section of Nt Kernel. This section implement the main
+  Patchguard code:
+    
+      Kernel Patch protection main check routine and first self-verification procedure
+      Patchguard Work Item routine, system crash routine (that erases even the stack)
+      Patchguard timer and one entry point (there are many others, but not in INITKDBG section)
+    
+  
+
+  Protected Code and Data
+  
+  All the values and data structures used to verify the entire Nt kernel code resides here. The area is huge (227 KB
+  more or less) and it is organized in at least 3 different way:
+  
+  
+  
+    First 2 KB contains an array of data structures that stores the code (and data) chunks pointer, size, and relative
+  calculated integrity keys of all the Nt functions used by Kernel Patch Protection to correctly do its job.
+    
+    
+  Nt Kernel Module (“ntoskrnl.exe”) base address and its Exception directory pointer, size and calculated integrity key.
+  A big array of DWORD keys then follows. For each module’s exception directory RUNTIME_FUNCTION entry there is a
+  relative 4 bytes key. In this manner Patchguard can verify each code chunk of the Nt Kernel.
+    
+    
+  A copy of all Patchguard protected data. I still need to investigate the way in which the protected Patchguard data
+  (like the global “CI.DLL” code integrity module’s “g_CiOptions” symbol for example) is stored in memory, but we know
+  for sure that the data is binary copied from its original location when the OS is starting in this section.
+    
+    
+
+  
+
+VERIFICATION METHODS - Some Words
+
+  Describing the actual methods used to verify the integrity of the running Operating system kernel is outside the scope
+  of this article. We are going only to get an introduction...
+  Kernel Patch protection has some entry points scattered inside the Kernel: 12 DPC routines, 2 timers, some APC
+  routines, and others.
+
+
+  When the Patchguard code acquires the processor execution, it decrypts its buffer and then calls the self-verify
+  routine. The latter function first verifies 0x3C0 bytes of the Patchguard buffer (including the just-executed
+  decryption code), re-calculating a checksum value and comparing it with the stored one. Then it does the same
+  verification as before, but for the Nt Functions exploited by its main check routine. The integrity keys and
+  verification data structures are stored in the start of area 3 of PG buffer.
+
+
+  If one of the checks goes wrong, Patchguard self-verify routine immediately crashes the system. It does this in a very
+  clever manner:
+
+
+  
+  First it restores all the Virtual memory structures values of vital Nt kernel functions (like Page table entry, Page
+  directory entry and so on…). Then it replaces all the code with the copied one, located in the Patchguard buffer. In
+  this way each eventual rootkit modification is erased and as result Patchguard code can crash the system without any
+  obstacles.
+  
+  
+  Finally calls “SdbpCheckDll” routine (misleading name) to erase the current thread stack and transfer execution to
+  KeBugCheckEx crash routine.
+  
+
+
+  Otherwise, in the case that all the initial checks pass, the code queues a kernel Work item, exploiting the standard
+  ExQueueWorkItem Kernel API (keep in mind that this function has been already checked by the previous self-verify
+  routine).
+
+
+  The Patchguard work item code immediately calls the main verification routine. It then copies its own buffer in
+  another place, re-encrypt the old Patchguard buffer, and finally jumps to the ExFreePool Kernel function. The latter
+  procedure will delete the old Patchguard buffer.
+
+
+  This way, every time a system check is raised, the Patchguard buffer location changes.
+  Main check routine uses some other methods to verify each Nt Kernel code and data chunk. Describing all of them and
+  the functionality of the main check routine is demanded to the next blog post….
+
+
+  The code used by Patchguard initialization routine to calculated the virtual memory data structure values is something
+  curious. Here is an example used to find the Page Table entry of a 64-bit memory address:
+
+
+  CalculatePteVa:
+  shr rcx, 9 ; Original Ptr address >> 9
+  mov rax, 98000000000h ; This negated value is FFFFFF680'00000000, or more
+  ; precisely "16 bit set to 1, X64 auto-value, all zeros"
+  mov r15, 07FFFFFFFF8h
+  and rcx, r15 ; RCX & 7F'FFFFFFF8h (toggle 25 MSB and last 3 LSB)
+  sub rcx, rax ; RCX += FFFFFF680'00000000
+  mov rax, rcx ; RAX = VA of PTE of target function
+
+
+  For the explanation on how it really works, and what is the x64 0x1ED auto-value, I remind the reader to the following
+  great book about X64 Memory management: Enrico Martignetti - What Makes it Page? The Windows 7 (x64) Virtual Memory Manager (2012)
+
+
+Conclusions
+
+  In this blog post we have analysed the Uroburos code that disables the old Windows 7 Kernel Patch Protection, and have
+  given overview of the new Patchguard version 8 implementation. The reader should now be able to understand why the
+  attacks such as the one used by Uroburos could not work with the new version of Kernel Patch Protection.
+  It seems that the new implementation of this technology can defeat all known attacks. Microsoft engineers have done a
+  great amount of work to try to mitigate a class of attacks .
+
+
+  Because of the fact that the Kernel Patch Protection is not hardware-assisted, and the fact that its code runs at
+  kernel-mode privilege level (the same of all kernel drivers), it is not perfect. At an upcoming conference, I will
+  demonstrate that a clever researcher can still disarm this new version, even if it’s a task that is more difficult to
+  accomplish. The researcher can furthermore use the original Microsoft Patchguard code even to protect his own hooks….
+
+
+  Stay tuned!
+
+

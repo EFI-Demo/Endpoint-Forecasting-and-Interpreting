@@ -1,0 +1,278 @@
+
+		Cybercriminals attempt to change tactics as fast as security and protection technologies do. During our year-long investigation of a targeted, invoice-themed XLS.HTML phishing campaign, attackers changed obfuscation and encryption mechanisms every 37 days on average, demonstrating high motivation and skill to constantly evade detection and keep the credential theft operation running.
+This phishing campaign exemplifies the modern email threat: sophisticated, evasive, and relentlessly evolving. The HTML attachment is divided into several segments, including the JavaScript files used to steal passwords, which are then encoded using various mechanisms. These attackers moved from using plaintext HTML code to employing multiple encoding techniques, including old and unusual encryption methods like Morse code, to hide these attack segments. Some of these code segments are not even present in the attachment itself. Instead, they reside in various open directories and are called by encoded scripts.
+In effect, the attachment is comparable to a jigsaw puzzle: on their own, the individual segments of the HMTL file may appear harmless at the code level and may thus slip past conventional security solutions. Only when these segments are put together and properly decoded does the malicious intent show.
+This campaign’s primary goal is to harvest usernames, passwords, and—in its more recent iteration—other information like IP address and location, which attackers use as the initial entry point for later infiltration attempts. As we previously noted, the campaign components include information about the targets, such as their email address and company logo. Such details enhance a campaign’s social engineering lure and suggest that a prior reconnaissance of a target recipient occurs.
+Email-based attacks continue to make novel attempts to bypass email security solutions. In the case of this phishing campaign, these attempts include using multilayer obfuscation and encryption mechanisms for known existing file types, such as JavaScript. Multilayer obfuscation in HTML can likewise evade browser security solutions.
+To defend organizations against this campaign and similar threats, Microsoft Defender for Office 365 uses multiple layers of dynamic protection technologies backed by security expert monitoring of email campaigns. Rich email threat data from Defender for Office 365 informs Microsoft 365 Defender, which provides coordinated defense against follow-on attacks that use credentials stolen through phishing. Microsoft 365 Defender does this by correlating threat data from email, endpoints, identities, and cloud apps to provide cross-domain defense.
+XLS.HTML phishing campaign: Fake payment notices are effective tool for attackers to steal credentials
+The XLS.HTML phishing campaign uses social engineering to craft emails mimicking regular financial-related business transactions, specifically sending what seems to be vendor payment advice. In some of the emails, attackers use accented characters in the subject line.
+The email attachment is an HTML file, but the file extension is modified to any or variations of the following:
+
+xls.HTML
+xslx.HTML
+Xls.html
+.XLS.html
+xls.htML
+xls.HtMl
+xls.htM
+xsl_x.h_T_M_L
+.xls.html
+._xslx.hTML
+._xsl_x.hTML
+
+
+Figure 1. Sample phishing email message with the HTML attachment
+Using xls in the attachment file name is meant to prompt users to expect an Excel file. When the attachment is opened, it launches a browser window and displays a fake Microsoft Office 365 credentials dialog box on top of a blurred Excel document. Notably, the dialog box may display information about its targets, such as their email address and, in some instances, their company logo. See below:
+
+Figure 2. Sample credentials dialog box with a blurred Excel image in the background. If the target user’s organization’s logo is available, the dialog box will display it. Otherwise, it displays Office 365 logos.
+The dialog box prompts the user to re-enter their password, because their access to the Excel document has supposedly timed out. However, if the user enters their password, they receive a fake note that the submitted password is incorrect. Meanwhile, the attacker-controlled phishing kit running in the background harvests the password and other information about the user.
+From plaintext to Morse code: A timeline of frequently changing attack segment encoding
+This phishing campaign is unique in the lengths attackers take to encode the HTML file to bypass security controls. As previously mentioned, the HTML attachment is divided into several segments, which are then encoded using various encoding mechanisms. To illustrate, this phishing attack’s segments are deconstructed in the following diagram:
+
+Figure 3. Anatomy of a phishing campaign
+
+Segment 1 – Email address of the target
+Segment 2 – Logo of the targeted user’s organization from logo[.]clearbit[.]com, i[.]gyazo[.]com, or api[.]statvoo[.]com; if the logo is not available, this segment loads the Microsoft Office 365 logo instead.
+Segment 3 – A script that loads an image of a blurred document, indicating that sign-in has supposedly timed out.
+Segment 4 – A script that prompts the user to enter their password, submits the entered password to a remote phishing kit, and displays a fake page with an error message to the user.
+
+As seen in the previous diagram, Segments 1 and 2 contain encoded information about a target user’s email address and organization. Not only do these details enhance a campaign’s social engineering lure, but they also suggest that the attackers have conducted prior recon on the target recipients.
+Regular updates of encoding methods prove that the attackers are aware of the need to change their routines to evade security technologies.
+Below is a timeline of the encoding mechanisms this phishing campaign used from July 2020 to July 2021:
+
+Figure 4. Timeline of the xls/xslx.html phishing campaign and encoding techniques used
+Based on the campaign’s ten iterations we have observed over the course of this period, we can break down its evolution into the phases outlined below. For a complete list of social engineering lures, attachment file names, JavaScript file names, phishing URLs, and domains observed in these attacks, refer to the Appendix.
+Transition from plaintext HTML to encoded segments
+The first iteration of this phishing campaign we observed last July 2020 (which used the “Payment receipt” lure) had all the identified segments such as the user mail identification (ID) and the final landing page coded in plaintext HTML. However, this changed in the following month’s wave (“Contract”) when the organization’s logo—obtained from third-party sites—and the link to the phishing kit were encoded using Escape.
+
+Figure 5. Attack segments in the HTML code in the July 2020 wave
+
+Figure 6. Embedded phishing kit domain and target organization’s logo in the HTML code in the August 2020 wave
+Hosting of segments on third-party sites and multiple encoding mechanisms
+Beginning with a wave in the latter part of August 2020, the actual code segments that display the blurred Excel background and load the phishing kit were removed from the HTML attachment. These were replaced with links to JavaScript files that, in turn, were hosted on a free JavaScript hosting site.
+The segments, links, and the actual JavaScript files were then encoded using at least two layers or combinations of encoding mechanisms. We have observed this tactic in several subsequent iterations as well. For example, inside the HTML code of the attachment in the November 2020 wave (“Organization name”), the two links to the JavaScript files were encoded together in two steps—first in Base64, then in ASCII. Meanwhile, the user mail ID and the organization’s logo in the HTML file were encoded in Base64, and the actual JavaScript files were encoded in Escape.
+
+Figure 7. HTML code containing the encoded JavaScript in the November 2020 wave
+
+Figure 8. First level of encoding using Base64, side by side with decoded string
+
+Figure 9. Second level of encoding using ASCII, side by side with decoded string
+Use of Morse code
+Morse code is an old and unusual method of encoding that uses dashes and dots to represent characters. This mechanism was observed in the February (“Organization report/invoice”) and May 2021 (“Payroll”) waves.
+In the February iteration, links to the JavaScript files were encoded using ASCII then in Morse code. Meanwhile in May, the domain name of the phishing kit URL was encoded in Escape before the entire HTML code was encoded using Morse code.
+
+Figure 10. Morse code-encoded embedded JavaScript in the February 2021 wave, as decoded at runtime
+Use of encoding “wrapper”
+While earlier iterations of this campaign use multiple encoding mechanisms by segment, we have observed a couple of recent waves that added one or more layers of encoding to “wrap” the entire HTML attachment itself. For example, in the March 2021 wave (“Invoice”), the user mail ID was encoded in Base64. Meanwhile, the links to the JavaScript files were encoded in ASCII before encoding it again with the rest of the HTML code in Escape.
+This was seen again in the May 2021 iteration, as described previously. In the June 2021 wave, (“Outstanding clearance slip”), the link to the JavaScript file was encoded in ASCII while the domain name of the phishing kit URL was encoded in Escape. The entire HTML attachment was then encoded using Base64 first, then with a second level of obfuscation using Char coding (delimiter:Comma, Base:10).
+
+Figure 11. Multilayer-encoded HTML in the June 2021 wave, as decoded at runtime
+Introduction of a new information-stealing module
+In the May 2021 wave, a new module was introduced that used hxxps://showips[.]com/api/geoip/ to fetch the user’s IP address and country data and sent them to a command and control (C2) server. As previously mentioned, attackers could use such information, along with usernames and passwords, as their initial entry point for later infiltration attempts.
+
+Figure 12. Script that collects a user’s IP address and location in the May 2021 wave
+Redirection to Office 365 page
+In the July 2021 wave (“Purchase order”), instead of displaying a fake error message once the user typed their password, the phishing kit redirected them to the legitimate Office 365 page.
+
+Figure 13. User’s credentials being posted to the attacker’s C2 server while the user is redirected to the legitimate Office 365 page
+Detecting dynamically changing email obfuscation techniques through coordinated threat defense
+The highly evasive nature of this threat and the speed with which it attempts to evolve requires comprehensive protection. Microsoft Defender for Office 365 detects malicious emails from this phishing campaign through diverse, multi-layered, and cloud-based machine learning models and dynamic analysis. In addition to inspecting emails and attachments based on known malicious signals, Microsoft Defender for Office 365 leverages learning models that inspect email message and header properties to determine the reputation of both the sender (for example, sender IP reputation) and recipient of the message.
+Microsoft Defender for Office 365 has a built-in sandbox where files and URLs are detonated and examined for maliciousness, such as specific file characteristics, processes called, and other behavior. For this phishing campaign, once the HTML attachment runs on the sandbox, rules check which websites are opened, if the JavaScript files decoded are malicious or not, and even if the images used are spoofed or legitimate.
+Microsoft Defender for Office 365 is also backed by Microsoft experts who continuously monitor the threat landscape for new attacker tools and techniques. The speed that attackers use to update their obfuscation and encoding techniques demonstrates the level of monitoring expertise required to enrich intelligence for this campaign type.
+Threat data from other Microsoft 365 Defender services enhance protections delivered by Microsoft Defender for Office 365 to help detect and block malicious components related to this campaign and the other attacks that may stem from credentials this campaign steals. Microsoft 365 Defender correlates threat data on files, URLs, and emails to provide coordinated defense.
+Finally, this blog entry details the techniques attackers used in each iteration of the campaign, enabling defenders to enhance their protection strategy against these emerging threats. Defenders can apply the security configurations and other prescribed mitigations that follow. Defenders can also run the provided custom queries using advanced hunting in Microsoft 365 Defender to proactively check their network for attacks related to this campaign.
+Mitigation actions
+Apply these mitigations to reduce the impact of this threat:
+
+Use Office 365 mail flow rules or Group Policy for Outlook to strip .html or .htm or other file types that are not required for business. Check your Office 365 antispam policy and your mail flow rules for allowed senders, domains, and IP addresses. Apply extra caution when using these settings to bypass antispam filters, even if the allowed sender addresses are associated with trusted organizations—Office 365 honors these settings and can let potentially harmful messages pass through. Review system overrides in threat explorer to determine why attack messages have reached recipient mailboxes.
+Turn on Safe Attachments policies to check attachments to inbound email. Enable Safe Links protection for users with zero-hour auto purge to remove emails when a URL gets weaponized post-delivery.
+Avoid password reuse between accounts and use multi-factor authentication (MFA), such as Windows Hello, internally on high-value systems. In addition, always enable MFA for privileged accounts and apply risk-based MFA for regular ones. Finally, require MFA for local device access, remote desktop protocol access/connections through VPN and Outlook Web Access. These steps limit the value of harvested credentials, as well as mitigate internal traversal after credential compromise and further brute-force attempts made by using credentials from infected hosts.
+Educate end users on consent phishing tactics as part of security or phishing awareness training. Training should include checks for poor spelling and grammar in phishing mails or the application’s consent screen, as well as spoofed app names and domain URLs, that are made to appear to come from legitimate applications or companies.
+Encourage users to use Microsoft Edge and other web browsers that support Microsoft Defender SmartScreen, which identifies and blocks malicious websites, including phishing sites, scam sites, and sites that contain exploits and host malware. Turn on network protection to block connections to malicious domains and IP addresses.
+
+Endpoint detection and response detections
+Alerts with the following title in the Microsoft 365 Security Center can indicate threat activity in your network:
+
+Email delivered with xslx.html/xls.html attachment
+
+Antivirus detections
+Microsoft Defender Antivirus detects threat components as the following malware:
+
+Trojan:JS/Phish.Y!MTB
+Trojan:HTML/PhishYourJS.A!ibt
+Trojan:HTML/Phish.PHIK!MTB
+
+Advanced hunting
+To locate specific attachments related to this campaign, run the following query:
+// Searches for email attachments with a specific file name extension xls.html/xslx.html
+EmailAttachmentInfo
+| where FileType has "html"
+| where FileName endswith_cs "._xslx.hTML" or FileName endswith_cs "_xls.HtMl" or FileName endswith_cs "._xls_x.h_T_M_L" or FileName endswith_cs "_xls.htML" or FileName endswith_cs "xls.htM" or FileName endswith_cs "xslx.HTML" or FileName endswith_cs "xls.HTML" or FileName endswith_cs "._xsl_x.hTML"
+| join EmailEvents on $left.NetworkMessageId == $right.NetworkMessageId
+| where EmailDirection == "Inbound"
+Learn how you can stop credential phishing and other email threats through comprehensive, industry-leading protection with Microsoft Defender for Office 365.
+ 
+Appendix: Indicators
+July 2020: Payment receipt
+HTML attachment name format:
+
+Payment receipt_<4 digits>_<2 digits>$_Xls.html (see sample in VirusTotal)
+
+Blurred Excel background images: 
+
+hxxps://i[.]gyazo[.]com/049bc4624875e35c9a678af7eb99bb95[.]jpg
+hxxps://i[.]gyazo[.]com/7fc7a0126fd7e7c8bcb89fc52967c8ec[.]png
+
+Phishing domain:
+
+hxxps://es-dd[.]net/file/excel/document[.]php
+
+August 2020: Contract
+HTML attachment name format:
+
+Contract-<10 digits>.XLS.html (see sample in VirusTotal)
+
+Links to organization logos:
+
+hxxps://moneyissues[.]ng/wp-content/uploads/2017/10/DHL-LOGO[.]jpg
+hxxps://postandparcel.info/wp-content/uploads/2019/02/DHL-Express-850×476[.]jpg
+
+Phishing domains: 
+
+hxxps://contactsolution[.]com[.]ar/wp-admin/ddhlreport[.]php
+hxxps://www[.]laserskincare[.]ae/wp-admin/css/colors/midnight/reportexcel[.]php
+
+Late August 2020: Ctr
+HTML attachment name format:
+
+Ctr-<8 digits>_xls.htML (see sample in VirusTotal)
+
+Hosted JavaScript files:
+
+hxxp://yourjavascript[.]com/40128256202/233232xc3[.]js
+hxxp://yourjavascript[.]com/84304512244/3232evbe2[.]js
+hxxp://yourjavascript[.]com/42580115402/768787873[.]js
+hxxp://yourjavascript[.]com/8142220568/343434-9892[.]js
+hxxp://yourjavascript[.]com/82182804212/5657667-3[.]js
+
+Phishing domain:
+
+hxxps://gladiator164[.]ru/wp-snapshots/root/0098[.]php?0976668-887
+hxxp://www.aiguillehotel[.]com/Eric/87870000/099[.]php?09098-897887
+
+November 2020: Organization name
+HTML attachment name format:
+
+<Organization name>-<6 digits>_xls.HtMl (see sample in VirusTotal)
+
+Hosted JavaScript files:
+
+hxxp://yourjavascript[.]com/1111559227/7675644[.]js – loads the blurred Excel background image
+hxxp://yourjavascript[.]com/2512753511/898787786[.]js
+hxxp://yourjavascript[.]com/1522900921/5400[.]js – steals user password and displays a fake incorrect credentials page
+
+Phishing domain:
+
+hxxp://tokai-lm[.]jp/root/4556562332/t7678[.]php?787867-76765645
+
+January 2021: Organization report
+HTML attachment name format:
+
+<Organization name>-Report-<6 digits>_xls.HtMl (see sample in VirusTotal)
+
+Hosted JavaScript files:
+
+hxxp://yourjavascript[.]com/0221119092/65656778[.]js – loads the blurred Excel background image
+hxxp://yourjavascript[.]com/212116204063/000010887-676[.]js – steals the user password and displays a fake incorrect credentials page
+
+Phishing domain: 
+
+hxxp://tannamilk[.]or[.]jp//_products/556788-898989/0888[.]php?5454545-9898989
+
+February 2021: Organization report/invoice
+HTML attachment name formats: 
+
+<Organization name>-Report-<6 digits>_xls.HtMl (see sample in VirusTotal)
+<Organization name>_invoice_<random numbers>._xlsx.hTML.
+
+Hosted JavaScript files:
+
+hxxp://coollab[.]jp/dir/root/p/434[.]js
+hxxp://yourjavascript[.]com/0221119092/65656778[.]js – loads the blurred Excel background image
+hxxp://coollab[.]jp/dir/root/p/09908[.]js
+hxxp://yourjavascript[.]com/212116204063/000010887-676[.]js – steals user password and displays a fake incorrect credentials page
+
+Phishing domains: 
+
+hxxp://www[.]tanikawashuntaro[.]com//cgi-bin/root – 6544323232000/0453000[.]php?90989897-45453
+hxxp://tannamilk[.]or[.]jp//_products/556788-898989/0888[.]php?5454545-9898989
+
+March 2021: Invoice
+HTML attachment name format: 
+
+<Organization name>_Invoice_<Day>_-<Date>._xslx.hTML (see sample in VirusTotal)
+
+Hosted JavaScript files:
+
+hxxp://yourjavascript[.]com/4154317425/6899988[.]js
+hxxp://www[.]atomkraftwerk[.]biz/590/dir/354545-89899[.]js – checks the password length
+hxxp://yourjavascript[.]com/2131036483/989[.]js
+hxxp://www[.]atomkraftwerk[.]biz/590/dir/86767676-899[.]js – loads the blurred background image, steals the user’s password, and displays the fake incorrect credentials popup message
+
+Phishing domains: 
+
+hxxp://coollab[.]jp/local/70/98988[.]php?989898-67676
+hxxps://tannamilk[.]or[.]jp/cgialfa/545456[.]php?7878-9u88989
+
+May 2021: Payroll
+HTML attachment name format: 
+
+<Organization name>_Invoice_<Day> <MM_DD_YYYY>._xsl_x.Html (see sample in VirusTotal)
+Payroll-<6 digits>_xls.HtMl
+
+Hardcoded links:
+
+hxxps://api[.]statvoo[.]com/favicon/?url=hxxxxxxxx[.]com – Organization logo
+hxxps://mcusercontent[.]com/dc967eaa4412707bedd3fe8ab/images/d2d8355d-7adc-4f07-8b80-e624edbce6ea.png – Blurred PDF background image
+
+Phishing domains: 
+
+hxxps://tannamilk[.]or[.]jp//js/local/33309900[.]php?8738-4526
+hxxp://tokai-lm[.]jp//home-30/67700[.]php?636-8763
+hxxp://coollab[.]jp/009098-50009/0990/099087776556[.]php?-aia[.]com[.]sg
+
+June 2021: Outstanding clearance slip
+HTML attachment name format:
+
+Outstanding June clearance slip|<random digits>._xslx.hTML
+
+Organization Logo:
+
+hxxps://api[.]statvoo[.]com/favicon/?url=sxmxxhxxxxp[.]co[.]xx
+
+Hosted JavaScript file:
+
+hxxp://yourjavascript[.]com/4951929252/45090[.]js
+
+Phishing domain:
+
+hxxp://tokai-lm[.]jp/style/b9899-8857/8890/5456655[.]php?9504-1549
+
+July 2021: Purchase order
+HTML attachment name format:
+
+PO<random digits> XLS.html
+
+Hardcoded links:
+
+hxxps://i[.]gyazo[.]com/dd58b52192fa9823a3dae95e44b2ac27[.]png – Microsoft Excel logo
+hxxps://aadcdn[.]msftauth [.]net/ests/2[.]1/content/images/backgrounds/2_bc3d32a696895f78c19df6c717586a5d[.]svg
+hxxps://i[.]gyazo[.]com/55e996f8ead8646ae65c7083b161c166[.]png – Blurred Excel document background image
+
+Phishing domains:
+
+hxxps://maldacollege[.]ac[.]in/phy/UZIE/actions[.]php
+hxxps://jahibtech[.]com[.]ng/wp-admta/taliban/office[.]php
+
+	

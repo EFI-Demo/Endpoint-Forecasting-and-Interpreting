@@ -1,0 +1,45 @@
+
+I just finished installing Ubuntu 9.10 server edition on a shiny new Dell PowerEdge R805 box, as part of expanding our malware analysis labs. No big deal - half an hour of babysitting an installer, right?
+
+Wrong. 
+
+It took me 5 hours, thanks to some really stupid decisions made by the Ubunutu team surrounding perhaps the most vital part of the installation process: the bootloader.
+
+The actual install itself was nice and easy, just like I've come to expect out of the Ubuntu folks: sane defaults, good explanations when I had to make a relevant choice, and generally minimal requirements for interactivity. Anybody with even the most basic computer experience could fumble their way through it. After finishing, I took my CD out, rebooted...and suddenly found myself at a Busybox shell with a note about GRUB being unable to find the root filesystem.
+
+I figured I'd done something really retarded, because in all of the years I've been installing *NIX operating systems, I've only had one other bootloader failure - an OpenBSD "Bad Magic" issue when I was swapping out hard drives that made immediate sense once I did two seconds worth of Googling, and that yielded a fun little picture in the process. So I sat down, thought for a second, and then realized I'd installed the 32-bit version of Ubunutu on a box with 8GB of RAM and a terabyte worth of hard drive - which sure seemed like a good reason for the OS to not be seeing the drive properly.
+
+So I headed back to my desk, burned a copy of the 64-bit version, reinstalled, and got...the exact same Busybox shell. Damnit!
+
+A quick bit of Googling seemed to suggest that there were issues with GRUB recognizing really big disks. Since I'd just used the whole drive with Ubuntu's guided LVM setup, I figured that either my /boot partition was way off past the end of where GRUB could read, or that my / partition was just too big for it to handle. That's what I get for being lazy, I figured, and headed back into installer land, this time manually partitioning things so that /boot was at the very start of the drive, / was 50GB, and /var took up the rest of the space. Another 30-minute installation later, I rebooted, figuring I'd be all set.
+
+Not so much.
+
+Confused, I followed the suggestion at the Busybox shell and did a "cat /proc/modules". Sure enough, mptbase, mptsas, and scsi_transport_sas were all loaded - exactly the modules I needed to be able to see this SAS/MPT BIOS controller. /dev/sda* existed, and inspecting /boot/grub/grub.cfg (side note: Linux people, can we *please* agree on one frikkin' extension for config files?) showed that my root device was set properly. What the hell?
+
+Getting desperate, I spent some substantial time scouring the web for answers. It seems that a number of people have had problems installing various versions of Ubuntu on the R805 boxes - but in classic Linux style, any time someone popped onto a forum or a mailing list asking how to fix boot issues with this hardware, the thread ended with some variant of "Hey, I figured it out! Thanks guys!", and NO GODDAMNED DESCRIPTION OF HOW THEY FIXED THE PROBLEM. Seriously, people, it takes like two minutes to explain the fix, and it will save countless people countless hours of pain if you just make sure your solution is archived somewhere on the web.
+
+After trying a whole host of possible fixes - setting the SAS controller to be visible to "BIOS only" instead of "BIOS & OS", telling the CD installer to boot off the first hard drive, etc. - I ran across this little nugget of wisdom, which suggested that I set my "rootdelay" value to 35 to give the SAS adapter time to initialize. 
+
+Aha! That made perfect sense, I figured. After all, this entire process had been further aggravated by the 30 seconds or so it takes the Dell SAS controller to initialize on each boot (seriously, people, how does it take a hard disk controller 30 f'ing seconds to initialize on a machine with 8 2.5GHz cores?); why wouldn't it want to waste another 30 seconds of my life re-initializing after the operating system loaded? 
+
+Optimistic about my prospects for success, I rebooted yet again, held down shift like the article suggested...and got no GRUB menu. I tried again with "e" (which I vaguely remembered using on some other bootloader in years gone by), and again with "Esc". The third time being a charm, I decided to brute-force the issue, popped the installer disc back in the drive, and chose "Rescue Broken System" from the menu.
+
+This is where I started to realize how broken Ubuntu's installation has become.
+
+At first, I thought I'd accidentally chosen "Install Ubuntu" from the menu, because the system proceeded along all of the same steps as a regular install. It even went to the trouble of finding my network hardware, having me choose an interface to do DHCP on, and set a hostname. Seriously, guys, I promise I don't need a fully functional network just to go touch my bootloader, repair a broken partition, or, you know, do anything else that would require me to use a CD to boot. You're just wasting my time.
+
+Once I finally got my shell and headed on over to edit /boot/grub/grub.cfg, I realized the reason I could't get into the GRUB menu: the default timeout value had been set to "-1", i.e. "don't wait at all". Gee, guys, that makes so much sense - because, you know, no one will ever need to edit their GRUB config on the fly! That, and setting a delay of 1 second would just be too much hassle for people trying to boot up nice and fast on their shiny new servers with the 90-second delay to get into the bootloader.
+
+With the delay fixed and GRUB reinstalled, I booted up again, and this time actually got to the GRUB menu. Much to my horror, the banner on the top read:
+
+"GRUB version 1.97~beta4"
+
+Really, Ubuntu? Seriously? You're going to put a beta version of a bootloader on the production release of a server operating system? What cutting-edge boot-loading feature could you possibly need that you couldn't use a release version of GRUB?
+
+Cursing the Ubuntu developers under my breath, I added the rootdelay value, hit Ctrl-x to boot, waited...and had a fully operational operating system in under a minute! Hallelujah!
+
+Convinced that I was done, I added the rootdelay value to /boot/grub/grub.cfg, ran "update-grub" as root to make the changes permanent, and rebooted one last time, just to be sure. It's a good thing I did, too, because MY CHANGES WEREN'T SAVED, and I ended right back up at my Busybox shell. I had to go in through the rescue option on the installer CD, make my changes there, and update GRUB from my CD just to get the changes to stick.
+
+With all of the effort the Ubuntu people put into making their installation simple, you'd think they could have gone to the trouble of setting the "rootdelay" variable to a higher value when they saw a SAS card that they probably know takes forever to initialize. Really, would that be so hard, guys?
+

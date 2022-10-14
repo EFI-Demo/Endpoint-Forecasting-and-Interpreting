@@ -1,0 +1,28 @@
+
+		This post is authored by Roberto Bamberger, Principal Consultant, Enterprise Cybersecurity Group.
+Amongst the plethora of stories about cyberattacks in the news, multiple recent articles have been published describing the more difficult to detect cyberattacks which leverage normal tools already present in an enterprise to achieve their mission. SecureList calls the techniques used in these situations “invisible” and “diskless”. This post describes the challenges your organization can face in detecting such attacks with typical detection techniques and what you can do to protect against them.
+To begin, consider that many of these attacks use native capabilities in Microsoft Windows such as PowerShell in order to avoid having to store files on disks which are routinely scanned and could be discovered by antivirus products. That is why Microsoft has developed multiple capabilities that can detect such attacks including:
+
+Microsoft Enterprise Threat Detection
+Windows Defender Advanced Threat Protection
+Microsoft Advanced Threat Analytics
+
+Here is a summary of why these can help you.
+The Microsoft Enterprise Threat Detection (ETD) service, is a managed detection service, able to detect invisible/diskless attacks and provide enterprises with actionable intelligence to effectively respond to these threats. Windows 10 also includes Windows Defender Advanced Threat Protection (Windows Defender ATP). This feature along with Antimalware Scan Interface (AMSI) and Microsoft Advanced Threat Analytics (ATA) provide you with user and entity behavioral analysis capabilities which can be effective in detecting such threats and their associated malicious behaviors.
+Enterprise Threat Detection can consume a variety of data sources:
+
+Windows error reports can contain memory of a faulting process, registry keys, files, and the results of WMI queries
+Telemetry sent from the organization’s IP egress ranges in the form of the Microsoft Active Protection System (MAPS)
+Data received by the Microsoft Digital Crimes Unit as part of its botnet disruption and eradication efforts
+Using ATA and Windows Defender ATP on Windows 10 monitors those signals and provides advanced detection and response data
+
+To illustrate leveraging the Windows Error Reporting data for this type of advanced analysis, the Microsoft ETD team recently received an event from a customer environment, which was due to a crash in PowerShell.
+
+In this case, PowerShell was executing an object stored in a base64 encoded string. Automated analysis of the memory of the PowerShell process indicated contained code consistent with malicious code in the form of shellcode:
+
+In this case, further analysis revealed that the code was being reflectively loaded into the PowerShell process attempts to download additional code from an external source. Using advanced analysis tools, ETD analysts determined the name of the server and file that was being requested.
+
+Analysis of the payload returned from this internet resource revealed that the attacker was establishing a reverse shell and loading the metasploit meterpreter, a popular penetration testing tool.  However, the meterpreter code was never written as a file to disk, therefore it was diskless, loaded only from an external site, making detection within the customer environment difficult.
+Microsoft ETD analysts quickly analyzed the event, determined it was malicious, and informed the organization of the nature of the attack, providing them with actionable intelligence. This specific actionable intelligence included indicators of attack that can be used to analyze additional data such as proxy logs, to determine if this activity was still ongoing and/or impacting other machines in their environment.
+In conclusion, organizations need to be aware of this type of malicious behavior becoming more prevalent in cybercrime. Microsoft has many insights and tools for enterprises to help keep their environments protected. For information about Enterprise Threat Detection services, contact your Microsoft Account Team or email mtds@microsoft.com.
+	

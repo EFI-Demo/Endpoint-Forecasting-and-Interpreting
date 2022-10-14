@@ -1,0 +1,86 @@
+While researching possible formjacking attacks on hotel websites recently, I stumbled across a separate issue that could potentially leak my and other guests' personal data. I tested multiple websites—including more than 1,500 hotels in 54 countries—to determine how common this privacy issue is. I found that two in three, or 67 percent, of these sites are inadvertently leaking booking reference codes to third-party sites such as advertisers and analytics companies. All of them did have a privacy policy, but none of them mentioned this behavior explicitly.
+.While it's no secret that advertisers are tracking users' browsing habits, in this case the information shared could allow these third-party services to log into a reservation, view personal details, and even cancel the booking altogether.
+
+It has been almost a year since the General Data Protection Regulation (GDPR) came into effect in Europe, but many hotels affected by this issue have been very slow to acknowledge, much less address, it.
+
+The sites I tested ranged from two-star hotels in the countryside to luxurious five-star resorts on the beach. Basically, I randomly chose locations where I would like to spend my vacation, then selected the top search engine results for hotels in those locations. Some hotel sites I tested are part of larger, well-known hotel chains, meaning my research for one hotel applies to other hotels in the chain.
+
+Some reservation systems were commendable, as they only revealed a numerical value and the date of the stay and did not divulge any personal information. But the majority leaked personal data, such as:
+
+
+	Full name
+	Email address
+	Postal address
+	Mobile phone number
+	Last four digits of credit card, card type, and expiration date
+	Passport number
+
+.What causes these leaks?
+
+More than half (57 percent) of the sites I tested send a confirmation email to customers with a direct access link to their booking. This is provided for the convenience of the customer, allowing them to simply click on the link and go straight to their reservation without having to log in.
+.Since the email requires a static link, HTTP POST web requests are not really an option, meaning the booking reference code and the email are passed as arguments in the URL itself. On its own, this would not be an issue. However, many sites directly load additional content on the same website, such as advertisements. This means that direct access is shared either directly with other resources or indirectly through the referrer field in the HTTP request. My tests have shown that an average of 176 requests are generated per booking, although not all these requests contain the booking details. This number indicates that the booking data could be shared quite widely.
+
+To demonstrate, let's assume the confirmation email contains a link in the following format, which would automatically log me into my booking overview:
+
+
+	https://booking.the-hotel.tld/retrieve.php?prn=1234567&[email protected]
+
+
+The loaded page, in this case the retrieve.php website, may call many remote resources. Some web requests made for these external objects will directly send the full URL, including the credentials, as a URL argument.
+
+The following is an example of an analytics request, which contains the full original URL including the arguments as an argument on its own:
+
+
+	https://www.google-analytics.com/collect?v=1&_v=j73&a=438338256&t=pageview&_s=1&dl=https%3A%2F%2Fbooking.the-hotel.tld%2Fretrieve.php%3Fprn%3D1234567%26mail%3Djohn%5Fsmith%40myMail.tld&dt
+	=Your%20booking&sr=1920x1080&vp=1061x969&je=0&_u=SCEBgAAL~&jid=1804692919&gjid=
+	1117313061&cid=1111866200.1552848010&tid=UA-000000-2&_gid=697872061.1552848010&gtm=2wg3b2MMKSS89&z=337564139
+
+
+
+As mentioned, the same data is also in the referrer field, which will be sent along by the browser in most cases. This results in the reference code being shared with more than 30 different service providers, including well-known social networks, search engines, and advertisement and analytics services. This information could allow these third-party services to log into a reservation, view personal details, and even cancel the booking altogether.
+
+Note that in this scenario, the fault is not on the service provider's side.
+
+There are other scenarios in which the booking data may also be leaked. Some sites pass on the information during the booking process, while others leak it when the customer manually logs into the website. Others generate an access token, which is then passed in the URL instead of the credentials, which is not good practice either.
+
+In most cases, I found that the booking data remains visible, even if the reservation has been canceled, granting an attacker a large window of opportunity to steal personal information.
+
+Hotel comparison websites and booking engines appear to be slightly more secure. From the five services that I tested, two leaked the credentials and one sent the login link without encryption.
+
+It should be noted that I identified some well-configured websites that digest the credentials first and then redirect after they set a cookie, ensuring data isn’t leaked.
+
+Unencrypted links
+
+It could be argued that the privacy risk with this issue is low given the data is only shared with third-party providers that are trusted by the websites. However, it is concerning that I found more than one-quarter (29 percent) of the hotel sites did not encrypt the initial link sent in the email that contained the ID. A potential attacker could therefore intercept the credentials of the customer who clicks on the HTTP link in the email, for example, to view or modify his or her booking. This may occur at public hotspots such as the airport or the hotel, unless the user protects the connection with VPN software. I also observed one booking system that leaked data during the booking process to a server over HTTP before the connection got redirected to HTTPS.
+.Unfortunately, this practice is not unique to the hospitality sector. Inadvertent sharing of sensitive information over URL arguments or in the referrer field is prevalent among websites. In the past couple of years, I have seen similar issues with multiple airlines, holiday attractions, and other websites. Other researchers reported similar issues in February 2019 wherein unencrypted links were used across multiple airline service providers.
+
+Further issues
+
+I also found that multiple websites allow brute forcing of the booking reference as well as enumeration attacks. In many cases, the booking reference code is simply incremented from one booking to the next. This means that if the attacker knows the email or the last name of the customer, they can guess that customer's booking reference number and log in. Brute forcing booking numbers is a widespread issue in the travel industry and I have blogged about it before.
+
+Such an attack might not scale well, but it does work well when an attacker has a specific target in mind or when the target location is known, for example a conference hotel. With some websites, the customer's email or name is not even needed on the backend—all that is required is a valid booking reference code. I found multiple examples of these coding mistakes, which would have allowed me to not only access all active reservations for a large hotel chain, but also view every valid flight ticket of an international airline.
+
+One booking engine was smart enough to create a random PIN code for the guest to use together with the booking reference number. Unfortunately, the login was not bound to the actual reservation that was accessed. An attacker could therefore simply use their own valid credentials to log in and still access any booking. At the time, I did not see any evidence that there were any rate limitations in the backend that would slow down such attacks.
+
+What are the risks?
+
+The 2018 Norton LifeLock Cyber Safety Insights Report recently revealed consumers are concerned about their privacy (83 percent), but most say they accept certain risks to make life more convenient (61 percent).
+
+Many individuals regularly share details of their travels by posting photos on social media networks. Some don't even bother blurring out the booking reference of their tickets. These individuals may not be too concerned about their privacy and may actually want their followers to know about their whereabouts, but I'm fairly sure they would pay more attention should they arrive at their hotel and find that their reservation has been canceled. An attacker might decide to cancel a reservation just for fun or as personal revenge, but it could also be to damage the reputation of a hotel as part of an extortion scheme or as an act of sabotage carried out by a competitor.   
+
+There have also been quite a few data breaches in the hospitality sector and exposure of data on poorly configured cloud data buckets. Such information could then be sold on underground markets or be used to commit identity fraud. The more complete the gathered data set is, the more valuable it is.
+
+Scammers could also use data gathered this way to send convincing personalized spam or carry out other social engineering attacks. Supplying personal information could boost the credibility of extortion mails, like the ones that claim you have been hacked.
+
+Moreover, targeted attack groups may also be interested in the movements of business professionals and government employees. A number of APT groups such as DarkHotel/Armyworm, OceanLotus/Destroyer, Swallowtail, and Whitefly are known to have compromised targets in the hospitality sector. There are various reasons why these groups are interested in this sector, including for general surveillance purposes, tracking a target's movements, identifying individuals accompanying them, or finding out how long someone is staying in a particular place. It could also allow for physical access to a target's location.
+
+Resolving the issue
+
+Under the GDPR, the personal data of individuals in the EU must be better protected in light of such issues. However, the affected hotels' response to my findings was disappointing.
+.I contacted the data privacy officers (DPOs) of the affected hotels and informed them of my findings. A surprising 25 percent of DPOs did not reply within six weeks. One email bounced, as the email address in the privacy policy was no longer active. Of those who did respond, it took them an average of 10 days. Those who did respond mainly confirmed receiving my inquiry and committed to investigating the issue and implementing any necessary changes. Some argued that it wasn't personal data at all and that the data has to be shared with advertising companies as stated in the privacy policy. Some admitted that they are still updating their systems to be fully GDPR-compliant. Other hotels that use external services for their booking systems became concerned that service providers turned out not to be GDPR-compliant after all, indicating the hotels may not have conducted proper vetting of their service booking partners per GDPR requirements.
+
+Mitigation
+
+Booking sites should use encrypted links (HTTPS) and ensure that no credentials are leaked as URL arguments. Customers can check if links are encrypted or if personal data, such as their email address, is passed as visible data in the URL. They can also use VPN services to minimize their exposure on public hotspots. Unfortunately, for the average hotel guest, spotting such leaks may not be an easy task, and they may not have much choice if they want to book a specific hotel.
+
+The fact that this issue exists, despite the GDPR coming into effect in Europe almost one year ago, suggests that the GDPR's implementation has not completely addressed how organizations respond to data leakage. More than 200,000 cases of GDPR violations, complaints, and data breaches have been reported so far, and users' personal data remains at risk.

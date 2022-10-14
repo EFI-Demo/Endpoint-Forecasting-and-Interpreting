@@ -1,0 +1,35 @@
+
+Over the weekend a rash of articles appeared across the Internet referring to a "new" Mac Trojan named "Revir.A". The first one that came to my attention was on the F-Secure Blog last Friday. I was able to obtain a copy of the referenced sample for this "Trojan" and started to analyse it.
+
+However, before I tell you how it turned out, I can't tell this story without telling another story first.
+
+As many security researchers are, I belong to several Mailing lists.  They are great tools to use when exchanging information with other researchers or talking about the newest things we've found.  It seems that no matter what the new technology is for exchanging data (Sharepoint, Wiki's, Google Wave), Email always seems to win.
+
+Well, back in May I was able to mine a small nugget of awesome from one of these Mailing lists.  Someone warned the list members of a new "Trojan" that was spreading, spoofing who it was from, and that it appeared to be a new SpearPhishing campaign. So naturally, I asked for a copy.
+
+What I received was a "Trojan" (Trojan is in air quotes there) for the Mac.  Something never seen before (as described by Virustotal) and was packaged up into a .zip file.
+
+This .zip file contained an Application for the Mac (.app) with the familiar Finder icon. A couple of reports we received said that the program executed by double clicking it, however, in our test suite, the embedded binary did not execute.
+
+This "Trojan" (as the trojan writer called it, I mean really... Trojan?) upon execution will display a PDF named "Survey.pdf", asking you to take a "Product Satisfaction Survey". Now, remember this was back in May. The VRT provided detection and protection for our AntiVirus customers (ClamAV and Immunet) as well as Snort detection at the time.
+
+Fast forward to this past weekend when a new "PDF" (It wasn't a PDF, it just looked like a PDF, contrary to some new reports) document started making the rounds. As I said in the beginning of my story, I managed to get a hold of this "PDF Trojan" and took a look inside.
+
+This new "Trojan" displayed a number of similarities to the other example we saw back in May. The same method for downloading other executables, a similar attack method, similar binary build methods, etc. Again the trojan wouldn't execute properly in our environment, some aspects of it functioned, and some didn't. Not a very good "Trojan" and certainly not as convincing as MacDefender.
+
+In any case, ClamAV and Immunet customers are now protected against this malware:
+MacOSX.Revir-1
+
+Snort customers: 
+Sid:20202 <-> BOTNET-CNC OSX.Revir-1 outbound connection
+
+Sid:20203 <-> BLOCKLIST DNS request for known malware domain tarmu.narod.ru
+
+As always, I'll keep reading the email from my lists, ever vigilant, keeping an eye open for the latest Mac malware, but if any of you reading this come across something, please get in touch with me or the VRT and let us know.  The VRT contact information can be found here: http://labs.snort.org/contact.html  To contact me directly, if you don't already know my email address, it is my first initial my last name at sourcefire.com :D
+
+Update:  After performing more research into the trojan, the original rules that were authored back in May also alert on this newest variant.  Ensure you have the following rules enabled as well:
+Sid:19017 <-> BOTNET-CNC MacBack Trojan outbound connection attempt
+Sid:19018 <-> BOTNET-CNC MacBack Trojan outbound connection attempt
+Sid:19019 <-> BOTNET-CNC MacBack Trojan outbound connection attempt
+
+

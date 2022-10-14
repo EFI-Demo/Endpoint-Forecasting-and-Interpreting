@@ -1,0 +1,128 @@
+
+		Gaining kernel privileges by taking advantage of legitimate but vulnerable kernel drivers has become an established tool of choice for advanced adversaries. Multiple malware attacks, including RobbinHood, Uroburos, Derusbi, GrayFish, and Sauron, and campaigns by the threat actor STRONTIUM, have leveraged driver vulnerabilities (for example, CVE-2008-3431, CVE-2013-3956, CVE-2009-0824, CVE-2010-1592, etc.) to gain kernel privileges and, in some cases, effectively disable security agents on compromised machines.
+Defending against these types of threats—whether those that live off the land by using what’s already on the machine or those that bring in vulnerable drivers as part of their attack chain—requires a fresh approach to security, one that combines threat defense on multiple levels: silicon, operating system, and cloud. Microsoft brought this chip-to-cloud approach with Azure Sphere, the integrated security solution for IoT devices and equipment. We brought the same approach to securing endpoint devices through Secured-core PCs.
+Secured-core PCs combine virtualization, operating system, and hardware and firmware protection. Along with Microsoft Defender Advanced Threat Protection, Secured-core PCs provide end-to-end protection against advanced threats.
+Hardware profile guaranteed to support the latest hardware-backed security features
+Microsoft worked internally and externally with OEM partners Lenovo, HP, Dell, Panasonic, Dynabook, and Getac to introduce a new a class of devices, Secured-core PCs. Secured-core PCs address the need for customers to perform the complex decision flow of mapping which security feature (e.g., hypervisor-protected code integrity (HVCI), virtualization-based security (VBS), Windows Defender Credential Guard) are supported by which hardware (e.g., TPM 1.0, 2.0, etc.).
+With Secured-core PCs, customers no longer need to make this complex decision; they’re assured that these devices support the latest hardware-backed security features.
+Hardware-backed security features enabled by default
+Secured-core PCs have the hardware-backed security featured enabled by default, removing the need for customers to test and enable these features, which require a combination of BIOS and OS settings changes.
+Because both BIOS settings and OS settings are enabled out of the box with these devices, the burden to enable these features onsite is removed for customers. The following hardware-backed security features are enabled by default on any Secured-core PC:
+ 
+
+
+
+Security promise
+Technical features
+
+
+Protect with hardware root of trust
+TPM 2.0 or higher
+TPM support enabled by default
+Virtualization-based security (VBS) enabled
+
+
+Defend against firmware attack
+Windows Defender System guard enabled
+
+
+Defend against vulnerable and malicious drivers
+Hypervisor-protected code integrity (HVCI) enabled
+
+
+Defend against unverified code execution
+Arbitrary code generation and control flow hijacking protection [CFG, ACG, CIG, KDP] enabled
+
+
+Defend against limited physical access, data attacks
+Kernel DMA protection enabled
+
+
+Protect identities and secrets from external threats
+Credential Guard BIOS pre-requisites (VBS) enabled
+Windows Hello support
+
+
+
+While some of these features have previously existed, customers had the burden of (1) choosing the right hardware profile that supported all of these features and (2) enabling these features on their devices. With Secured-core PCs, these hardware-backed security features are assured to work on the hardware and are enabled by default.
+Advanced security features: Secure device risk, anti-tampering, driver control, firmware control, supply-chain interdiction, and more
+The hardware-backed security features that are enabled by default, along with a combination of Secured-core services, seamlessly integrate with Microsoft Defender ATP, lighting up additional security scenarios and providing unified protection against the entire attack chain.
+In this blog, we will showcase how Secured-core PC features deliver strong driver controls that protects against threats that use vulnerable drivers to elevate privilege, using the RobbinHood ransomware as example.
+Case study: Secured-core PCs vs. RobbinHood ransomware
+RobbinHood ransomware is distributed as a packed executable that contains multiple binaries. One of these files is a Gigabyte driver (GDRV.sys), which has a vulnerability that  could allow elevation of privilege, enabling an adversary to gain kernel privileges. In RobbinHood campaigns, adversaries use these kernel privileges to disable kernel-mode signing to facilitate the loading of an unsigned driver. The unsigned malicious driver is then used to disable security products from the kernel.
+
+Figure 1. RobbinHood ransomware attack chain
+RobbinHood is not an isolated threat leveraging a vulnerable driver to achieve elevation of privilege. In the last two years, the Microsoft Defender ATP Research Team has seen a rise in the use of vulnerable drivers by adversaries, ranging from commodity malware to nation-state level attacks. In addition to vulnerable drivers, there are also drivers that are vulnerable by design (also referred to as “wormhole drivers”), which can break the security promise of the platform by opening up direct access to kernel-level arbitrary memory read/write, MSRs.
+In our research, we identified over 50 vendors that have published many such wormhole drivers. We actively work with these vendors and determine an action plan to remediate these drivers. In order to further help customers identify these drivers and take necessary measures, we built an automated way in which we can block vulnerable drivers, and that is updated through Windows update. Customers can also manage their own blocklist as outlined in the sections below.
+Preventive defenses
+Two of the security promises of Secured-core PCs are directly applicable to preventing RobbinHood attacks:
+
+Defending against vulnerable and malicious drivers
+Defending against unverified code execution
+
+Defending against vulnerable and malicious drivers
+Secured-core PCs are the latest hardware to provide driver control out of the box, with baseline configuration already set. Driver control is provided by a combination of HVCI & Windows Defender Application Control (WDAC) technologies.
+Every driver loaded into the kernel is verified by HVCI before it’s allowed to run. HVCI runs in a hardware-protected execution environment isolated from the kernel space and cannot be tampered with by other code running in the kernel, including drivers.
+Driver control uses HVCI & WDAC technologies to perform the following operations:
+
+Validity and memory integrity enforcement at load-time and runtime
+
+HVCI uses hardware-based virtualization and the hypervisor (the same hypervisor also used in Azure) to protect Windows kernel mode processes from injection and execution of malicious or unverified code. The integrity of code that runs in the Windows kernel is validated by HVCI according to the kernel signing policy applied to the device. Additionally, kernel memory pages are never simultaneously writable and executable. This makes Secured-core PCs highly resistant to malicious software attempting to gain code execution in the kernel.
+In the case of GDRV.sys, which is the driver used by the RobbinHood malware, if the vulnerable driver is successfully loaded and then exploited, the runtime memory integrity check would protect the critical components. Thus, an attack to change ci!g_CiOptions and nt!g_CiEnabled, would be ineffective, as the kernel ignores changes to the variables coming from the general kernel space. And, as code integrity is enabled by default, the malicious driver RBNL.sys wouldn’t load.
+The image below shows an event log from a Secured-core PC showing runtime memory integrity check preventing the CI options from being tampered with by RobbinHood and, subsequently, preventing the malicious driver RBNL.sys from being loaded.
+
+Figure 2. Event log from Secured-core PC
+Because runtime memory integrity check is enabled by default on Secured-core PCs, RobbinHood wouldn’t be able to disable code integrity on these machines.
+
+Blocklist check
+
+While the most ideal scenario is for enterprises to set customer-specific allows lists, it can be a complex undertaking. To help customers, HVCI uses a blocklist of drivers that are blocked from loading. This blocklist is supplied in two ways:
+
+
+
+Microsoft-supplied blocklist
+
+
+
+Microsoft threat research teams continuously monitor the threat ecosystem and update the list of drivers that in the Microsoft-supplied blocklist. This blocklist is pushed down to devices via Windows update.
+We’ve heard from customers that they’d like to provide a list of drivers that should be on the generic Microsoft-supplied blocklist. We’re working on a new feature that allow customers to submit drivers that they’d like us to review and add to the Microsoft-supplied blocklist.
+
+
+
+Customer-specific blocklist
+
+
+
+We recognize that there are situations where customers want a blocklist specific to their organization. By default, any validly signed driver is accepted, but customers can choose to reduce the list of accepted drivers by choosing only WHQL signed drivers. These are drivers that are submitted to Microsoft for signing and are run through a number of tests before being signed.
+Devices can apply a custom code integrity policy that customers can use to define their own specific blocklist. This article has more information on how to create such a customer specific blocklist. Below is an example of a customer-specific blocklist that blocks the vulnerable driver GDRV.sys.
+
+Figure 3. Custom blocklist that blocks the vulnerable driver GDRV.sys
+Defending against unverified code execution and kernel data corruption attacks
+There are several unverified code execution mitigations built-in to Windows. These are readily available on Secured-core PCs.
+The RobbinHood attack utilized the vulnerable GDRV.sys driver to change a crucial variable within the system memory. Although HVCI already protects against the attack on g_CiOptions, other areas of memory may still be susceptible, and we need broader defense against kernel data corruption attacks.
+In addition to existing mitigations, Windows is introducing a new feature called Kernel Data Protection (KDP), which provides driver developers and software running in the Windows kernel (and the OS code itself) with the ability to mark some kernel memory containing sensitive information as read-only protected. The memory is protected through the second level address translation (SLAT) tables by the hypervisor, such that no software running in VTL0 have access to the protected memory. KDP does not protect executable pages, as those are already protected with HVCI.
+Many kernel components have data that is set only once during boot and remains unchanged for the rest of the boot cycle. The first release of KDP protects the static data sections of a driver. In the future, we’re also planning to provide APIs to dynamically allocate and release protected initialized pool memory.
+Secured-core PCs have KDP enabled by default.
+Detection defenses
+As observed in RobbinHood attacks, once the threat gains kernel-level privilege, the threat turns off system defenses, including the endpoint protection agent. Secured-core PCs provide a monitoring agent that utilizes virtualization-based security and runs in this protected environment.
+The monitoring agent performs several functions. The ones relevant for this case study are:
+
+Secure anti-tampering for security agents
+Secure monitoring of Windows
+
+Secure anti-tampering for security agents
+This monitoring agent watches for attempts to tamper with the security agents. For Microsoft Defender ATP customers, these are integrated into alerts that are surfaced in Microsoft Defender Security Center.
+
+Figure 4. Windows Defender System Guard runtime monitor agent
+Secure monitoring of Windows
+The agent also monitors several areas of Windows, including checking for kernel exploit behavior that are often used to elevate privileges. In this particular case, the monitoring agent detected a token tampering assertion.
+
+Figure 5. Microsoft Defender ATP alert for process privilege escalation
+Secured-core PCs have both VBS and this secure monitoring agent turned on by default.
+Conclusion
+As this case study demonstrates, more and more threats are becoming so advanced that they can bypass software-only based defenses. Secured-core PCs are protected from RobbinHood and similar threats by default.
+Customers can also get similar protection on traditional devices as long as they have the necessary hardware and are configured correctly. Specifically, the following features need to be enabled: Secure boot, HVCI (enables VBS), KDP (automatically turned on when VBS is on), KDMA (Thunderbolt only) and Windows Defender System Guard.
+With Secured-core PCs, however, customers get a seamless chip to cloud security pattern that starts from a strong hardware root of trust and works with cloud services and Microsoft Defender ATP to aggregate and normalize the alerts from hardware elements to provide end-to-end endpoint security.
+Overall improved endpoint protection accrues to the broader Microsoft Threat Protection, which combines and orchestrates into a single solutions the capabilities of Microsoft Defender ATP, Office 365 ATP, Azure ATP, and Microsoft Cloud App Security to provide comprehensive, cross-domain protection for endpoints, email and data, identities, and apps.
+ 
+	

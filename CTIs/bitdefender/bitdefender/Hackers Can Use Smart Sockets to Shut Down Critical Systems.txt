@@ -1,0 +1,46 @@
+Users might be risking their privacy, and even physical security, when using smart plugs to manage appliances in homes, office buildings and other spaces. A popular electrical socket is vulnerable to malicious firmware upgrades and can be controlled remotely to expose users to both physical and online security risks, Bitdefender IoT researchers found.
+As part of Bitdefender’s continuous efforts to raise awareness on the security hazards posed by Internet of Things technologies, researchers have performed a new analysis on IoT gadgets and are ready to reveal the findings.
+The vulnerable device is a smart electrical switch that plugs into any wall socket and enables users to schedule a connected electronic device on and off from their smartphone. It can power any gadget – thermostats, smart TVs, coffee makers, security cameras, garage doors, and medical devices and so on.
+Configuring the device
+
+To set up the device, the user needs to plug it in a regular electrical socket. Secondly, he is required to download the corresponding mobile app from Google Play Store or the Apple Store. The mobile app has been downloaded by over 10k Android users alone, at the time of writing.
+In the mobile application, the user selects the option to install a new plug and chooses the home Wi-Fi network from the list. The mobile application tries to establish a connection with the device’s hotspot and after it detects it, the app connects automatically. The user is asked to introduce the credentials of his home network, which the app transmits to the device. The smart plug connects to the local network and the setup process is complete.
+Next, the device registers to vendor servers through UDP messages containing information on the model, the device name and MAC address. The same data, plus the firmware version, port and local IP address, is sent in reply to the app.
+
+Figure 2. Information sent to application
+Vulnerability insights
+Bitdefender researchers observed that the hotspot is secured with a weak username and password combination. Furthermore, the application does not alert the user to risks associated with leaving default credentials unchanged. Changing them can be done by clicking ‘Edit’ on the name of the smart plug from the main screen and choosing a new name and a new password.
+Secondly, researchers noticed that, during configuration, the mobile app transfers the Wi-Fi username and password in clear text over the network. Also, the device-to-application communication that passes through the manufacturer’s servers is only encoded, not encrypted. Encoding can be easily reversed using a scheme that is publicly available, while encryption keeps data secret, locked with a key available for a selected few.
+
+Figure  3. Device name and password sent unsecured over the network
+Lastly, a product feature allows the device to be configured to send email notifications to the user every time it switches from one state to another. However, this functionality requires access the user’s email account credentials.
+
+Figure 4. Email notification service
+Possible attacks 
+In light of the above information, there are two types of cyber-attacks that can be performed. To test the applicability of the attacks, Bitdefender researchers created a test environment – a local network replicating, as accurately as possible, the real conditions in which sensitive data is being communicated.
+Password remote control
+If an attacker knows the MAC address of the device and the default password, he can gain remote control of the device to re-schedule it, or access all the information the device uses, including the user’s email address and password, if the email notification feature is enabled. This can lead to the full compromise of the linked email account, unless two-factor authentication is enabled.
+Firmware upgrade through command injection
+The device hashes its own credentials using the MD5 algorithm. Hashing means that, for every input (string of data), a hash delivers a unique value of 32 characters. This is done through the md5sum command, which receives the joined username and password as a parameter.
+This method is prone to command injection because the password is not sanitized. Sanitization strips invalid characters typically banned in usernames, passwords or email addresses such as commas, question marks or Unicode characters.
+The password, for instance, can contain the “;” symbol that may be misinterpreted as the end of a command. Thus, the initial command ends before “;”, and a command specified in the newly created password will be executed.
+
+Figure 5. Hashing credentials through md5sum command
+When an attacker exploits this flaw, the commands specified in the new password overwrite the root password and can open the embedded Telnet service. Using Telnet, an attacker, regardless of his location, can send commands to stop/start/schedule the device, as well as to execute rogue commands, including running malicious firmware to achieve persistence or using the device to perform attacks on other computers or devices inside the local network.
+“This type of attack enables a malicious party to leverage the vulnerability from anywhere in the world”, says Alexandru Balan, Chief Security Researcher at Bitdefender. “Up until now most IoT vulnerabilities could be exploited only in the proximity of the smart home they were serving, however, this flaw allows hackers to control devices over the Internet and bypass the limitations of the network address translation. This is a serious vulnerability, we could see botnets made up of these power outlets.”
+
+Figure 6. Connecting to Telnet to access the compromised device remotely
+“One of the most destructive actions an attacker can take is to rip off the existing software and plant malicious software in its place,” says George Cabau, antimalware researcher at Bitdefender. “For users, the consequences can extend to losing control of all their network-connected devices as they become weapons of attack in a cyber-criminal network, as well as to exposing their email accounts and their contents.”
+Advice for users
+This research reminds users to take into account the security imperfections of Internet of Things devices, because exploiting them may result in serious consequences to their online privacy and even physical security. Bitdefender advises users to:
+Perform a thorough research before buying an IoT device for their homes. Online reviews may reveal privacy issues other users have encountered.
+Test the gadget to understand how it works (if possible). How does it connect to the Internet, what data can it access, where is that data stored and under what circumstances?
+Proper research into the new device will help users weigh the risks and benefits – can this device turn into a privacy hazard? Using data collected from it, could someone infiltrate the home Wi-Fi network to snoop on private conversations and steal other personal information?
+Read the privacy statement before activating the device and connecting it to the web.
+Install a home cyber-security solution designed for IoTs. It will scan the whole network to provide anti-phishing protection, malicious-website alerts, detection and quarantining of any malware or rogue users.
+Bitdefender is at the forefront of the home integrated cyber-security industry since designing Bitdefender BOX, the first home security solution for connected devices. The BOX solves one of the biggest challenges derived from the IoT market’s complexity and fragmentation – security for “non-classical” devices.  This was made possible by shifting from device-oriented security to a solution able to intercept attacks at their core: the home network.
+Thus, Bitdefender BOX provides advanced malware protection for all connected devices – smartphones, PCs, Macs, home appliances, wearables and others. The product has been recently upgraded with a Vulnerability Assessment feature, which scans devices to pinpoint their security weaknesses, and Active Threat Control, which stops even never-before-seen malware.
+Responsible disclosure and status
+Bitdefender practiced reasonable disclosure with the vendor of the aforementioned IoT equipment. So, as a matter of course, the vulnerabilities were reported in accordance to Bitdefender’s vulnerability disclosure policy. According to this policy, vendors are officially informed of the findings and encouraged to solve the bugs/flaws in their products. 30 days after the initial reporting, the findings are published.
+The vendor is working on a fix to be released in Q3 of 2016.
+The technical analysis has been performed by Bitdefender researchers Dragos Gavrilut, Radu Basaraba and George Cabau.

@@ -1,0 +1,40 @@
+
+This week we are introducing a new rule category into the VRT rule set, named "file-identify.rules".  The purpose of this category is to standardize the structure of rules that “set” a flowbit and to enhance detection by looking into file data. The changes will occur in two stages.
+
+Stage 1. The creation of a series of rules that detect the "magic" in files, probably around 70 to start, with more being added as time passes and needs arise. For example:
+
+alert tcp $EXTERNAL_NET $FILE_DATA_PORTS -> $HOME_NET any (msg:"FILE-IDENTIFY PNG file magic detection"; flow:to_client,established; file_data; content:"|89|PNG|0D 0A 1A 0A|"; within:8; fast_pattern; flowbits:set,http.png; flowbits:noalert; classtype:misc-activity; sid:20478; rev:1;)
+
+In this example, the magic at the beginning of the file is detected (the "|89|PNG|0D 0A 1A 0A|”) and the flowbit is set for this particular file type. This will allow a flowbit to be set for file types based on the data in the file and not the file extension in say a URI. For example, if a rule looks for “.jpg” in the URI and sets the “http.jpg” flowbit to track the download for the image requested, but the file is actually a PDF with a .jpg extension, then further detection based on the setting of this flowbit could lead to false positive events at best and false negative events at worst.
+
+Stage 2. Move all URI checks for file extensions over to "file-identify". A lot of work has been done to cleanup these rules. They now have a well defined and consistent structure, with references, flow, message, detection, classtype and pcre options all standardized.
+
+For example:
+
+alert tcp $HOME_NET any -> $EXTERNAL_NET $HTTP_PORTS (msg:"WEB-CLIENT .hta download attempt"; flow:to_server,established; content:".hta"; nocase; http_uri; pcre:"/\.hta(\b|$)/Ui"; flowbits:set,http.hta; flowbits:noalert; classtype:not-suspicious; sid:3551; rev:4;)
+
+Now reads:
+
+alert tcp $HOME_NET any -> $EXTERNAL_NET $HTTP_PORTS (msg:"FILE-IDENTIFY HTA file download request"; flow:to_server,established; content:".hta"; nocase; http_uri; fast_pattern:only; pcre:"/\x2ehta([\?\x5c\x2f]|$)/smiU"; flowbits:set,http.hta; flowbits:noalert; reference:url,en.wikipedia.org/wiki/HTML_Application; classtype:misc-activity; sid:3551; rev:5;)
+
+And rules like this:
+
+alert tcp $EXTERNAL_NET $HTTP_PORTS -> $HOME_NET any (msg:"WEB-CLIENT GIF transfer"; flow:from_server,established; content:"image/"; nocase; http_header; pcre:"/^Content-Type\x3a(\s*|\s*\r?\s+)image\x2fgif/smiH"; flowbits:set,http.gif; flowbits:noalert; classtype:protocol-command-decode; sid:3535; rev:9;)
+
+Have been changed (or eliminated in this case) and have been split into two:
+
+alert tcp $HOME_NET any -> $EXTERNAL_NET $HTTP_PORTS (msg:"FILE-IDENTIFY GIF file download request"; flow:to_server,established; content:".gif"; nocase; http_uri; fast_pattern; pcre:"/\x2egif([\?\x5c\x2f]|$)/smiU"; flowbits:set,http.gif; flowbits:noalert; classtype:misc-activity; sid:17394; rev:2;)
+
+alert tcp $EXTERNAL_NET $FILE_DATA_PORTS -> $HOME_NET any (msg:"FILE-IDENTIFY GIF file magic detection"; flow:to_client,established; file_data; content:"GIF8"; within:4; fast_pattern; content:"a"; within:1; distance:1;  flowbits:set,http.gif; flowbits:noalert; classtype:misc-activity; sid:20459; rev:1;)
+
+Over the course of the next week, these changes will be made to the rule set, and a new variable will be introduced in the snort configuration file:
+
+portvar FILE_DATA_PORTS  [$HTTP_PORTS,110,143]
+
+Following these two introductions, the structure and formatting of all the flowbit names will be standardized. For example, replacing names like “http.gif” with “file.gif”, will reflect more accurately what is being detected.
+
+Action items for you:
+
+#1. You'll need to add the above variable to your snort.conf, use the snort.conf in the VRT tarball, or download the new snort.conf .
+#2. If you are using the Sourcefire product, or PulledPork, the change should be minimal. The Sourcefire product and PulledPork perform flowbit auto-enabling and resolution. If you are using another tool to mange your installation, you will need to pay attention to this rule category.
+

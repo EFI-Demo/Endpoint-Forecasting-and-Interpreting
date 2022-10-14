@@ -1,0 +1,88 @@
+
+		The linchpin of successful cyberattacks, exemplified by nation state-level attacks and human-operated ransomware, is their ability to find the path of least resistance and progressively move across a compromised network. Determining the full scope and impact of these attacks is one the most critical, but often most challenging, parts of security operations.
+To provide security teams with the visibility and solutions to fight cyberattacks, Microsoft 365 Defender (previously Microsoft Threat Protection) correlates threat signals across multiple domains and point solutions, including endpoints, identities, data, and applications. This comprehensive visibility allows Microsoft 365 Defender to coordinate prevention, detection, and response across your Microsoft 365 data.
+One of the many ways that Microsoft 365 Defender delivers on this promise is by providing high-quality consolidation of attack evidence through the concept of incidents. Incidents combine related alerts and attack behaviors within an enterprise. An example of an incident is the consolidation of all behaviors indicating ransomware is present on multiple machines, and connecting lateral movement behavior with initial access via brute force. Another example can be found in the latest MITRE ATT&CK evaluation, where Microsoft 365 Defender automatically correlated 80 distinct alerts into two incidents that mirrored the two attack simulations.
+The incident view helps empower defenders to quickly understand and respond to the end-to-end scope of real-world attacks. In this blog we will share details about a data-driven approach for identifying and augmenting incidents with behavioral evidence of lateral movement detected through statistical modeling. This novel approach, an intersection of data science and security expertise, is validated and leveraged by our own Microsoft Threat Experts in identifying and understanding the scope of attacks.
+Update [5/9/2022]: In line with the recently announced expansion into a new service category called Microsoft Security Experts, we’re introducing the availability of Microsoft Defender Experts for Hunting for public preview. Defender Experts for Hunting is for customers who have a robust security operations center but want Microsoft to help them proactively hunt for threats across Microsoft Defender data, including endpoints, Office 365, cloud applications, and identity.
+Identifying lateral movement
+Attackers move laterally to escalate privileges or to steal information from specific machines in a compromised network. Lateral movement typically involves adversaries attempting to co-opt legitimate management and business operation capabilities, including applications such as Server Message Block (SMB), Windows Management Instrumentation (WMI), Windows Remote Management (WinRM), and Remote Desktop Protocol (RDP). Attackers target these technologies that have legitimate uses in maintaining functionality of a network because they provide ample opportunities to blend in with large volumes of expected telemetry and provide paths to their objectives. More recently, we have observed attackers performing lateral movement, and then using the aforementioned WMI or SMB to deploy ransomware or data-wiping malware to multiple target machines in the network.
+A recent attack from the PARINACOTA group, known for human-operated attacks that deploy the Wadhrama ransomware, is notable for its use of multiple methods for lateral movement. After gaining initial access to an internet-facing server via RDP brute force, the attackers searched for additional vulnerable machines in the network by scanning on ports 3389 (RDP), 445 (SMB), and 22 (SSH).
+The adversaries downloaded and used Hydra to brute force targets via SMB and SSH. In addition, they used credentials that they stole through credential dumping using Mimikatz to sign into multiple other server machines via Remote Desktop. On all additional machines they were able to access, the attackers performed mainly the same activities, dumping credentials and searching for valuable information.
+Notably, the attackers were particularly interested in a server that did not have Remote Desktop enabled. They used WMI in conjunction with PsExec to allow remote desktop connections on the server and then used netsh to disable blocking on port 3389 in the firewall. This allowed the attackers to connect to the server via RDP.
+They eventually used this server to deploy ransomware to a huge portion of the organization’s server machine infrastructure. The attack, an example of a human-operated ransomware campaign, crippled much of the organization’s functionality, demonstrating that detecting and mitigating lateral movement is critical.
+
+Figure 1. PARINACOTA attack with multiple lateral movement methods
+A probabilistic approach for inferring lateral movement
+Automatically correlating alerts and evidence of lateral movement into distinct incidents requires understanding the full scope of an attack and establishing the links of an attacker’s activities that show movement across a network. Distinguishing malicious attacker activities among the noise of legitimate logons in complex networks can be challenging and time-consuming. Failing to get an aggregated view of all related alerts, assets, investigations, and evidence may limit the action that defenders take to mitigate and fully resolve an attack.
+Microsoft 365 Defender uses its unique cross-domain visibility and built-in automation powered to detect lateral movement The data-driven approach to detecting lateral movement involves understanding and statistically quantifying behaviors that are observed to a part of one attack chain, for example, credential theft followed by remote connections to other devices and further unexpected or malicious activity.
+Dynamic probability models, which are capable of self-learning over time using new information, quantify the likelihood of observing lateral movement given relevant signals. These signals can include the frequency of network connections between endpoints over certain ports, suspicious dropped files, and types of processes that are executed on endpoints. Multiple behavioral models encode different facets of an attack chain by correlating specific behaviors associated with attacks. These models, in combination with anomaly detection, drive the discovery of both known and unknown attacks.
+Evidence of lateral movement can be modeled using a graph-based approach, which involves constructing appropriate nodes and edges in the right timeline. Figure 2 depicts a graphical representation of how an attacker might laterally move through a network. The objective of graphing an attack is to discover related subgraphs with high enough confidence to surface for immediate further investigation. Building behavioral models that can accurately compute probabilities of attacks is key to ensuring that confidence is correctly measured and all related events are combined.
+
+Figure 2. Visualization of network with an attacker moving laterally (combining incidents 1, 2, 4, 5)
+Figure 3 outlines the steps involved for modeling lateral movement and encoding behaviors that are later referenced for augmenting incidents. Through advanced hunting, examples of lateral movement are surfaced, and real attack behaviors are analyzed. Signals are then formed by aggregating telemetry, and behavioral models are defined and computed.
+
+Figure 3. Specifying statistical models to detect lateral movement encoding behaviors
+Behavioral models are carefully designed by statisticians and threat experts working together to combine best practices from probabilistic reasoning and security, and to precisely reflect the attacker landscape.
+With behavioral models specified, the process for incident augmentation proceeds by applying fuzzy mapping to respective behaviors, followed by estimating the likelihood of an attack. For example, if there’s sufficient confidence that the relative likelihood of an attack is higher, including the lateral movement behaviors, then the events are linked. Figure 4 shows the flow of this logic. We have demonstrated that the combination of this modeling with a feedback loop based on expert knowledge and real-world examples accurately discovers attack chains.
+
+Figure 4. Flow of incident augmentation algorithm based on graph inference
+Chaining together the flow of this logic in a graph exposes attacks as they traverse a network. Figure 5 shows, for instance, how alerts can be leveraged as nodes and DCOM traffic (TCP port 135) as edges to identify lateral movement across machines. The alerts on these machines can then be fused together into a single incident. Visualizing these edges and nodes in a graph shows how a single compromised machine could allow an attacker to move laterally to three machines, one of which was then used for even further lateral movement.
+ 
+Figure 5. Correlating attacks as they pivot through machines
+Augmenting incidents with lateral movement intel
+The PARINACOTA attack we described earlier is a human-operated ransomware campaign that involved compromising six newly onboarded servers. Microsoft 365 Defender automatically correlated the following events into an incident that showed the end-to-end attack chain:
+
+A behavioral model identified RDP inbound brute force attempts that started a few days before the ransomware was deployed, as depicted in Figure 6.
+When the initial compromise was detected, the brute force attempts were automatically identified as the cause of the breach.
+Following the breach, attackers dropped multiple suspicious files on the compromised server and proceeded to move laterally to multiple other servers and deploy the ransomware payload. This attack chain raised 16 distinct alerts that Microsoft 365 Defender, applying the probabilistic reasoning method, correlated into the same incident indicating the spread of ransomware, as illustrated in Figure 7.
+
+ 
+Figure 6. Indicator of brute force attack based on time series count of daily inbound public IP
+ 
+Figure 7. Representation of post breach and ransomware spreading from initial compromised server
+Another area where constructing graphs is particularly useful is when attacks originate from unknown devices. These unknown devices can be misconfigured machines, rogue devices, or even IoT devices within a network. Even when there’s no robust telemetry from devices, they can still be used as linking points for correlating activity across multiple monitored devices.
+In one example, as demonstrated in figure 8, we saw lateral movement from an unmonitored device via SMB to a monitored device. That device then established a connection back to a command-and-control (C2), set up persistence, and collected a variety of information from the device. Later, the same unmonitored device established an SMB connection to a second monitored device. This time, the only actions the attacker took was to collect information from the device.
+The two devices shared a common set of events that were correlated into the same incident:
+
+Sign-in from an unknown device via SMB
+Collecting device information
+
+
+Figure 8: Correlating attacks from unknown devices
+Conclusion
+Lateral movement is one of the most challenging areas of attack detection because it can be a very subtle signal amidst the normal hum of a large environment. In this blog we described a data-driven approach for identifying lateral movement in enterprise networks, with the goal of driving incident-level discovery of attacks, delivering on the Microsoft 365 Defender promise to provide coordinated defense against attacks. This approach works by:
+
+Consolidating signals from Microsoft 365 Defender’s unparalleled visibility into endpoints, identities, data, and applications.
+Forming automated, compound questions of the data to identify evidence of an attack across the data ecosystem.
+Building subgraphs of lateral movement across devices by modeling attack behavior probabilistically.
+
+This approach combines industry-leading optics, expertise, and data science, resulting in automated discovery of some of the most critical threats in customer environments today. Through Microsoft 365 Defender, organizations can uncover lateral movement in their networks and gain understanding of end-to-end attack chains. Microsoft 365 Defender empowers defenders to automatically stop and resolve attacks, so security operations teams can focus their precious time and resources to more critical tasks, including performing mitigation actions that can remove the ability of attackers to move laterally in the first place, as outlined in some of our recent investigations here and here.
+Microsoft 365 Defender harnesses the power of Microsoft 365 security products to deliver unparalleled coordinated defense that detects, correlates, blocks, remediates, and prevents attacks across an organization’s Microsoft 365 environment. Existing Microsoft 365 licenses provide access to Microsoft 365 Defender features in Microsoft 365 security center without additional cost. To start using Microsoft 365 Defender, go to security.microsoft.com.
+Learn how Microsoft 365 Defender can help your organization to stop attacks with coordinated defense. Read these blog posts in the Inside Microsoft 365 Defender series:
+
+Inside Microsoft 365 Defender: Mapping attack chains from cloud to endpoint
+Inside Microsoft 365 Defender: Correlating and consolidating attacks into incidents
+Inside Microsoft 365 Defender: Solving cross-domain security incidents through the power of correlation analytics
+
+Justin Carroll, Cole Sodja, Mike Flowers, Joshua Neil, Jonathan Bar Or, Dustin Duran
+Microsoft 365 Defender Team
+
+Talk to us
+Questions, concerns, or insights on this story? Join discussions at the Microsoft 365 Defender tech community.
+Read all Microsoft security intelligence blog posts.
+Follow us on Twitter @MsftSecIntel.
+
+		
+			
+				
+			
+
+			
+				Listen to the Security Unlocked podcast
+				Hear more from the author of this blog on episode #4 of Security Unlocked. Subscribe for new episodes each week covering the latest in security news.
+				Listen now
+			
+		
+
+		
+	

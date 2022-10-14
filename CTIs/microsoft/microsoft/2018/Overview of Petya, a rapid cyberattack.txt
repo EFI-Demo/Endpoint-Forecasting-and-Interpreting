@@ -1,0 +1,56 @@
+
+		In the first blog post of this 3-part series, we introduced what rapid cyberattacks are and illustrated how they are different in terms of execution and outcome. Next, we will go into some more details on the Petya (aka NotPetya) attack.
+How Petya worked
+The Petya attack chain is well understood, although a few small mysteries remain. Here are the four steps in the Petya kill chain:
+
+Figure 1: How the Petya attack worked
+
+Prepare – The Petya attack began with a compromise of the MEDoc application. As organizations updated the application, the Petya code was initiated.
+Enter – When MEDoc customers installed the software update, the Petya code ran on an enterprise host and began to propagate in the enterprise.
+Traverse – The malware used two means to traverse:
+
+Exploitation – Exploited vulnerability in SMBv1 (MS17-010).
+Credential theft – Impersonated any currently logged on accounts (including service accounts).
+Note that Petya only compromised accounts that were logged on with an active session (e.g. credentials loaded into LSASS memory).
+
+
+Execute – Petya would then reboot and start the encryption process. While the screen text claimed to be ransomware, this attack was clearly intended to wipe data as there was no technical provision in the malware to generate individual keys and register them with a central service (standard ransomware procedures to enable recovery).
+
+Unknowns and Unique Characteristics of Petya:
+Although it is unclear if Petya was intended to have as widespread an impact as it ended up having, it is likely that this attack was built by an advanced group, considering the following:
+
+The Petya attack wiped the event logs on the system, which is “unneeded” as the drive was wiped later anyways. This leaves an open question on whether this is just standard anti-forensic practice (as is common for many advanced attack groups) or whether there were other attack actions/operations being covered up by Petya.
+The supply chain approach taken by Petya requires a well-funded adversary with a high level of investment into attack skills/capability. Although supply chain attacks are rising, these still represent a small percentage of how attackers get into corporate environments and require a higher degree of sophistication to execute.
+
+Petya and Traversal/Propagation
+Our observation was that Petya spread more by using identity impersonation techniques than through MS17-010 vulnerability exploitation. This is likely because of the emergency patching initiatives organizations followed to deploy MS17-010 in response to the WannaCrypt attacks and associated publicity.
+The Petya attacks also resurfaced a popular misconception about mitigating lateral traversal which comes up frequently in targeted data theft attacks. If a threat actor has acquired the credentials needed for lateral traversal, you can NOT block the attack by disabling execution methods like PowerShell or WMI. This is not a good choke point because legitimate remote management requires at least one process execution method to be enabled.
+
+Figure 2: How the Petya attack spreads
+You’ll see in the illustration above that achieving traversal requires three technical phases:
+1st phase: Targeting – Identify which machines to attack/spread to next.
+Petya’s targeting mechanism was consistent with normal worm behavior. However, Petya did include a unique “innovation” where it acquired IPs to target from the DHCP subnet configuration from servers and DCs to accelerate its spread.
+2nd phase: Privilege acquisition – Gain the privileges required to compromise those remote machines.
+A unique aspect of Petya is that it used automated credential theft and re-use to spread, in addition to the vulnerability exploitation. As mentioned earlier, most of the propagation in the attacks we investigated was due to the impersonation technique. This resulted in impersonation of the SYSTEM context (computer account) as well as any other accounts that were logged in to those systems (including service accounts, administrators, and standard users).
+3rd phase: Process execution – Obtain the means to launch the malware on the compromised machine.
+This phase is not an area we recommend focusing defenses on because:
+
+An attacker (or worm) with legitimate credentials (or impersonated session) can easily use another available process execution method.
+Remote management by IT operations requires at least one process execution method to be available.
+
+Because of this, we strongly advise organizations to focus mitigation efforts on the privilege acquisition phase (2) for both rapid destruction and targeted data theft attacks, and not prioritize blocking at the process execution phase (3).
+
+Figure 3: Most Petya propagations were due to impersonation (credential theft)
+Because of the dual channel approach to propagation, even an organization that had reached 97% of their endpoints with MS17-010 patching was infected enterprise-wide by Petya. This shows that mitigating just one vector is not enough.
+The good news here is that any investment made into credential theft defenses (as well as patching and other defenses) will directly benefit your ability to stave off targeted data theft attacks because Petya simply re-used attack methods popularized in those attacks.
+Attack and Recovery Experience: Learnings from Petya
+Many impacted organizations were not prepared for this type of disaster in their disaster recovery plan. The key areas of learnings from real world cases of these attacks are:
+
+Figure 4: Common learnings from rapid cyberattack recovery
+Offline Recovery Required – Many organizations affected by Petya found that their backup applications and Operating System (OS) deployment systems were taken out in the attack, significantly delaying their ability to recover business operations. In some cases, IT staff had to resort to printed documentation because the servers housing their recovery process documentation were also down.
+Communications down – Many organizations also found themselves without standard corporate communications like email. In almost all cases, company communications with employees was reliant on alternate mechanisms like WhatsApp, copy/pasting broadcast text messages, mobile phones, personal email addresses, and Twitter.
+In several cases, organizations had a fully functioning Office 365 instance (SaaS services were unaffected by this attack), but users couldn’t access Office 365 services because authentication was federated to the on premises Active Directory (AD), which was down.
+More information
+To learn more about rapid cyber attacks and how to protect against them, watch the on-demand webinar: Protect Against Rapid Cyberattacks (Petya, WannaCrypt, and similar).
+Look out for the next and final blog post of a 3-part series to learn about Microsoft’s recommendations on mitigating rapid cyberattacks.
+	

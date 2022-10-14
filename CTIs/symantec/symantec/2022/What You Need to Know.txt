@@ -1,0 +1,128 @@
+As the world becomes accustomed to living with COVID-19, people are increasingly having to prove they are vaccinated, often via the use of so-called digital vaccine passports containing their identity and vaccination record. Employers, restaurants, even the neighborhood bar are relying on this system to be secure, accurate, and to maintain user privacy. The person using the passport is also expecting the same thing. 
+
+With a lack of federal guidance or global policy, it has been left up to country, state, or even local municipalities to decide what passes as an "official" vaccine passport. Without clear requirements, the private and public sector providers of vaccine passport apps must tackle evaluating a technology and workflow that includes collecting the minimum amount of medical data and personal identifiable information (PII) required to prove vaccination records are legitimate.
+
+Symantec, a division of Broadcom Software, took a look at how these digital vaccine passports work and the potential security risks and threat scenarios they present.
+
+What is a digital vaccine passport?
+
+A vaccine passport is a paper or digital form certifying a person has been vaccinated against a disease, in this case COVID-19. While paper passports may be used, more often the digital form is used, which may, in some cases, be only a screenshot of the results or picture directly taken of the vaccine card (this may work in some cases, although it lacks authenticity that the results are from the provider and have not been tampered with).
+
+Digital vaccination passports have QR codes that contain and connect a user’s encoded health data (a vaccination record from a medical provider) to the vaccinated person's passport app. Issuers of the encoded vaccination data include healthcare providers and government entities. These entities follow one of two standards concerning the structure of the encoded data.
+
+The first standard, followed primarily by issuers in the U.S. and Canada, is the SMART Health Card Framework from VCI, a broad coalition of leading healthcare and technology organizations. The second standard, recognized internationally, is the EU Digital COVID Certificate and uses the Electronic Health Certificate Container Format (HCERT).
+
+Both standards use QR codes and are very similar as far as data structure, with one key difference as we will see below.
+
+The tools, or validation apps, used to decode the vaccination data in the passport app QR codes are readily available. Using one of these tools, we will take a look at the data contained in one of the QR codes, using an example code from California's digital vaccine record system.
+.Note the "SMART" logo (Figure 1) identifying it as a SMART Health Card.
+
+$  zbarimg qrcode_passport.png --raw --quiet
+
+shc:/567629095243206034602924374044603122295953265460346029254077280433602
+
+8702864716745222809286155305564710341432164324111083963210645240371337721
+
+2638633677424237084126633945392929556404425627596537253338446120605736010
+
+645315539723274242843574557440550766267775….
+
+The shc:/ further identifies the SMART Health scheme and the data encodes to a JSON Web Token (JWT). Note that the data is not encrypted, simply encoded. Encoded meaning it may look like just black bars and numbers but decodes directly to the raw vaccination data.
+
+Once decoded, we find that the data mainly contains the same data as the paper version of the vaccination record. Specifically, the full set of data, in this example, includes:
+
+
+	The issuer (iss): https://myvaccinerecord.cdph.ca.gov/creds
+	Issuance date (nbf): November 5, 2021
+	Vaccination claim (vc), including full name, date of birth, date of immunization, and the vaccine batch
+	The "signature" of the issuer for validation
+
+
+$ zbarimg qrcode_passport.png --raw --quiet | xargs ./jwt_tool.py --shc
+
+JWT Token: eyJ6aXAiOiJERUYiLCJhbGciOiJFUzI1NiIsImtpZCI6IjdKdmt0VXBmMV85TlB3ZE0tNzBGSlQzWWR5VGlT[...].
+
+3ZLdTuMwEIXfZfY2_ykpzeW[...].YCeST7-YDMawwowswFx1R_TYg_5mDVsrSXqNLckdqCY5eNriEoUaSBSu7sCF8T
+
+Token header values:
+
+[+] zip = "DEF"
+
+[+] alg = "ES256"
+
+[+] kid = "7JvktUpf1_9NPwdM-70FJT3YdyTiSe2Ivm…"
+
+Token payload values:
+
+[+] iss = "https://myvaccinerecord.cdph.ca.gov/creds"
+
+[+] nbf = 1635982044    ==> TIMESTAMP = 2021-11-03 16:27:24 (UTC)
+
+[+] vc = JSON object:
+
+    [+] type = "['https://smarthealth.cards#health-card', 'https://smarthealth.cards#immunization', 'https://smarthealth.cards#covid19']"
+
+    [+] credentialSubject =  {"fhirVersion": "4.0.1", "fhirBundle": {"resourceType": "Bundle", "type": "collection", "entry": [{"fullUrl": "resource:0", "resource": {"resourceType": "Patient", "name": [{"family": "Doe", "given": ["John"]}], "birthDate": "1980-01-01"}}, {"fullUrl": "resource:1", "resource": {"resourceType": "Immunization", "status": "completed", "vaccineCode": {"coding": [{"system": "http://hl7.org/fhir/sid/cvx", "code": "208"}]}, "patient": {"reference": "resource:0"}, "occurrenceDateTime": "2021-03-01", "lotNumber": "EN6208"}}, {"fullUrl": "resource:2", "resource": {"resourceType": "Immunization", "status": "completed", "vaccineCode": {"coding": [{"system": "http://hl7.org/fhir/sid/cvx", "code": "208"}]}, "patient": {"reference": "resource:0"}, "occurrenceDateTime": "2021-04-01", "lotNumber": "ER8737"}}]}}}}
+
+Token signature:
+
+YCeST7-YDMawwowswFx1R_TYg_5mDVsrSXqNLckdqCY5eNriEoUaSBSu7sCF8T
+
+It is important to note that anyone with the QR code can decode this information, as it is not encrypted. The same data can be used to copy and generate the same QR code. The signature, on the other hand, can be used to verify that the passport has not been changed or tampered with and that it came from the issuer, in this case the State of California. By providing the signature and sharing the public key, anyone can verify the vaccine passport has not been tampered with and is from the issuer.
+
+Internationally, QR code vaccination records use the Electronic Health Certificate Container Format (HCERT). Similar to the SMART Health Card, the QR image contains a header, payload, and signature. The payload contains mostly the same vaccination record data - name, date of birth, vaccination record, and dates. The signature is also used to validate the authenticity of the digital vaccination record. However, the difference is in the header. SMART Health Cards contain a link/URL to the issuer in the header, which contains the public key used to validate the authenticity of the record using the signature. HCERT QR codes only contain the name of the issuer in the header, and it is up to the verifier app to find and store the public key from the issuer.
+
+App risks
+
+What are the actual data privacy risks associated with digital vaccine passports? At a minimum, the personal data they contain includes the person's name, date of birth, and vaccine status. This data may be considered medical data and, if exposed, poses a risk if obtained by scammers, who may use it for targeted phishing attacks.
+
+Another, and arguably greater and potentially graver risk, is the validity and accuracy of the vaccine passport. Similar to traditional passports, counterfeiting or tampering with the results may in some jurisdictions result in criminal penalties. Therefore, the technology to identify digital vaccine passports must securely and accurately identify their validity and ensure the results have not been tampered with. Otherwise, people may be exposed to the virus and this could come with deadly consequences.
+
+We analyzed 40 digital vaccine passport apps and 10 validation apps. The apps we examined were from government entities and regional health providers in multiple countries around the world. 
+
+Digital passport wallet apps
+
+Digital vaccine passports are commonly stored on a person's mobile device inside a digital wallet. This provides the convenience of being able to quickly and easily open and show vaccination records when requested. If done right, the person can be confident the data is accurate and secure. Not done right, and the vaccination record can potentially be read by an attacker, either via a network attack or a malicious app on the user’s mobile device.
+
+Note that our app analysis focused on publicly available mobile apps used to store vaccination records. Apple and Google also provide storage and retrieval for vaccine passports - Apple via the Health App and Google via Google Wallet - and while our findings for these solutions didn't raise any security flags, it is important to note that both rely on app sandbox protection and sharing permissions to protect vaccination records. This means that if the mobile device is compromised by an attacker, or if the user is tricked into sharing the health data, all bets are off.
+
+Digital passport wallet apps: threat scenarios
+
+Wallets that store data in the cloud may expose the user’s vaccination records by including hardcoded cloud credentials inside the app. During our analysis we also found wallets containing hardcoded cloud credentials, potentially exposing sensitive users’ data.
+
+Vaccine records may also be exposed if the digital wallet app transfers data from the cloud unencrypted or insecurely.
+
+In addition, vaccine records may be exposed if the user unknowingly shares the health data to other apps on their device, or if the vaccine records are stored insecurely on the device.
+
+Knowing these threat scenarios, we analyzed the apps looking for risky behaviors that include:
+
+
+	Accesses external storage
+	Disables SSL certificate authority (CA) validation
+	Does not require HTTPS
+	Sends data unencrypted
+	Uses hardcoded cloud credentials
+
+
+Out of the 40 digital passport wallet apps analyzed, 27 exhibited at least one of these risky behaviors.
+.Digital passport validation apps: threat scenarios
+
+To verify that a vaccine passport is legitimate, validation apps exist that decode the data in the QR code and flag if the vaccination record has been tampered with.
+
+As we saw when decoding the example QR code, a signature is contained inside the record that can be used to verify that the record is from the issuer and has not been tampered with. How do we know the QR code is from a specific health provider or issuer? Also inside the QR code is the link to the public key used to sign the record, which is then used to validate the signature.
+
+Anyone can create a QR code and put in their own issuer links, therefore a validation app must show and/or whitelist only approved issuers. Otherwise, anyone could use a fake state or medical named issuer URL with fake vaccination record data and the validation app would blindly pass the person. This type of flaw was found in the Quebec Vaxicode Verif app in late 2021.
+
+When transferring the public key from the issuer or health provider, the URL must be securely accessed and transferred to the mobile device running the app. If the validation app insecurely accesses the URL, an attacker may change the public key and "pass" their fake vaccination record. Or, even more deviously, change it to selectively fail other vaccination records.
+
+Often validation apps also store the digital vaccine records, either locally or in the cloud. If that is the case, which ideally it shouldn't be, the validation apps are subject to the same risks and threat scenarios as digital wallet apps.
+
+Knowing this, we looked for the same previously listed risky behaviors in seven validation apps available at the time of this report and found all of them to be safe. That being said, we will continue to scan new versions of those apps, as well as new validation apps, as they appear on our customers' mobile devices.
+
+Conclusion
+
+This is yet another reminder to always be vigilant of apps claiming to protect your privacy and identity, including digital passport wallets. Only give apps permission to private data that they require, nothing more. Whenever possible, avoid third-party apps claiming to securely store your vaccination records and instead use digital wallet solutions provided by the major mobile platforms, such as the Apple Health app and Google Wallet.
+
+App developers should only collect and access the user data required to provide the service to the user. Developers should also understand and implement best security practices that protect the users’ private data in the cloud, in transit, and on device. Anything less may compromise your users’ privacy, expose personal medical data, and potentially undermine the legitimacy of their vaccination records entirely.
+
+ 

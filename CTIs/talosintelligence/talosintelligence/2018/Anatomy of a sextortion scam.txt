@@ -1,0 +1,183 @@
+
+
+This blog was written by Jaeson Schultz.
+
+
+Since this July, attackers are increasingly spreading sextortion-type attacks across the internet. Cisco Talos has been investigating these campaigns over the past few months. In many cases the spammers harvested email addresses and passwords from a publicly available data breach, and then used this data to facilitate their sextortion attacks. While the attackers do not actually have any compromising videos showing the victim, the emails claim to have explicit videos that they will distribute if the victim doesn't pay the extortion payment by a certain time. By including the recipient's password along with their demands for payment, the attackers hope to legitimize their claims about having compromising material concerning the victim. While these attacks have been in the wild for months, Talos wanted to take a closer look at some of these campaigns to see why users were being tricked into sending the attackers large amounts of bitcoin despite the attackers' empty threats. By examining some of the sextortion spam campaigns in detail, our researchers were able to gain insight into how these criminals operate. 
+
+
+
+
+
+An example of a sextortion email containing slight changes to the wording of the message body.
+
+
+Sextortion Campaign Analysis
+
+To facilitate a deeper understanding of sextortion scams, Talos extracted and analyzed messages related to two very similar sextortion spam campaigns. The first spam campaign we analyzed began on Aug.30, 2018, and the second campaign began Oct. 5, 2018. Both campaigns are still active at the time of writing this blog.
+
+Talos extracted all messages from these two sextortion campaigns that were received by SpamCop from Aug. 30, 2018 through Oct. 26, 2018 — 58 days' worth of spam. Every message sent as a part of these two sextortion campaigns contains a From: header matching one of the following two regular expressions:
+
+From =~ /Aaron{3}Smith@yahoo\.jp/
+From =~ /Aaron@Smith{3}\.edu/ 
+
+
+Campaign Totals
+
+In total, SpamCop received 233,236 sextortion emails related to these "Aaron Smith" sextortion campaigns. The messages were transmitted from 137,606 unique IP addresses. The vast majority of the sending IP addresses, 120,659 sender IPs (87.7 percent), sent two or fewer messages as a part of this campaign. 
+
+
+
+
+Number of sextortion emails received by SpamCop over time
+
+The sending IPs are distributed among many countries, however roughly 50 percent of the sextortion messages come from only five countries: Vietnam (15.9 percent), Russia (15.7 percent), India (8.5 percent), Indonesia (4.9 percent) and Kazakhstan (4.7 percent). If some of these countries seem familiar, that may be because India and Vietnam were previously identified as having exceedingly large numbers of machines that are infected with the Necurs botnet, a well-known distributor of many pieces of malware. 
+
+
+
+
+Distribution of sender IP addresses by country
+
+Despite sending more than 233,000 email messages as part of these campaigns, the number of unique recipients was actually fairly low. Talos found only 15,826 distinct victim email addresses. This means that the attackers were sending an average of almost 15 sextortion spam messages per recipient. One unlucky victim from our dataset was contacted a staggering 354 times.
+
+
+Payment demands
+
+Each sextortion spam contains a payment demand. The payment requested by the attackers varies according to the specific campaign, but in this instance, it is a randomly generated number consisting of an integer between one and seven, followed by three zeros ($1,000 - $7,000). These six different payment amounts appear with almost identical frequency across the entire set of emails, suggesting that there was no effort made on the part of the attackers to tailor their payment demands to individual victims. 
+
+
+Cryptocurrency wallets
+
+In addition to the payment demand, each sextortion message also contains a bitcoin (BTC) wallet address to receive the payment from the victim. In total, Talos identified 58,611 unique bitcoin wallet addresses associated with these two spam campaigns. This works out to an average of approximately four sextortion messages per bitcoin wallet. Out of the approximately 58,000 bitcoin wallets, only 83 wallets have positive balances. However, the balances in those 83 wallets add up to 23.3653711 bitcoins, the equivalent of $146,380.31. That isn't too bad considering the attackers have only been distributing this particular scam for roughly 60 days, and do not actually possess any compromising material concerning the victim.
+
+If you look at the number of unique bitcoin wallets and unique victim email addresses seen over time, you can see that the attackers periodically inject their ongoing campaign with fresh data. The number of unique bitcoin wallets tends to peak and then reduce over time, until it peaks again, with another fresh batch of attacker-generated bitcoin wallets. The last major injection of fresh wallet addresses occurred on Oct. 9. The same can be seen regarding unique message recipients over time, with what appears to be a large injection of fresh recipients  also occurring around Oct. 9.
+
+
+
+
+Unique versus duplicate bitcoin wallets and recipient email addresses
+
+Unfortunately, as we dug further into the individual bitcoin wallets possessing positive balances, we noticed some oddities regarding the wallet payment amounts. Several wallets had received transfers that fell well under the minimum $1,000 payment that was demanded as part of this specific campaign. The payment amounts were low enough to fall outside the realm of what could be logically explained as a result of fluctuations in the price of bitcoin. 
+
+
+
+
+Bitcoin wallet found in the Aaron Smith sextortion spam that contains far less than the minimum demand of $1,000.
+
+Our researchers discovered that some of the wallets used in this attack were also being used in other attacks. The attackers were reusing some of their bitcoin wallet addresses across different spam campaigns.
+
+In light of the attackers' bitcoin wallet reuse, Talos decided to expand our research to include all spam messages that mention "bitcoin," while also possessing a string of 26-35 characters resembling a bitcoin wallet address in the body of the email. 
+
+
+Attackers' use of personal information
+
+One of the first related sextortion campaigns we discovered utilized the victim's telephone number instead of their data breach password. While a telephone number isn't nearly as private or confidential as a user's password, it is still arguably somewhat personal. By including the victim's telephone number, the attackers were hoping they could convince recipients that their sextortion scam was indeed real. 
+
+
+
+
+An example sextortion attack using victims' phone numbers
+
+If you read the text closely, you will notice that much of the text in this email is virtually identical to the text contained in the "Aaron Smith" campaigns Talos analyzed previously, especially the text in the closing paragraph. 
+
+As a matter of fact, while searching SpamCop, we encountered a sample email message where the attackers appeared to have mistakenly disclosed their template containing the choose-your-own-adventure-style text variations for generating varied message bodies as part of their sextortion spam attack.
+
+
+
+
+An example of a sextortion template message mistakenly emailed out by the attackers 
+
+
+Internationalized sextortion
+
+Security researchers at IBM X-Force recently discovered a sextortion campaign that was purportedly sent through the Necurs' botnet infrastructure in late September 2018. Using the 20 bitcoin wallet indicators of compromise (IoCs) provided by IBM, Talos identified nearly 1,000 different sending IP addresses involved in transmitting both the "Aaron Smith" spam, as well the international sextortion spam that IBM X-Force associated with the Necurs botnet. The overlap in sending IP infrastructure indicates, with a reasonable degree of confidence, that the same spammers are behind both of these sextortion campaigns. 
+
+Besides the "7 different languages (ENG, GER, FRE, ITA, JPN, KOR, ARA)" of sextortion spam identified in the X-Force blog, Talos identified additional variations of a similar sextortion campaign in Czech, Spanish, Norwegian, Swedish and Finnish.
+
+
+
+
+An example of a sextortion message in Spanish
+
+
+Additional attack variations
+
+There were other, similar forms of sextortion spam originating from some of the same Necurs-sending IP infrastructure. Below is an example of a sextortion spam email that is attempting to look like a support ticket. For extra authenticity, the message even includes text near the top of the body that reads: "Camera Ready, Notification: <date>."
+
+
+
+
+An example of a sextortion email disguised as a "Ticket"
+
+The attackers used that same exact bitcoin wallet in a completely different type of bitcoin-related email scam. The BTC wallet 1HJbQG3NsDGqqnnF1cU2c1Cgj1BT65TYRy located in the "Ticket" example above, also appears in an explicit video-for-bitcoin scam. In the sex video swindle, the attackers impersonate a young girl from the Russian Federation, and promise to send a custom explicit video in exchange for a deposit of $100 into the attackers' bitcoin wallet.
+
+
+
+
+An example of an explicit video-for-bitcoin message containing a duplicate sextortion bitcoin wallet
+
+Talos identified additional bitcoin wallets that overlapped, which revealed additional attacks, also likely perpetrated by the same group of spammers. For example, the bitcoin wallet 1NAXPRTdVdR5t7wfR1C4ggr9rwFCxqBZD7 not only appears in the "Ticket"-type sextortion scam messages detailed above, but it also appears in a different scheme meant to extort bitcoin from recipients who may be cheating on their significant other. The spammers claim to have been following the victim, where they obtained photographic evidence concerning the recipient's purported infidelity.
+
+
+
+
+An example of an illicit relationship extortion message
+
+
+Other (unrelated?) attack variations 
+
+As we reviewed additional bitcoin-related spam from SpamCop, we came across several other types of social engineering attacks aimed at obtaining bitcoin payments.
+
+In a clever twist on the "I-know-you-are-cheating" extortion example detailed above, attackers claim to have proof that the victim's partner is in fact cheating on them. While the wording of the text in the message feels somewhat familiar, it is dissimilar enough to other extortion attacks (by containing an attached QR code, for example) that it may in fact be the handiwork of a completely different group of attackers.
+
+
+
+
+A variation of the extortion attack offering victims proof of their partner's infidelity
+
+Talos also discovered messages related to a much more frightening and violent variety of extortion. In these messages, the attackers claim to have been paid to kill the recipient of the email. The hitmen claim to already have their transportation arranged, but since they have had a change of heart, they are now willing to sell information about who hired them to their potential victim. Again, the formula and wording the message sound quite similar to text we witnessed in multiple sextortion emails. Though we suspect it, Talos cannot say for certain that these violent extortion emails are in fact the work of the same attackers.
+
+
+
+
+An example of a violent extortion message threatening to kill the recipient
+
+
+Other examples of social engineering
+
+There were some bitcoin-related spam campaigns we noticed that, while they had very little connecting them to the spam sent via the Necurs botnet, they represented creative attempts to coerce some victims through social engineering.
+
+First, there was an attack targeting victims with a propensity to fall for get-rich-quick schemes. In this offer, recipients are encouraged to send bitcoin to a wallet address where their bitcoin will magically double in value within three hours' time. This bitcoin "doubler" claims to exploit an undisclosed "bug in the system."  While the average user may be able to realize quickly this is a scam, some users who are not as educated on the concept of bitcoin may be susceptible to this type of spam. 
+
+
+
+
+An example of the bitcoin doubler email
+
+Other bitcoin-related spam targets those who might be inclined to donate to charity. While easing the suffering of children affected by military aggression is a most admirable cause, we couldn't find anything in this message to indicate that this is a legitimate charitable organization.
+
+
+
+An example of the questionable "Charitable Children's Fund" email
+
+We also discovered a piece of spam that claims to be "positive junk mail." The body of the message reads, "You know those emails that keep circulating trying to extort you for bitcoin claiming they have compromised the camera in your computer and have embarrassing videos and photos that they plan to share with your friends and family?...This IS NOT one of those!"  
+
+
+
+
+An example of the bitcoin lottery spam
+
+In the Q&A section near the bottom of this email the spammers write, "Q: How do we know this is legitimate? A: You don't. We can't actually post proof without exposing ourselves as well as the winner. Take it for what it's worth. We apologize but this is the best we can do."
+
+If you're curious about how the whole Oct. 4 bitcoin lottery drawing turned out, note that there is only one transaction for the bitcoin wallet mentioned in the spam. That transaction happened back on Sept. 28 and was for $4.
+
+
+Conclusion
+
+Most anti-spam solutions will filter out obvious sextortion attempts like the ones we highlighted in this post. However, that is no silver bullet. When these kinds of spam campaigns make it into users' email inboxes, many of them may not be educated enough to identify that it's a scam designed to make them give away their bitcoins. Unfortunately, it is clear from the large amount of bitcoin these actors secured that there is still a long way to go in terms of educating potential victims. 
+
+
+Indicators of compromise (IOC)
+
+Here is a list of the 58,611 bitcoin wallets used by the attackers in the "Aaron Smith" sextortion spam.
+

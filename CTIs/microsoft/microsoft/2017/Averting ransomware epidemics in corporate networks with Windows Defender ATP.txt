@@ -1,0 +1,83 @@
+
+		Microsoft security researchers continue to observe ransomware campaigns blanketing the market and indiscriminately hitting potential targets. Unsurprisingly, these campaigns also continue to use email and the web as primary delivery mechanisms. Also, it appears that most corporate victims are simply caught by the wide nets cast by ransomware operators. Unlike cyberespionage groups, ransomware operators do not typically employ special tactics to target particular organizations.
+
+
+
+
+The trend towards increasingly sophisticated malware behavior, highlighted by the use of exploits and other attack vectors, makes older platforms so much more susceptible to ransomware attacks. From June to November 2017, Windows 7 devices were 3.4 times more likely to encounter ransomware compared to Windows 10 devices.
+Read our latest report: A worthy upgrade: Next-gen security on Windows 10 proves resilient against ransomware outbreaks in 2017
+
+
+
+Although indiscriminate ransomware attacks are very much like commodity malware infections, the significant cost that can result from a broad ransomware attack justifies consideration of a layered, defense-in-depth strategy that covers protection, detection, and response. As attacks reach the post-breach or post-infection layer—when endpoint antimalware fails to stop a ransomware infection—enterprises can benefit from post-breach detection solutions that provide comprehensive artifact information and the ability to quickly pivot investigations using these artifacts.
+Our research into prevalent ransomware families reveals that delivery campaigns can typically stretch for days or even weeks, all the while employing similar files and techniques. As long as enterprises can quickly investigate the first cases of infection or ‘patient zero’, they can often effectively stop ransomware epidemics. With Windows Defender Advanced Threat Protection (Windows Defender ATP), enterprises can quickly identify and investigate these initial cases, and then use captured artifact information to proactively protect the broader network.
+To test how Windows Defender ATP can help your organization detect, investigate, and respond to advanced attacks, sign up for a free trial.
+In this blog, we take a look at an actual Cerber ransomware infection delivered to an enterprise endpoint by a campaign that ran in late November 2016. We look at how Windows Defender ATP, in the absence of endpoint antimalware detections, can flag initial infection activity and help enterprises stop subsequent attempts to infect other devices.
+Detecting Cerber ransomware behavior
+In an earlier blogpost, we described how the Cerber ransomware family has been extremely active during the recent holiday season. It continues to be one of the most prevalent ransomware families affecting enterprises as shown in Figure 1. Not only are there similarities between members of this well-distributed ransomware family, certain Cerber behaviors are common malware behaviors. Detecting these behaviors can help stop even newly distributed threats.
+
+Figure 1. Ransomware encounters on enterprise endpoints
+ 
+A real case of Cerber meeting Windows Defender ATP
+The Cerber ransomware infection started with a document downloaded into the Downloads folder through a webmail client. A user opened the document and triggered an embedded macro, which in turn launched a PowerShell command that downloaded another component carrying the ransomware payload. As shown below, the PowerShell command was detected by Windows Defender ATP.
+
+Figure 2. PowerShell command detection
+ 
+Windows Defender ATP also generated an alert when the PowerShell script connected to a TOR anonymization website through a public proxy to download an executable. Security operations center (SOC) personnel could use such alerts to get the source IP and block this IP address at the firewall, preventing other machines from downloading the executable. In this case, the downloaded executable was the ransomware payload.
+
+Figure 3. Alert for the TOR website connection showing the source IP address
+ 
+After the payload was downloaded into the Temp directory, it was then executed by a parent cmd.exe process. The payload created a copy of itself in the Users folder and then launched that copy. Machine learning algorithms in Windows Defender ATP were able to detect this self-launching behavior.
+
+Figure 4. Ransomware launching copy of itself as detected on Windows Defender ATP
+ 
+Just prior to encrypting files, the Cerber ransomware tried to prevent future attempts at file recovery by deleting system restore points and all available volume shadow copies—these are used by Windows System Restore and Windows Backup and Restore during recovery. This hostile behavior was also detected by Windows Defender ATP.
+
+Figure 5. Deletion of volume shadow copies
+ 
+Breadth and depth of alerts enable easy scoping and containment
+Windows Defender ATP generated at least four alerts during the infection process, providing a breadth of detections that helps ensure coverage for changing techniques between Cerber versions, samples, and infections instances. To build up the mechanisms behind these alerts, Microsoft security researchers comb through ransomware families and identify common behaviors. Their research supports machine learning models and behavioral detection algorithms that detect ransomware at different stages of the kill chain, during delivery (by email or using exploit kits) up to the point when victims make ransom payments.
+
+Figure 6. Alerts that correspond to different kill stages
+ 
+Each alert provides additional context about the attack. In turn, SOC personnel can use this contextual information to pivot an investigation and get insights from endpoints across the organization. Using the provided file and network activity information, pivoting investigations in the Windows Defender ATP console can bring about conclusive leads, even when no actual ransomware payload is detonated.
+To investigate our Cerber case, we use the name of the payload file hjtudhb67.exe, which is clearly unusual and not likely used by legitimate executables. A quick search on the Windows Defender ATP console yields 23 other files with the same name. The files were suspiciously created in a span of approximately 10 days and scattered across endpoints in the organization. (Note that although most of these files are artifacts from the actual infection, some are possibly remnants of tests by SOC personnel who responded to the alerts.)
+
+Figure 7. Instances of file with the same unusual name as the ransomware
+ 
+We pivot to the source IP that hosted the payload file and perform a search to reveal that 10 machines connected to this IP address. Blocking this source IP on the corporate firewall on the day of the first infection could have helped prevent the Cerber ransomware payload file from reaching other machines.
+Conclusion: Defense-in-depth with Windows Defender ATP
+We have seen how Windows Defender ATP provides enterprise SOC personnel with a powerful view of events and behaviors associated with a ransomware infection, from the time of initial delivery and throughout the installation process. Enterprise SOC personnel are able to understand how ransomware has reached an endpoint, assess the extent of the damage, and identify artifacts that can be used to prevent further damage. These capabilities are made possible by cloud analytics that continuously search for and flag signs of hostile activity, including signs that could have been missed in other defensive layers.
+Upcoming enhancements to Windows Defender ATP with the Windows 10 Creators Update will take its capabilities one step further by enabling network isolation of compromised machines. The update will also provide an option to quarantine and prevent subsequent execution of files.
+Windows Defender ATP is built into the core of Windows 10 Enterprise. Download this playbook to see how you can leverage Windows Defender ATP to detect, investigate, and mitigate ransomware in networks: Windows Defender Advanced Threat Protection – Ransomware response playbook.
+To test how Windows Defender ATP can help your organization detect, investigate, and respond to advanced attacks, sign up for a free trial.
+Windows 10 security against Cerber ransomware
+Windows 10 is built with security technologies that can help detect the latest batch of Cerber ransomware.
+
+Windows Defender detects Cerber ransomware as Win32/Cerber. It also detects files that assist in the distribution of the payload file using email and exploit kits. Malicious email attachments are detected as TrojanDownloader:O97M/Donoff, and the RIG exploit kit is detected as Exploit:HTML/Meadgive.
+For security on the web, Microsoft Edge browser can help prevent exploit kits from running and executing ransomware on computers. SmartScreen Filter uses URL reputation to block access to malicious sites, such as those hosting exploit kits.
+Device guard protects systems from malicious applications like ransomware by maintaining a custom catalog of known good applications and stopping even kernel-level malware with virtualization-based security.
+AppLocker group policy also prevents dubious software from running.
+
+Office and Office 365 security against Cerber ransomware
+Office 365 Advanced Threat Protection blocks emails that spread malicious documents that could eventually install Cerber. IT administrators can use Group Policy in Office 2016 to prevent malicious macros inside documents from running, such as the documents in password-protected attachments used commonly in Cerber campaigns.
+ 
+Tommy Blizard 
+ 
+ 
+Related blog entries
+
+WannaCrypt ransomware worm targets out-of-date systems
+World Backup Day is as good as any to back up your data
+Ransomware: a declining nuisance or an evolving menace?
+
+ 
+ 
+
+ 
+
+Talk to us
+Questions, concerns, or insights on this story? Join discussions at the Microsoft community and Windows Defender Security Intelligence.
+Follow us on Twitter @WDSecurity and Facebook Windows Defender Security Intelligence.
+ 
+	

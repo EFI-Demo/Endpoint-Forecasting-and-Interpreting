@@ -1,0 +1,120 @@
+
+		This post is authored by Michael Bargury, Data Scientist, C+E Security. 
+The need
+The cloud introduces new security challenges, which differ from classic ones by diversity and scale. Once a Virtual Machine (VM) is up and running with an open internet port, it is almost instantaneously subject to vulnerability scanning and Brute Force (BF) attacks. These attacks are usually not directed at a specific organization’s environment. Instead, they cover a broad range of environments, hoping to infiltrate even a small fraction of them, to be used for their computational power or as part of a botnet.
+The agile nature of the cloud allows organizations to build elaborate and highly customized environments. These environments constantly change, as customers utilize the cloud’s ability to adapt to variations in computational or network communication demands. Although this agility is one of the cloud’s top offerings, it also makes it harder to apply and maintain security best practices. As your environment changes, the security measurements needed to protect it might change as well. Moreover, while security experts can manually analyze common environment scenarios and offer security recommendations, the huge diversity in the cloud renders these recommendations useless for many organizations, which requires more tailor-suited solutions.
+Proper security recommendations have the potential to make a huge impact on an organization’s security. They can minimize attack surface, essentially blocking attacks before they occur.
+The opportunity
+On the other hand, the cloud provides unique opportunities, which are impossible or impractical for most organizations on their own. The broad visibility and the diversity of environments allow statistical models to detect abnormal activities across the cloud. Organizations can anonymously share their security-related data with trusted 3rd parties such as Azure Security Center (ASC), which can leverage this data to provide better detection and security recommendations for all organizations. Essentially, the cloud allows organizations to combine their knowledge in a way, which is much larger than the sum of its parts.
+Leveraging these cloud-unique opportunities gives birth to a whole new world of customized security recommendations. Instead of a single one-fits-all best practice, the cloud allows customized best practices to be generated and updated constantly, as a cloud environment is built and evolved. Imagine an agent, which detects a security risk associated with a machine placed under the wrong subnet, or an automatically updating firewall.
+Example
+Let us dive into a very basic, yet typical scenario. As a developer in a cloud-based organization, I would like to deploy a new SQL-Server on Windows. I deploy a new Windows VM, install SQL-Server and create an inbound rule in my Network Security Group (NSG) to allow for incoming communication in port 1433.
+A few months later, the SQL-Server had long been deleted. The VM is being used for something else entirely. The only thing left from my initial deployment is the inbound rule on port 1433, which has been forgotten by the individual who deleted the SQL-Server. This leaves an opening for malicious intenders to gain access to my machine, or simply to cause an overuse of resources by bombarding it with requests. After a while, I get a security alert from ASC. There was a successful BF attack on my machine, and it is now compromised. Looking at the logs, I see that the attack was carried through port 1433.
+A good security recommender system would have identified that port 1433 is no longer in use by SQL Server, and prompt me with a recommendation to close it before the machine was compromised.
+Learning scenario
+Taking the perspective of a cloud provider, we will now devise a way to detect the scenario mentioned above and recommend a mitigation on time.
+We can safely assume that most Azure customers use port 1433 for SQL-Server communication, as it is the default port used in SQL-Server software. This reduces our problem to the following goal: find machines with an inbound rule for port 1433, which do not run SQL-Server software.
+But wait, how do we know which SQL-Server software to look for the absence of? We can try to manually devise a list of executables with underline SQL-Server, but there must be a better way.
+Remember, we have assumed that most Azure customers use port 1433 for SQL-Server communication. Utilizing this assumption, we can learn which executable is unusually common in machines with an inbound rule on port 1433, out of the entire population of Azure VMs.
+And so, our final goal becomes: find machines with an inbound rule for port 1433, which do not run common executables within this group.
+We can try to reach this goal in several ways. We can take a classification approach. We use two weeks of executable executions, from 30K Azure machines that use ASC’s monitoring agent.
+First, we devise a list of distinct executables. We are looking for executables of a very common software so we can filter the list by executables that run in more than 10 Azure VMs, to reduce noise. This leaves us with 4,361 distinct executables.
+We represent each Azure VM as a vector of indicators of executables run by that VM. For example, consider “A”, which ran only a single executable. That VM would be represented by zero-vector, with a single coordinate containing a one, which represents that executable. Next, we label each VM by whether or not it has port 1433 open for inbound traffic.
+We will treat our dataset as a classification problem: given a binary feature vector for each VM, predict whether its port 1433 is open for inbound traffic. Notice that we already know the answer to this question. Therefore, we will be able to measure the accuracy of our model.
+We train a Random Forest (RF) model to solve the classification problem. We use an RF for multiple reasons. First, it forces the model to only consider a small subset of features, which corresponds to a small number of executables which we hope would be SQL-Server related. Second, allowing only a few trees in the RF will yield a simple classification model, easily interpretable and understandable.
+To avoid overfitting, we use hypothesis validation. We split our dataset 70-30 percent to train-test dataset. We train the model on the training set and measure its performance on the test set.
+// Error = (# wrong classifications) / (# samples)
+
+Train error = 0.00095
+
+Test error = 0.00128
+The model performs very well, with low classification error both for the train and test sets.
+Let’s think about what happened here. The model was able to accurately predict whether a VM has an inbound rule for port 1433, using a small list of executables ran by that VM. This implies that there is some set of executables, which are extremely common among VMs which can be addressed on port 1433. To examine these executables, we can look at the top ten features by importance (significance to classification) provided by our classifier:
+
+
+\\program files\\microsoft sql server\\mssql_ver.mssqlserver\\mssql\\binn\\sqlagent.exe
+
+
+\\program files\\microsoft sql server iaas agent\\bin\\ma\\agentcore.exe
+
+
+\\packages\\plugins\\microsoft.compute.vmaccessagent\\version\\bin\\jsonvmaccessextension.exe
+
+
+\\program files\\microsoft sql server iaas agent\\bin\\sqlservice.exe
+
+
+\\program files\\microsoft sql server\\mssqlmssqlserver\\mssql\\binn\atabasemail.exe
+
+
+\\windows\\microsoft.net\\framework\\version\gen.exe
+
+
+\\program files (x86)\\microsoft sql server\\version\ools\\binn\\sqlexe
+
+
+\\packages\\plugins\\microsoft.sqlmanagement.sqliaasagent\\version\\sqliaasextensiondeployer.exe
+
+
+\\packages\\plugins\\microsoft.enterprisecloud.monitoring.microsoftmonitoringagent\\version\\mmaextensionheartbeatservice.exe
+
+
+\\program files\\microsoft sql server\\mssqlmssqlserver\\mssql\\binn\\fdhost.exe
+
+
+This is excellent. Our model found that the best indicators for port 1433 being open, is having SQL-Server related executables running on the VM. This validates our assumption that most Azure customers use port 1433 for SQL-Server communication! Otherwise, our model wasn’t able to get such high accuracy scores by using SQL-Server executables as features.
+Returning to our initial goal – we are looking for machines which do not run executables which are very common within this group. For these machines, there is no way the model can detect that their port 1433 is open, judging from SQL-Server related executables. Hence, these machines should correspond with our model’s classification errors! More specifically, we are looking for false negatives (FN, the model wrongly classifies the VM to have a closed port 1433).
+Let’s examine one of these VMs. Here is it’s list of ran executables:
+
+
+\windows\softwaredistributionownload\install\: [exe, windows-ver-delta.exe]
+
+
+\windowsazure\guestagent_ver\collectguestlogs.exe
+
+
+\program files\microsoft security client\mpcmdrun.exe
+
+
+\windows\servicingrustedinstaller.exe
+
+
+\windows\winsxs\amd64_microsoft-windows-servicingstack_veriworker.exe
+
+
+\program files\microsoft office 15\clientx64\officec2rclient.exe
+
+
+\program files\java\: [jre_ver\bin\jp2launcher.exe, 8.0_144\bin\javaws.exe]
+
+
+\program files (x86)\common files\java\java update\jucheck.exe
+
+
+\windows\microsoft.net\framework64\ver\: [exe, ngen.exe]
+
+
+\windows\microsoft.net\framework\ver\: [exe, ngentask.exe]
+
+
+\windows\system32\inetsrv\w3wp.exe
+
+
+\windows\system32\wbem\: [exe, wmiprvse.exe]
+
+
+\windows\system32\: [taskhostex.exe, mrt.exe, schtasks.exe, taskeng.exe, wsqmcons.exe, rundll32.exe, sc.exe, lpremove.exe, mpsigstub.exe, ceipdata.exe, defrag.exe, sppsvc.exe, cmd.exe, conhost.exe, svchost.exe, aitagent.exe, taskhost.exe, mrt-ver.exe, sppextcomobj.exe, wermgr.exe, werfault.exe, tzsync.exe, slui.exe]
+
+
+Indeed, we don’t see SQL-Server here! Actually, it seems like this VM is running mostly Windows/Azure updates. We can issue a recommendation for this VM to remove its inbound rule for port 1433. Looking at past ASC alerts, we can see that this machine was brute forced on six different days, providing valuable attack surface to malicious intenders. Our model can put an end to that!
+Overall, we found five machines which might have port 1433 open for no reason (FN of the classification model).
+Generalization
+Now that we have a working model and a nice Proof of Concept, we might consider applying it for similar scenarios. After all, why focus only on port 1433 and SQL-Server, when our model didn’t depend on either of these as an assumption.
+We can generalize our scenario and solution to the following:
+
+Goal: find machines with an inbound rule for port X, which do not run executables which are very common within this group.
+Method: Train an RF to predict whether or not a machine has port X open for inbound traffic, based on the executables ran. Output the machine that was misclassified by the RF.
+
+Conclusions
+The scenario developed above is only the tip on the iceberg. The Azure Security Center (ASC) team is working hard on providing adaptive prevention capabilities, to enable better security for Azure customers. For information about the first adaptive prevention feature in ASC, see How Azure Security Center uses machine learning to enable adaptive application control. To learn about the use of Machine Learning in ASC, see Machine Learning in Azure Security Center.
+	

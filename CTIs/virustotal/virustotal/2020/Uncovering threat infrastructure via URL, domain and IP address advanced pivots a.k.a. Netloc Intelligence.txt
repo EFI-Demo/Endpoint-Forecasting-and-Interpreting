@@ -1,0 +1,199 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Quick links:
+https://support.virustotal.com/hc/en-us/articles/360001387057
+https://developers.virustotal.com/v3.0/reference#intelligence-search
+https://github.com/VirusTotal/vt-py
+
+Ten years ago, VirusTotal launched VT Intelligence; a critical component of VT Enterprise which offers users the capability to search over VirusTotal's dataset using advanced search modifiers. VT Intelligence allows security professionals to pinpoint malware based on its structural, behavioural, binary, metadata, etc. properties to uncover entire threat campaigns.
+
+For example, the following search query instructs VirusTotal to search for all documents that make use of macros whose static analysis seems to reveal some kind of payload execution and that when executed in a dynamic analysis environment (sandbox) reach out to a URL (highly suspicious sequence of events):
+type:docx tag:macros tag:run-file behaviour_network:http
+
+
+
+By drilling down within the VT corpus and identifying these kinds of suspicious patterns, analysts can discover new threats and build the defenses for them. 
+
+However, this approach has certain limitations. In the context of an attack, hashes/files are one of the last observables, to mitigate a threat, often analysts must begin by studying the campaign at the network level. A single domain/URL/IP address might be used to distribute thousands of server-side polymorphic variants of the same malware family. Similarly, very often it is far easier to discover new threat campaigns by focusing on the network side of things, has an adversary set up a new domain to distribute his malware? Can I block such domain in my network perimeter defenses (IDS, firewalls, webproxy etc.) even before he leverages it to distribute malware? VT Graph allows you to understand this easily:
+
+
+
+
+
+
+As you can see, by blocking the domain bbvaticanskeys[.]com we would be, all of a sudden, killing the chances of our organization’s users downloading any malware that it delivers now or in the future and we would also be preventing the exfiltration of data to the domain if the compromise had already taken place. Note that hundreds of different variants communicate with the domain. In an onion layered security model it is important to build defenses not only against the bullets, but also against the gun, the bad actor porting the gun and the organization to which they belong. 
+
+
+
+Enter VT Intelligence’s netloc faceted search layer. We are supercharging the investigation capability of VT Enterprise customers by allowing a myriad of search modifiers over the domains, IPs and URLs that VirusTotal scans and sees in its backend processes, at no extra cost. This new functionality has been seamlessly rolled out to your accounts and it will simply consume search quota in the same manner that traditional VT Intelligence and VT API queries do. 
+
+So what exactly does this mean for investigators? VirusTotal can now power numerous new use cases:
+
+Discover new threat campaign infrastructure set up via builders/kits and perform early blocking at the network perimeter level
+
+Often adversaries instrument their attacks via trojan builders, exploit kits, command-and-control panels, etc. It is basically tooling that allows less technical crooks to set up an attack or that accelerates the time to launch a campaign. 
+
+The catch is that these kits often lead to repeated patterns that can be used to identify an attack:
+
+Common URL path subsequences.
+Uncommon HTTP ports.
+Distinctive server HTTP response headers.
+Repeated URL GET/POST parameters across campaigns.
+etc.
+
+Repetition of server setup patterns is something you can easily observe by browsing over something like URLhaus:
+
+
+
+With the netloc intelligence module you can now launch searches like:
+
+entity:url query_field:worker query_value:universal - Silentbruter malware
+entity:url path:"fre.php" - LokiBot CnC
+entity:url port:7000 path:gw
+entity:url path:"/zehir/z3hir"
+entity:url path:"bstr.php"
+entity:url path:"tuk_tuk.php"
+entity:url path:"/private/checkPanel.php"
+
+With regards to path commonalities, Virus Bulletin recently published an article on dissecting the C&C panel deployments, it clearly portrays how new malware variants and threat infrastructure can be identified by focusing on CnC kit patterns:
+
+
+
+The author’s observations are easily backed with the following VT Intelligence search:
+entity:url path:"PvqDq929BSx_A_D_M1n_a.php"
+
+By focusing on the newest sightings first, you can immediately discover new infrastructure being set up by attackers. You can block the pertinent domains/IPs long before they may impact your organization and very often long before blocking technologies catch up on the malware that they deliver.
+
+
+Track threat actors by revealing new threat infrastructure operated by the same group
+
+Sometimes the patterns do not surface in the URL itself but rather in the domain registration details, SSL certificates, DNS TXT records, etc. It is not uncommon to see attackers registering new domains with the same email address or identical fake physical address. The new netloc intelligence component allows you to pivot over (anonymized - privacy preserving) whois details.
+
+Let’s look at an interesting reported campaign:
+
+
+New Advanced Phishing Kits Target Digital Platforms
+“We hit pay dirt. Whois records for both of these name servers reveal more than a thousand additional malicious domains using similar naming conventions.”
+ 
+Name servers:
+ns1.anx[.]link
+ns1.anx-dns[.]link
+ns1.anxdns[.]io
+
+We can craft a whois search to identify other domains making use of the same name servers
+entity:domain whois:"ns1.anx.link"
+
+We can also do it at the DNS records level:
+entity:domain ns_record:"ns1.anx.link"
+entity:domain txt_record:"tsdomain"
+
+Note that all these pivots surface as quick links on basically every section in the details of observable reports, meaning that when looking at a particular IP/domain you can immediately jump to other related infrastructure:
+
+
+
+This is something that applies to pretty much every information block, not only to the Whois lookup. For example, you may click on an SSL thumbprint to discover other IPs that make use of a given SSL certificate.  This builds upon our existing capabilities to discover other infrastructure operated by a same group, namely our pDNS dataset:
+https://www.virustotal.com/gui/ip-address/206.54.170.81/relations
+
+Other interesting commonly reused artefacts that can be searched for are trackers or cookie names.
+
+
+Protect your brand and discover phishing campaigns
+
+Phishing sites against a particular bank or online service will often make use of typosquatting or will contain the name of the given service as a subdomain of an illegit domain. This allows investigators to find URLs in the dataset that do not belong to the original brand:
+entity:url hostname:"*gmail*" p:1+
+
+This said, sometimes the attackers will avoid including the legit name in the domain string so as to prevent easy detection. In those cases we can still discover new phishing campaigns. For instance, let us focus on websites that make use of GMail’s favicon:
+https://www.virustotal.com/gui/search/entity:url%20main_icon_dhash:%2200e8e0968ee8d48a%22/urls
+
+
+
+Similarly, we can look into certain indexed metadata, such as the title of the page or meta tags:
+entity:url title:"Sign in - Google Accounts" p:5+
+
+More generally, you might just be interested in keeping up with the phishing landscape:
+entity:url AND (category:phishing OR engines:phishing) AND positives:3+
+
+
+
+Feed your IDS/SIEM/webproxy blocks, etc. with IoCs based on anomalous or suspicious patterns
+
+Sometimes you do not really know what you are hunting for, but you can unearth threats by focusing on highly suspicious sightings. Why would someone configure a server to return an “image/jpeg” HTTP response header when serving a Windows executable? The only reason is probably to try to circumvent very basic web proxy filtering:
+entity:url header_value:"image/jpeg" tag:downloads-pe
+
+
+
+This logic can also be applied to URL paths, the extension modifier tries to identify file extension within URL paths:
+entity:url extension:jpg tag:downloads-pe
+
+On this front, identifying double extension tricks also comes to mind as an easy hunting dork:
+entity:url path:".jpg.exe"
+
+Similarly, attackers tend to reuse deception techniques such as spamming users to deceive them into downloading malicious documents that claim to be some kind of invoice or payment request (e.g. Emotet spreading):
+entity:url header_value:"attachment;filename" header_value:"invoice" tag:downloads-doc
+entity:url header_value:"attachment;filename" header_value:"payment" tag:downloads-doc
+
+
+
+Executable downloads on non-standard HTTP ports are often worth deeper inspection:
+entity:url tag:downloads-pe port:81+ NOT port:443 NOT port:8080
+
+Open directories are also a common place to hunt for malware:
+entity:url tag:opendir tag:contains-pe p:1+
+
+As well as executables served via bare IP address URLs that are repeatedly submitted to VirusTotal:
+entity:url tag:ip tag:downloads-pe submissions:20+
+
+Same goes for DGA-like patterns:
+entity:domain tag:dga detected_communicating_files_count:10+ communicating_files_max_detections:10+
+
+Malicious domains can also be surfaced by focusing on their relationships, in these cases we do not track particular actors or campaigns but rather high numbers of malicious sightings around the pertinent network locations:
+
+entity:domain detected_downloaded_files_count:1+ detected_urls_count:1+ detected_communicating_files_count:1+ detected_referring_files_count:1+
+
+entity:ip detected_downloaded_files_count:1+ detected_urls_count:1+ detected_communicating_files_count:1+ detected_referring_files_count:1+
+
+When considering detections of connected entities, probably the most interesting search is to identify undetected URLs that download some kind of malicious file:
+entity:url positives:0 response_positives:10+
+
+All of these suspicious sightings can be extended to your own organization’s properties in order to dig deeper into threats that interact directly with your domains or IP ranges:
+entity:domain domain:"*.google.com" detected_communicating_files_count:10+ communicating_files_max_detections:10+
+
+
+
+Filters on the IP address CIDR are also allowed, to focus exclusively on your network ranges:
+entity:ip ip:"35.224.0.0/12" AND ((detected_communicating_files_count:10+ communicating_files_max_detections:10+) OR (detected_downloaded_files_count:10+ downloaded_files_max_detections:10+))
+
+All of this said, we acknowledge that the current facets and indexed data might not be perfect. Over the coming months we will be adding new modifiers based on more use cases that you may have, so please do not hesitate to contact us with suggestions and feature requests. We are pretty certain that one the most prevalent asks will be to expose some kind of YARA-like Livehunt capability in order to set up notifications for new network-level sightings: more on that front later this year.
+
+The described functionality is now also exposed via APIv3:
+https://developers.virustotal.com/v3.0/reference#intelligence-search
+https://github.com/VirusTotal/vt-py
+
+Oh, and one last thing, you may have already noticed that we recently added domain and IP address verdicts to extend the reputation capabilities that we already offered for files and URLs.
+
+Happy hunting!
+
+
+Email ThisBlogThis!Share to TwitterShare to Facebook
+
+
+

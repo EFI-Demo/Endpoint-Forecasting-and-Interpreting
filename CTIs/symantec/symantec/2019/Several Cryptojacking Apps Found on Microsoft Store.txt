@@ -1,0 +1,53 @@
+On January 17, we discovered several potentially unwanted applications (PUAs) on the Microsoft Store that surreptitiously use the victim’s CPU power to mine cryptocurrency. We reported these apps to Microsoft and they subsequently removed them from their store.
+.The apps—which included those for computer and battery optimization tutorial, internet search, web browsers, and video viewing and download—came from three developers: DigiDream, 1clean, and Findoo. In total, we discovered eight apps from these developers that shared the same risky behavior. After further investigation, we believe that all these apps were likely developed by the same person or group.
+.Users may get introduced to these apps through the top free apps lists on the Microsoft Store or through keyword search. The samples we found run on Windows 10, including Windows 10 S Mode.
+
+As soon as the apps are downloaded and launched, they fetch a coin-mining JavaScript library by triggering Google Tag Manager (GTM) in their domain servers. The mining script then gets activated and begins using the majority of the computer’s CPU cycles to mine Monero for the operators. Although these apps appear to provide privacy policies, there is no mention of coin mining on their descriptions on the app store.
+
+The apps were published between April and December 2018, with most of them published toward the end of the year. Even though the apps were on the app store for a relatively short period of time, a significant number of users may have downloaded them. Although we can’t get exact download or installation counts, we can see that there were almost 1,900 ratings posted for these apps. However, app ratings can be fraudulently inflated, so it is difficult to know how many users really downloaded these apps.
+
+Mining script
+
+These apps’ domains are hardcoded in their app manifest file, as shown in Figure 2.
+.When each app is launched, the domain is silently visited in the background and triggers GTM with the key GTM-PRFLJPX, which is shared across all eight applications.
+
+GTM is a legitimate tool that allows developers to inject JavaScript dynamically into their applications. However, GTM can be abused to conceal malicious or risky behaviors, since the link to the JavaScript stored in GTM is https://www.googletagmanager.com/gtm.js?id={GTM ID} which doesn’t indicate the function of the code invoked.
+.By monitoring the network traffic from these apps, we found that they all connect to the following remote location, which is a coin-mining JavaScript library: http://statdynamic.com/lib/crypta.js
+
+The apps then access their own GTM and activate the mining script.
+
+Crypta.js is an encrypted JavaScript library, as shown in Figure 4.
+.After we decoded it, we found that it was a version of the Coinhive library. Coinhive is a script that mines Monero. Since the Coinhive service was launched in September 2017, there have been many reports of it being used for cryptojacking without site visitors' knowledge.
+
+We also investigated the miner activation code on GTM, and the key source code is shown in Figure 5.
+.We observed that the miner crawls with the key da8c1ffb984d0c24acc5f8b966d6f218fc3ca6bda661, which serves as the wallet for Coinhive.
+
+These apps fall under the category of Progressive Web Applications, which are installed as a Windows 10 app running independently from the browser, in a standalone (WWAHost.exe process) window.
+
+Shared domain name servers
+
+From the apps’ network traffic, we found the hosting server for each app. Through a Whois query, we found that all of these servers actually have the same origin. Therefore, these apps were most likely published by the same developers using different names.
+.We have informed Microsoft and Google about these apps’ behaviors. Microsoft has removed the apps from their store. The mining JavaScript has also been removed from Google Tag Manager.
+
+Mitigation
+
+Stay protected from online threats and risks by taking these precautions:
+
+
+	Keep your software up to date.
+	Do not download apps from unfamiliar sites.
+	Only install apps from trusted sources.
+	Pay close attention to the permissions requested by apps.
+	Pay close attention to CPU and memory usage of your computer or device.
+	Install a suitable security app, such as Norton or Symantec Endpoint Protection, to protect your device and data.
+	Make frequent backups of important data.
+
+
+Protection
+
+Symantec and Norton products detect the apps and the JavaScript cryptocurrency miner, respectively, as the following:
+
+
+	PUA.Downloader
+	Miner.Jswebcoin
+

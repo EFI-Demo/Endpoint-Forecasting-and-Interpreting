@@ -1,0 +1,103 @@
+
+This blog post is authored by Warren Mercer and Paul Rascagneres with contributions from Nick Biasini
+
+
+Summary
+
+Since our initial discovery of a malicious mobile device management (MDM) platform that was loading fake applications onto smartphones, we have gained greater insight into the attacker's methods. We now know how the attacker took advantage of a common MDM feature and used an iOS profile to hide and disable the legitimate versions of the apps to force the use of the malicious stand-ins.
+
+Cisco Talos previously published two articles (here and here) on the subject. In the aforementioned campaigns, the attackers enrolled iOS devices into the MDM and used the devices to control the victim's devices, deploying malicious apps disguised as the messaging services WhatsApp, Telegram and Imo, as well as the web browser Safari.
+
+After additional research, we now know that the attacker deployed the malicious apps after the actor deployed a profile on the enrolled devices and abused the age rating restriction functionality that exists on iOS devices. The age ratings for WhatsApp and Telegram are 12-plus and 17-plus, respectively. After the age rating limit was set to 9-plus, the installed legitimate applications disappeared from the device:
+
+
+
+
+
+
+
+
+The app still exists on the device, however, the user will not be able to interact with it, even if the user searches for the app using the search function on the iOS device. It simply does not open.
+
+All mobile device users should be aware of these attack methods as to prevent attackers from gaining control of their phones through an MDM. In the text and videos below, we will walk through the process of checking your phone for an unauthorized MDM and any changes in the age settings. 
+
+
+More details on the profile setup
+
+In the iOS ecosystem, you can configure devices using profiles. This is an XML file that can be distributed to iOS devices. For example, the MDM enrollment mechanism is performed using a profile. Profiles can be easily created using the official Apple tool Apple Configurator 2. Thanks to these profiles, we can restrict app usage:
+
+
+
+
+
+As you can see in the screenshot, the app restriction is limited to the supervised device. In our investigation, the enrolled iPhones were not in supervised mode, but the legitimate WhatsApp application disappeared to force the user to only have access to the malicious one. How?
+
+The attackers used the age rating to forbid the usage of apps rated for ages 9 and above:
+
+
+
+
+
+Here is the capture of the XML content of the profile hosted on the malicious MDM:
+
+<key>ratingApps</key>
+<integer>200</integer>
+<key>ratingMovies</key>
+<integer>1000</integer>
+<key>ratingRegion</key>
+<string>us</string>
+<key>ratingTVShows</key>
+<integer>1000</integer>
+
+
+In this context, the 200 equates to the "age 9-plus" rating.
+
+Once this profile is installed on the iOS device, the applications restricted by the age rating stay installed, but can no longer be used or accessed, and the icon disappears from the device springboard. Using the app store, you can see that the application is still installed, but the user cannot launch it. You can control the restriction settings on your device:
+
+
+
+
+
+We can see that the restrictions are displayed as "disabled" — that's why the text is in grey. But,  it is enabled.
+
+
+
+
+
+If the profile is installed manually via Apple Configurator, or by opening the profile XML from Safari, a new entry will appear in the Settings > General > Profile menu. If the MDM deploys the profile, it does not appear (the MDM enrollment profile will be present).
+
+
+How to check iPhone profiles
+
+In the videos below, we are going to show you how an attacker can obtain access to your phone by enrolling you in a malicious MDM platform. You'll notice there is a fair amount of user interaction involved. However, if the attacker can correctly socially engineer a user via a phone call, or if they have physical access to the device, enrollment can be quick and effective.
+
+The first video shows the enrollment process from an end user's perspective. We have carried out this test on an iPhone X running the latest 11.4.1 iOS from Apple. The lab phone used is not jailbroken or tampered with in any way. It's an iPhone X fresh out of the box updated to the latest iOS.
+
+
+
+
+
+As you can see in the video, the user has accepted a couple of INSTALL/TRUST processes to allow the phone to be enrolled. Once we successfully enroll the phone within the malicious MDM, we could push profiles and applications on to the device. To this end, we were able to push a profile that had age restrictions in place, as detailed earlier in the blog, which meant that our legitimate WhatsApp application disappeared and, with our MDM access, we pushed a new malicious version of WhatsApp to the phone.
+
+It's important to note here that there is no malicious malware, vulnerability or zero-day used to enroll the phone within the MDM. It is a legitimate method of device administration that is used within enterprises throughout the world. The attacker has merely leveraged this process.
+
+Talos recommend the following methods to check if your phone has additional profiles or is enrolled in an MDM platform:
+
+1. Users can view restrictions set by MDM profiles in Settings > General > Profiles & Device Management > [MDM configuration] >  Restrictions
+
+2. Users can also check which applications a MDM profile installed on their device in Settings > General > Profiles & Device Management > [MDM configuration] >  Apps.
+
+Note: If you do not have any PROFILE & DEVICE MANAGEMENT menu option available, this means the phone is currently not enrolled in an MDM, nor are there any additional profiles trusted on the phone.
+
+
+
+
+
+
+Conclusion
+
+When most consumers think about malware on their mobile devices, they usually think that they need to download a patch to fix a bug or vulnerability. However, this technique is not a vulnerability. Rather, it's an existing, legitimate feature used by this threat actor in order to hide the victim's legitimate applications and hide them while deploying a malicious version.  This technique is completely opaque once the user enrolls in the MDM. 
+
+An MDM can silently deploy a profile. Therefore,e strongly recommend that iPhone profiles are audited and suspicious profiles are deleted. Additionally, you can check the restrictions menu on your phone to verify if an age rating is configured on it. 
+
+

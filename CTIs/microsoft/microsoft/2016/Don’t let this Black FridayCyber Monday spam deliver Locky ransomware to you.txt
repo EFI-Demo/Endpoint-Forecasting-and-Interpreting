@@ -1,0 +1,92 @@
+
+		We see it every year: social engineering attacks that take advantage of the online shopping activities around Black Friday and Cyber Monday, targeting customers of online retailers. This year, we’re seeing a spam campaign that Amazon customers need to be wary of. The fake emails pretend to be notifications from the online retailer that a purchase has been sent out for delivery. To appear legitimate, the emails may also spoof delivery companies.
+
+
+
+
+The trend towards increasingly sophisticated malware behavior, highlighted by the use of exploits and other attack vectors, makes older platforms so much more susceptible to ransomware attacks. From June to November 2017, Windows 7 devices were 3.4 times more likely to encounter ransomware compared to Windows 10 devices.
+Read our latest report: A worthy upgrade: Next-gen security on Windows 10 proves resilient against ransomware outbreaks in 2017
+
+
+
+These email messages start an infection chain that leads to a ransomware infection. You don’t want to find yourself at the end of this chain, because by then, your files will have been encrypted by the malware.
+But, as it’s a chain of events, you can stop the infection at several points. Let’s trace the infection chain:
+
+The email is a fake Amazon notification. You can detect that it’s fake, because even if it tries to look as legitimate as possible, it still doesn’t look like the usual Amazon email. Amazon lists components of a fake email here: https://www.amazon.com/gp/help/customer/display.html?nodeId=15835501
+The attachment is a ZIP file. Don’t open this attachment. It contains as JavaScript (.js) file, not a file type often sent in legitimate email communications.
+The JavaScript in the ZIP file is obfuscated. Don’t open this script. It’s a Nemucod malware that downloads the payload. Windows Defender detects this JavaScript downloader.
+The downloaded file is a ransomware detected as Ransom:Win32/Locky.A. Windows Defender detects this malware.
+
+
+Figure 1: The Black Friday/Cyber Monday themed spam triggers an infection chain that leads to a ransomware infection
+Locky is a ransomware family that encrypts files using a public key. It’s been known to be spread by the downloader Nemucod. We have been tracking the Nemucod-Locky tandem, and we have seen it evolve over time, changing attachment file names and social engineering lures. This Black Friday/Cyber Monday version is just the latest of what looks like a continuous campaign.
+Here are samples of the fake Amazon email messages:
+
+Figure 2: A sample fake Amazon email that also spoofs Royal Mail as the courier
+
+Figure 3: A sample fake Amazon email that also spoofs FedEx as the courier
+
+Figure 4: A sample fake Amazon email that also spoofs DHL as the courier
+In what looks like an attempt to evade anti-spam solutions that depend on the hash of the email body, the character “=” is added in random places in the email. The malware authors could have reused the message from a previous spam campaign, and needed only to change the positions of the added character. This changes the hash of the email body, and it might prove effective against some email filters.
+The email attachment is a ZIP file that contains an obfuscated JavaScript (.js) file, detected as TrojanDownloader:JS/Nemucod:
+
+Figure 5: The ZIP attachment contains a malicious JavaScript file
+
+Figure 6: The JavaScript file is obfuscated
+When opened, the JavaScript connects to the following URLs to download a file:
+
+hxxp:// livingnetwork .co.za/hfvg623?zvMNzYWImo=zvMNzYWImo
+hxxp:// ayurvedic .by/hfvg623?zvMNzYWImo=zvMNzYWImo
+hxxp:// marcelrahner .com/hfvg623?zvMNzYWImo=zvMNzYWImo
+hxxp:// copeigoan .net/hfvg623?zvMNzYWImo=zvMNzYWImo
+hxxp:// sheerfoldy .com/hfvg623?zvMNzYWImo=zvMNzYWImo
+
+The downloaded file is an encrypted blob, which the JavaScript decrypts to a .DLL file and then executes. This file is a DLL version of Ransom:Win32/Locky.A.
+Ransom:Win32/Locky.A encrypts files and renames them to this format: [victim computer ID] – [hexadecimal file identifier].aeris. The extension .aeris is the latest in a list that Locky has used for the files it encrypts: .locky, .zepto, .odin, .shit, and .thor.
+The ransomware assigns an ID to the victim computer, which it uses for the file name of encrypted files. It then connects to command-and-control (C&C) servers to report this ID and other information about the infected computer.
+It drops the following ransom note, which instructs the victim to pay to regain access to the files: %Desktop%\-INSTRUCTION.bmp:
+
+Figure 7: Ransom:Win32/Locky.A leaves this ransom note
+The malware analyzed for the blog post have the following SHA1:
+
+TrojanDownloader:JS/Nemucod (JavaScript downloader)
+
+4ef30bdcf4e858f6ed28c88434786c014b027fcc
+5e484feb2b9b7639b3a8c61a726f28087fbf3709
+df774d57a6491d83c0add823f4c04ca83b0d8b6c
+ec2046c728094f08e701339cde7dd205d4126d43
+
+
+Ransom:Win32/Locky.A (Decrypted payload)
+
+1734ef2d44bdc71bdf81de0726a8da072d352ded
+449e33faef1646a667a44ea7d0e1bf0e924afade
+
+
+
+Prevention and mitigation
+To avoid falling prey to this new ransomware, here are some tips:
+For end users
+
+Use an up-to-date, real-time antimalware product, such as Windows Defender for Windows 10.
+Think before you click. Do not open emails from senders you don’t recognize. Upload any suspicious files here: https://www.microsoft.com/en-us/security/portal/submission/submit.aspx. This campaign spoofs Amazon and the delivery companies Royal Mail, DHL, and FedEx. The attachment is a ZIP file, which may be a common attachment type, but it contains a .JS file. Be mindful of what the attachment is supposed to be (in this case, most likely a document) and the actual file type (a script).
+
+For IT administrators
+
+Use Office 365 Advanced Threat Protection. It has a machine learning capability to help your network administrators block dangerous email threats. See the Overview of Advanced Threat Protection in Exchange: new tools to stop unknown attacks, for details.
+Use Windows Defender Advanced Threat Protection to help detect, investigate, and respond to advanced and targeted attacks on your enterprise networks. To test how Windows Defender ATP can help your organization, sign up for a free trial.
+Use the AppLocker group policy to prevent dubious software from running.
+
+ 
+Duc Nguyen and Wei Li
+ 
+ 
+ 
+
+ 
+
+Talk to us
+Questions, concerns, or insights on this story? Join discussions at the Microsoft community and Windows Defender Security Intelligence.
+Follow us on Twitter @WDSecurity and Facebook Windows Defender Security Intelligence.
+ 
+	

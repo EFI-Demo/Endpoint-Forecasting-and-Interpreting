@@ -1,0 +1,52 @@
+
+		Windows Defender Antivirus uses a layered approach to protection: tiers of advanced automation and machine learning models evaluate files in order to reach a verdict on suspected malware. While Windows Defender AV detects a vast majority of new malware files at first sight, we always strive to further close the gap between malware release and detection.
+In a previous blog post, we looked at a real-world case study showing how Windows Defender Antivirus cloud protection service leverages next-gen security technologies to save “patient zero” from new malware threats in real-time. In that case study, a new Spora ransomware variant was analyzed and blocked within seconds using a deep neural network (DNN) machine learning classifier in the cloud. In this blog post we’ll look at how additional automated analysis and machine learning models can further protect customers within minutes in rare cases where initial classification is inconclusive.
+Layered machine learning models
+In Windows Defender AV’s layered approach to defense, if the first layer doesn’t detect a threat, we move on to the next level of inspection. As we move down the layers, the amount of time required increases. However, we catch the vast majority of malware at the first (fastest) protection layers and only need to move on to a more sophisticated (but slower) level of inspection for rarer/more advanced threats.
+For example, the vast majority of scanned objects are evaluated by the local Windows Defender client machine learning models, behavior-based detection algorithms, generic and heuristic classifications, and more. This helps ensure that users get the best possible performance. In rare cases where local intelligence can’t reach a definitive verdict, Windows Defender AV will use the cloud for deeper analysis.
+
+Figure 1. Layered detection model
+For a more detailed look at our approach to protection, see The evolution of malware prevention.
+Detonation-based machine learning classification
+We use a variety of machine learning models that use different algorithms to predict whether a certain file is malware. Some of these algorithms are binary classifiers that give a strict clean-or-malware verdict (0 or 1), while others are multi-class classifiers that provide a probability for each classification (malware, clean, potentially unwanted application, etc). Each machine learning model is trained against a set of different features (often thousands, sometimes hundreds of thousands) to learn to distinguish between different kinds of programs.
+For the fastest classifiers in our layered stack, the features may include static attributes of the file combined with events (for example, API calls or behaviors) seen while the scanning engine emulates the file using dynamic translation. If the results from these models are inconclusive, we’ll take an even more in-depth look at what the malware does by actually executing it in a sandbox and observing its run-time behavior. This is known as dynamic analysis, or detonation, and happens automatically whenever we receive a new suspected malware sample.
+The activities seen in the sandbox machine (for example, registry changes, file creation/deletion, process injection, network connections, and so forth) are recorded and provided as features to our ML models. These models can then combine both the static features obtained from scanning the file with the dynamic features observed during detonation to arrive at an even stronger prediction.
+
+Figure 2. Detonation-based machine learning classification
+Ransom:Win32/Tibbar.A – Protection in 14 minutes
+On October 24, 2017, in the wake of recent ransomware outbreaks such as Wannacry and NotPetya, news broke of a new threat spreading, primarily in Ukraine and Russia: Ransom:Win32/Tibbar.A (popularly known as Bad Rabbit).
+This threat is a good example of how detonation-based machine learning came into play to protect Windows Defender AV customers. First though, let’s look at what happened to patient zero.
+At 11:17 a.m. local time on October 24, a user running Windows Defender AV in St. Petersburg, Russia was tricked into downloading a file named FlashUtil.exe from a malicious website. Instead of a Flash update, the program was really the just-released Tibbar ransomware.
+Windows Defender AV scanned the file and determined that it was suspicious. A query was sent to the cloud protection service, where several metadata-based machine learning models found the file suspicious, but not with a high enough probability to block. The cloud protection service requested that Windows Defender AV client to lock the file, upload it for processing, and wait for a decision.
+Within a few seconds the file was processed, and sample-analysis-based ML models returned their conclusions. In this case, a multi-class deep neural network (DNN) machine learning classifier correctly classified the Tibbar sample as malware, but with only an 81.6% probability score. In order to avoid false positives, cloud protection service is configured by default to require at least 90% probability to block the malware (these thresholds are continually evaluated and fine-tuned to find the right balance between blocking malware while avoiding the blocking of legitimate programs). In this case, the ransomware was allowed to run.
+
+Figure 3. Ransom:Win32/Tibbar.A ransom note 
+Detonation chamber
+In the meantime, while patient zero and eight other unfortunate victims (in Ukraine, Russia, Israel, and Bulgaria) contemplated whether to pay the ransom, the sample was detonated and details of the system changes made by the ransomware were recorded.
+
+Figure 4. Sample detonation events used by the machine learning model
+As soon as the detonation results were available, a multi-class deep neural network (DNN) classifier that used both static and dynamic features evaluated the results and classified the sample as malware with 90.7% confidence, high enough for the cloud to start blocking.
+When a tenth Windows Defender AV customer in the Ukraine was tricked into downloading the ransomware at 11:31 a.m. local time, 14 minutes after the first encounter, cloud protection service used the detonation-based malware classification to immediately block the file and protect the customer.
+At this point the cloud protection service had “learned” that this file was malware. It now only required metadata from the client with the hash of the file to issue blocking decisions and protect customers. As the attack gained momentum and began to spread, Windows Defender AV customers with cloud protection enabled were protected. Later, a more specific detection was released to identify the malware as Ransom:Win32/Tibbar.A.
+Closing the gap
+While we feel good about Windows Defender AV’s layered approach to protection, digging deeper and deeper with automation and machine learning in order to finally reach a verdict on suspected malware, we are continually seeking to close the gap even further between malware release and protection. The cases where we cannot block at first sight are increasingly rare, but there is so much to be done. As our machine learning models are continuously updated and retrained, we are able to make better predictions over time. Yet malware authors will not rest, and the ever-changing threat landscape requires continuous investment in new and better technologies to detect new threats, but also to effectively differentiate the good from the bad.
+What about systems that do get infected while detonation and classification are underway? One area that we’re actively investing in is advanced remediation techniques that will let us reach back out to those systems in an organization that were vulnerable and, if possible, get them back to a healthy state.
+If you are organization that is willing to accept a higher false positive risk in exchange for stronger protection, you can configure the cloud protection level to tell the Windows Defender AV cloud protection service to take a more aggressive stance towards suspicious files, such as blocking at lower machine learning probability thresholds. In the Tibbar example above, for example, a configuration like this could have protected patient zero using the initial 81% confidence score, and not wait for the higher confidence (detonation-based) result that came later. You can also configure the cloud extended timeout to give the cloud protection service more time to evaluate a first-seen threat.
+As another layer of real-time protection against ransomware, enable Controlled folder access, which is one of the features of the new Windows Defender Exploit Guard. Controlled folder access protects files from tampering by locking folders so that ransomware and other unauthorized apps can’t access them.
+For enterprises, Windows Defender Exploit Guard’s other features (Attack Surface Reduction, Exploit protection, and Network protection) further protect networks from advanced attacks. Windows Defender Advanced Threat Protection can also alert security operations personnel about malware activities in the network so that personnel can promptly investigate and respond to attacks.
+To test how Windows Defender ATP can help your organization detect, investigate, and respond to advanced attacks, sign up for a free trial.
+For users running Windows 10 S, malware like Tibbar simply won’t run. Windows 10 S provides advanced levels of security by exclusively running apps from the Microsoft Store. Threats such as Tibbar are non-issues for Windows 10 S users. Learn more about Windows 10 S.
+New machine learning and AI techniques, in combination with both static and dynamic analysis, gives Windows Defender AV the ability to block more and more malware threats at first sight and, if that fails, learn as quickly as possible that something is bad and start blocking it. Using a layered approach, with different ML models at each layer, gives us the ability to target a wide variety of threats quickly while maintaining low false positive rates. As we gather more data about a potential threat, we can provide predictions with higher and higher confidence and take action accordingly. It is an exciting time to be in the fray.
+ 
+Randy Treit
+Senior Security Researcher, Windows Defender Research 
+ 
+ 
+ 
+
+
+Talk to us
+Questions, concerns, or insights on this story? Join discussions at the Microsoft community and Windows Defender Security Intelligence.
+Follow us on Twitter @WDSecurity and Facebook Windows Defender Security Intelligence.
+ 
+	

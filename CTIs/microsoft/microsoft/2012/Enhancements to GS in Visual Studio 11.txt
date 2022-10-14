@@ -1,0 +1,35 @@
+
+		As mentioned in previous posts, there are some interesting changes afoot regarding security in Visual Studio 11. Here is the next installment of the series by Tim Burrell outlining more of the work done by Security Science and the talented folks on the Visual Studio team…
+———————————————————————————————————————–
+Microsoft is actively developing Visual Studio 11 and continually looking for ways to improve security-related functionality in the software. We previously noted that we are updating the on-by-default /GS compiler switch, which provides protection against some memory safety bugs such as buffer overflows. This post will provide additional information on those changes.
+You may recall that /GS buffer overrun protection places a cookie on the stack between local variables and critical security-critical metadata such as the return address.
+
+The integrity of the GS cookie is checked at the end of the function, prior to the return address being used to return to the caller; if the cookie has been corrupted then execution is terminated rather than carrying on and transferring control to a now suspect return address in memory.
+Note that this kind of protection is designed to catch the traditional overflow scenario – i.e. modification of consecutive bytes – and this is indeed by far the most common type of stack corruption bug. However it does not protect a scenario such as:
+
+If the attacker can control the value of ‘n’ above then he can corrupt a single TCHAR character, leaving any GS cookie untouched:
+
+In reviewing those Microsoft Security Response Center (MSRC) cases due to stack-based corruption that were not covered by the existing /GS mechanism, we noted one error that stood out as being more common than others: misplaced null terminators. A typical code sequence might be something like:
+ 
+The ManipulateString() function correctly writes data within the bounds of the string ‘buf’– but fails to keep track of the final length ‘cch’ of the resulting string. The instruction that null-terminates the string could therefore write outside the bounds of the string buffer without corrupting the GS cookie.
+Compile the code above using the Visual Studio 11 Developer Preview tools and you will see that the generated code includes an extra check:
+
+The compiler has inserted range validation code for the null-terminating instruction to guard against an out-of-bounds write to memory, roughly equivalent to: 
+
+A couple of questions arising from this are:
+1.       “What is the __report_rangecheckfailure() function?”
+2.       “When/how often does this range validation happen?”
+The __report_rangecheckfailure() is similar to the existing __report_gsfailure() function; it just terminates the program to prevent further execution in a state that we know is about to become untrustworthy. We will come back to this in more detail in a later post.
+With respect to how often such range validation happens, it is targeted precisely at the code pattern for which there is historical data indicating the highest risk of a bug being present, namely an assignment to a single array element where:
+–          The array element size is 1 or 2 bytes, i.e. typically a string. 
+–          The value being written is zero, i.e. to catch the null terminator case.
+–          The array is declared to be of fixed known size (note that this could be a local or global array so not restricted to the stack).
+In addition, for the compiler to be able to insert the instruction guarding against a range violation, it needs to know the size of the array. So an additional requirement in Visual Studio 11 Developer Preview is that the array assignment instruction involves an array of locally and statically declared size. By means of illustration, the following would not lead to a range check being inserted:
+
+As always this is a trade-off. By targeting these extra checks as described above, Visual Studio 11 by default provides extra protection for a limited set of bugs that history tells us are the most common kind of stack-corruption bugs not covered previously by /GS, while minimizing performance and codesize impact by keeping the number of such checks low overall. 
+And of course /GS continues to provide the familiar cookie-based protection against traditional stack overflows.
+The /GS compiler switch is one of many security enhancements being looked at for Visual Studio 11 and is but one small part of the Security Development Lifecycle (SDL) process and methodology for developing secure software, which includes much more than just using specific compiler switches – read more and find additional resources related to SDL here.
+Tim Burrell, MSEC Security Science.
+ 
+
+	

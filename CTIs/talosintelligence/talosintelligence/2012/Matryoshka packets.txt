@@ -1,0 +1,27 @@
+
+
+I have heard many people talk about ICMP and UDP tunnels but very rarely observed them in the wild. We recently had the opportunity to examine a sample that uses this technique for C&C. It communicates by either an ICMP echo with a data section that includes a full TCP SYN packet, or a UDP packet destined for port 53 with a payload that also includes a full TCP SYN packet.
+
+Both methods have a data section with an Ethernet frame, IP header, and TCP header. Many of the fields associated with these headers are fixed length and a few of them will remain fairly consistent across connections. Using these fixed lengths and consistent values we can start building a Snort rule that inspects the payload of these packets for a TCP SYN. The ICMP and UDP packets are also arranged so that the embedded packet in the payload starts at the same point. 
+
+The first header within the payload is the destination MAC, source MAC and type. The type will typically be IPv4 so the Snort rule will start there. The offset and depth combination make sure detection is at the correct position in the packet.
+
+
+content:"|08 00 45|"; offset:12; depth:15;
+
+The next reliable fields we look for are the IP fragment and offset. The distance and within will skip over a few more dynamic fields while ensuring it does not go beyond the fragment and offset fields.
+
+content:"|00 00|"; distance:5; within:7;
+
+The IP header also contains a type field, in this case the type is TCP.
+
+content:"|06|"; distance:1; within:1;
+
+Finally the acknowledgement number for an initial SYN will be null.
+
+content:"|00 00 00 00|"; distance:18; within:22; 
+
+This all results in SIDs 24087 and 24088, which will alert on each packet tunneled in this manner. ClamAV coverage can be found under the name Trojan.Win32.Bledoor.
+
+Different methods of creating these tunnels might require an adjustment of the depth/offset on the first match but the rest are relative to the first match, though searching through the last several months worth of traffic from our malware sandbox showed no other samples using this type of technique. If you come across a tunnel similar to this, and want help creating detection for it, drop us a line at vrt < at > sourcefire < dot > com, and we'll be happy to help.
+

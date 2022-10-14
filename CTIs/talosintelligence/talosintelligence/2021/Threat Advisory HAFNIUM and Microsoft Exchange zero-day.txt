@@ -1,0 +1,118 @@
+
+
+Microsoft released patches for four vulnerabilities in Exchange Server on March 2, disclosing that these vulnerabilities were being exploited by a previously unknown threat actor, referred to as HAFNIUM.
+The vulnerabilities in question — CVE-2021-26855, CVE-2021-26857, CVE-2021-26858 and CVE-2021-27065 — affect Microsoft Exchange Server 2019, 2016, 2013 and the out-of-support Microsoft Exchange Server 2010. The patches for these vulnerabilities should be applied as soon as possible. Microsoft Exchange Online is not affected.
+Patches for an additional three vulnerabilities in the same software have also been released: CVE-2021-26412, CVE-2021-26854 and CVE-2021-27078. It is believed that these vulnerabilities have not yet been exploited in the wild.
+
+Threat activity details
+
+The threat actor has been observed targeting an array of organizations, including infectious disease researchers, law firms, higher education institutions, defense contractors, policy think tanks and non-governmental organizations. Attacks exploiting these vulnerabilities are believed to date back to Jan. 6, 2021.
+The attacks start by exploiting CVE-2021-26855, a server-side request forgery vulnerability, or by abusing stolen passwords. This vulnerability is exploited by sending a specially crafted XML SOAP payload to the Exchange Web Services API running on the Exchange Server. The threat actor has been observed using leased virtual private servers within the United States and connecting to TCP port 443 (HTTPS) on the vulnerable servers to carry out the attacks.
+After the initial attack, the threat actor has bypassed authentication and can perform operations on the users’ mailboxes, such as downloading messages. The threat actor subsequently exploits additional vulnerabilities including the remote code execution vulnerability CVE-2021-26857 to execute instructions as SYSTEM, and the arbitrary file write vulnerabilities CVE-2021-26858 and CVE-2021-27065 to upload webshells to the compromised host. This allows the threat actor to execute additional instructions on the compromised devices.
+The attackers have been observed dumping LSASS process memory with Procdump and comsvcs.dll, using 7-Zip and WinRar to compress stolen data for exfiltration, using PsExec and PowerCat to connect and send commands to remote systems, using PowerShell and the Nishang framework to make changes including creating a reverse shell and creating new user accounts.
+
+Threat mitigation
+
+All organisations using the affected software should prevent external access to port 443 on Exchange Servers, or set up a VPN to provide external access to port 443. This will ensure that only authenticated and authorized users can connect to this service. However, this action will only protect against the initial step of the attack.
+Administrators should immediately apply the published patches to vulnerable Exchange Servers. This will require bringing the devices up to the necessary patch level by applying previous patches, if these have not been already applied.
+Cisco has been closely monitoring the situation and has released protection against the threat as detailed in the coverage section.
+
+Coverage
+Snort SIDs:
+
+CVE-2021-26857 — 57233-57234
+CVE-2021-26855 — 57241-57244
+CVE-2021-26858 & CVE-2021-27065 — 57245-57246
+CVE-2021-24085 — 57251
+CVE-2021-27065 — 57252-57253
+Html.Webshell.Hafnium — 57235-57240
+
+
+Cisco Secure Endpoint (formerly AMP):
+Malicious files detected as:
+
+Threat Name: Html.Webshell.HAFNIUM.DRT.Talos
+
+Behavioural Protection Signatures:
+
+PowerShell Download String
+Raw GitHub Argument
+RunDLL32 Suspicious Process
+CVE-2021-26858 Potential Exploitation
+CVE-2021-26857 Potential Exploitation
+Nishang Powershell Reverse Shell
+
+ClamAV:
+
+Win.ASP.MSExchangeExploit*
+
+Talos Security Intelligence Block List
+  IP addresses blocked as Classification: Attackers
+Cisco Umbrella
+  IP addresses blocked as Security Category: Command and Control Threat Types: Dropper
+
+Cisco Incident Response Services are available to assist organisations to respond and recover from an incident. Additionally, Incident Response Services can be used to help organisations prepare for attacks and to test existing procedures.
+
+
+Cisco Secure Firewall / Secure IPS (Network Security) appliances such as Next-Generation Firewall (NGFW), Next-Generation Intrusion Prevention System (NGIPS), Cisco ISR, and Meraki MX can detect malicious activity associated with this threat.
+
+Cisco Secure Endpoint is ideally suited to prevent the execution of the malware detailed in this post. Users of this solution can use Orbital Advanced Search to run complex OSqueries to see if their endpoints are infected with this specific threat. Try Cisco Secure Endpoint for free here.
+
+Cisco AMP for Networks is able to detect malicious software as it crosses the network.
+
+Cisco Secure X gives security teams a single location to identify threats, perform automated workflows, and to remediate incidents.
+
+Cisco Secure Malware Analytics (Threat Grid) helps identify malicious binaries and build protection into all Cisco Security products.
+
+Cisco Secure Network Analytics (Stealthwatch) uses a variety of analytical processes to identify anomalous and malicious behavior occurring on the network. 
+
+Cisco Secure Workload (Tetration), can identify anomalous behaviour of affected systems and highlight systems that require patching.
+
+Cisco Umbrella, our secure internet gateway (SIG), blocks users and systems from connecting to malicious domains and IPs.
+ 
+Additional protections with context to your specific environment and threat data are available from the Firepower Management Center.
+
+Open Source Snort Subscriber Rule Set customers can stay up to date by downloading the latest rule pack available for purchase on Snort.org.
+
+
+IOCs
+IP addresses leveraged by attackers.
+103.77.192.219
+104.140.114.110
+104.250.191.110
+108.61.246.56
+149.28.14.163
+157.230.221.198
+167.99.168.251
+185.250.151.72
+192.81.208.169
+203.160.69.66
+211.56.98.146
+5.254.43.18
+80.92.205.81
+
+Web Shell SHA256 Hashes
+893cd3583b49cb706b3e55ecb2ed0757b977a21f5c72e041392d1256f31166e2
+406b680edc9a1bb0e2c7c451c56904857848b5f15570401450b73b232ff38928
+2fa06333188795110bba14a482020699a96f76fb1ceb80cbfa2df9d3008b5b0a
+b75f163ca9b9240bf4b37ad92bc7556b40a17e27c2b8ed5c8991385fe07d17d0
+097549cf7d0f76f0d99edf8b2d91c60977fd6a96e4b8c3c94b0b1733dc026d3e
+2b6f1ebb2208e93ade4a6424555d6a8341fd6d9f60c25e44afe11008f5c1aad1
+65149e036fff06026d80ac9ad4d156332822dc93142cf1a122b1841ec8de34b5
+511df0e2df9bfa5521b588cc4bb5f8c5a321801b803394ebc493db1ef3c78fa1
+4edc7770464a14f54d17f36dc9d0fe854f68b346b27b35a6f5839adf1f13f8ea
+811157f9c7003ba8d17b45eb3cf09bef2cecd2701cedb675274949296a6a183d
+1631a90eb5395c4e19c7dbcbf611bbe6444ff312eb7937e286e4637cb9e72944
+
+Additional References
+
+CISA Alert - Mitigate Microsoft Exchange Server Vulnerabilities
+Volexity Blog - Operation Exchange Marauder: Active Exploitation of Multiple Zero-Day Microsoft Exchange Vulnerabilities
+Microsoft Blog - Defending Exchange Servers Under Attack
+Exchange Team Blog - Released: March 2020 Exchange Server Security Updates
+Microsoft EMEA Out of Band Webcast
+Microsoft Blog - HAFNIUM Targeting Exchange Servers with 0-Day Exploits
+
+
+
+

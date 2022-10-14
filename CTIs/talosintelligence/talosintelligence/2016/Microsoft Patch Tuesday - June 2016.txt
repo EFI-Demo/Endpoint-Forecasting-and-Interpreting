@@ -1,0 +1,62 @@
+
+This post was authored by Warren Mercer.
+
+Patch Tuesday for June 2016 has arrived where Microsoft releases their monthly set of security bulletins designed to address security vulnerabilities within their products. This month's release contains 17 bulletins addressing 44 vulnerabilities. Five bulletins resolve critical vulnerabilities found in MS DNS Server, Edge, Internet Explorer, JScript/VBScript, and Office. The remaining bulletins are rated important and address vulnerabilities in Active Directory, Exchange Server, Group Policy, SMB Server, Netlogon, Windows Graphics component, Windows Kernel-mode Drivers, Windows PDF, Window Search Component, and WPAD.
+
+
+Bulletins Rated Critical
+
+Microsoft bulletins MS16-063, MS16-068 through MS16-071, and MS16-083 are rated as critical in this release. 
+
+MS16-063 and MS16-068 are this month's bulletins for Microsoft Internet Explorer and Edge browsers. The IE security bulletin addresses vulnerabilities in Internet Explorer versions 9, 10, & 11. The IE bulletin covers 10 vulnerabilities in total and resolves eight memory corruption bugs, seven of which are critical, a XSS filter vulnerability, and a WPAD vulnerability. The Edge bulletin addresses eight vulnerabilities, consisting of four memory corruption bugs, two information disclosure, one security feature bypass and a PDF remote code execution vulnerability.
+
+MS16-069 addresses six arbitrary code execution vulnerabilities within JScript and VBScript scripting engines in Windows. Note that bulletin is targeted at Window Vista, Windows Server 2008, and Windows Server 2008 R2. Those who use newer versions of Windows will not see this bulletin. Multiple arbitrary code execution vulnerabilities exist due to the way that the engine handles objects in memory in IE. Exploitation of these vulnerabilities is possible if, for instance, an adversary builds a malicious website that exploits a vulnerability to achieve code execution in the context of the logged on user. An additional attack vector could be Microsoft Office documents with an embedded malicious ActiveX controls. Microsoft does suggest a workaround for situations where the security update can not be applied. For more information, please refer to the Microsoft security bulletin.
+
+MS16-070 addresses four vulnerabilities within Microsoft Office. Three arbitrary code execution vulnerabilities and one information disclosure vulnerability were addressed in this month's bulletin. Of the three code execution vulnerabilities, two were due to memory corruption (CVE-2016-0025, CVE-2016-3233) and one due to OLE DLL side loading (CVE-2016-3235). Successful exploitation of these could be achieved via a specially crafted email which encourages the user to open the attached file. This can result in the adversary gaining arbitrary code execution in the context of the logged on user. 
+
+MS16-071 addresses a use-after-free vulnerability (CVE-2016-3227) within Microsoft DNS servers. Successful exploitation of this flaw could allow an adversary to execute arbitrary code within the context of a local SYSTEM account via creating a specially crafted application to connect to a Windows DNS server and issue malicious requests to the server.
+
+MS16-083 is an Adobe Flash Player security bulletin, APSB16-18,  for the Flash Player libraries found in Microsoft Internet Explorer 10 and 11 and Microsoft Edge. Note that Adobe has issued a Security Advisory, warning users that a vulnerability patched in this bulletin is under active exploitation. Users and administrators are advised to install this bulletin immediately or to implement a suggested workaround Microsoft has detailed in the bulletin in order to mitigate the risk of compromise.
+
+
+Bulletins Rated Important
+
+Microsoft bulletins MS16-072 through MS16-082 are rated as important in this month's release.
+
+MS16-072 addresses CVE-2016-3223, a privilege escalation vulnerability within Group Policy. This vulnerability manifests when Windows processes group policy updates. Note that for this this attack to be carried out, an attack would need to conduct a man-in-the-middle (MiTM) attack between a domain controller and target machine. The user account could then be escalated to a privileged administrative account.
+
+MS16-073 resolves CVE-2016-3218 & CVE-2016-3221, which are privileges escalation bugs within the Win32k kernel driver. Exploitation of these flaws could allow an attacker to execute arbitrary code in kernel mode. These vulnerabilities manifests due to improper handling of objects in memory. An information disclosure vulnerability (CVE-2016-3232) is also addressed, but is only specific to versions of Windows Server 2012. This vulnerability exists within the Windows Virtual PCI and Virtual Service Provider where they fail to handle uninitialized memory correctly. This could allow an attacker to disclose specific information from memory. 
+
+MS16-074 resolves two privilege escalation vulnerabilities and an information disclosure vulnerability within the Microsoft Graphics Component. CVE-2016-3216 is an information disclosure vulnerability within Windows Graphic Device Interface (GDI32.dll) due to improper handling of objects in memory. This could lead to an ASLR bypass which, if used in conjunction with another vulnerability, could lead to arbitrary code execution. Both privilege escalation vulnerabilities are due to improper handling of memory with CVE-2016-3219 affecting the Windows Graphic Component and CVE-2016-3220 affecting Adobe Type Manager Font Driver (ATMFD). Successful exploitation would allow an attacker to execute arbitrary commands as an administrator.
+
+MS16-075 addresses CVE-2016-3225, an arbitrary code execution flaw within Microsoft Server Message Block protocol. Exploitation of this vulnerability could allow an authenticated attacker to forward authentication requests intended for another service and allow arbitrary code execution with elevated permissions. Microsoft have detailed this attack requires an attacker to be already logged on to the affected machine.
+
+MS16-076 resolves CVE-2016-3228, a vulnerability within NetLogon due to improper handling of objects resulting in memory corruption. This vulnerability could allow an attacker with access to your organization's Primary Domain Controller (PDC) to run a specially crafted application to carry out remote code execution and secure a channel to the PDC as a replica domain controller.
+
+MS16-077 contains fixes for two vulnerabilities related to Windows Proxy Autodiscovery (WPAD), both which allow for privilege escalation. This update addresses how Windows handles proxy discovery. CVE-2016-3213 manifests when Windows falls back to a vulnerable proxy discovery process.  An attacker would be required to poison your DNS server to register their own host as a WPAD within local DNS or alternatively respond to a NetBIOS name request for WPAD. CVE-2016-3236 allows for privilege escalation under specific proxy discovery scenarios whereby an attacker would potentially access and control network traffic.
+
+MS16-078 addresses CVE-2016-3231, a privilege escalation flaw within the Windows Diagnostic Hub. Exploiting this vulnerability could allow an attacker to gain elevated privileges due to a failure to sanitize input by the Standard Collector Service, thus leading to an insecure library loading scenario. This can allow an attacker to execute arbitrary code under elevated privileges.
+
+MS016-079 addresses a vulnerability within Microsoft Exchange Server, CVE-2016-0028, which can lead to information disclosure due to Outlook Web Access (OWA) handling HTML messages incorrectly. An attacker could use specifically crafted email image URLs, which are loaded without warning or filtering within OWA, to beacon information back about the end user and could allow fingerprinting and tracking.
+
+MS16-080 addresses several vulnerabilities within Microsoft PDF. CVE-2016-3201 & CVE-2016-3215 are both information disclosure issues which can lead to successful reading of information within the context of the user using a specially crafted PDF file. CVE-2016-3203 is a remote code execution flaw which could be exploited by enticing a user to open a malicious PDF file. This bulletin aims to resolve the issues by correcting how the .pdf files are parsed within Windows.
+
+MS16-081 fixes a Denial of Service (DoS) vulnerability within Microsoft Active Directory where the creation of multiple machine accounts can lead to AD becoming unresponsive. This vulnerability could be exploited by using an authenticated account to create multiple machine accounts within an AD environment. CVE-2016-3226 is addressed by correcting how machine accounts are created within AD. 
+
+MS16-082 addresses CVE-2016-3230, a Denial of Service vulnerability (DoS) vulnerability within Microsoft Windows StructuredQuery Component. This vulnerability manifests as a result of the StructuredQuery component failing to properly handle objects in memory. An attacker could exploit this vulnerability and cause a server's performance to degrade and result in a DoS.
+
+
+Coverage
+
+In response to these bulletin disclosures, Talos is releasing the following rules to address these vulnerabilities. Please note that additional rules may be released at a future date and current rules are subject to change pending additional vulnerability information. For the most current rule information, please refer to your FireSIGHT Management Center or Snort.org.
+
+
+Snort Rules
+
+
+Microsoft Bulletins: 39227, 39193-39196, 39199-39208, 39211-39226, 39228-39239, 39242-39261, 39266-39267
+Adobe Flash Player: 39262-39265, 39269-39319 
+
+
+
+

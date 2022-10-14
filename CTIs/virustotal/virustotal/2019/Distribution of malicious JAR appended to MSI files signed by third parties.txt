@@ -1,0 +1,45 @@
+
+Microsoft Windows keeps the Authenticode signature valid after appending any content to the end of Windows Installer (.MSI) files signed by any software developer. This behaviour can be exploited by attackers to bypass some security solutions that rely on Microsoft Windows code signing to decide if files are trusted. The scenario is especially dangerous when the appended code is a malicious JAR because the resulting file has a valid signature according to Microsoft Windows and the malware can be directly executed by Java.
+
+Code signing is the method of using a certificate-based digital signature to sign executables and scripts in order to verify the author's identity and ensure that the code has not been changed or corrupted since it was signed by the author.[1] This way, for example, if you modify the content or append any data to a signed Windows PE (.EXE) file the signature of the resulting file will not be valid for Microsoft Windows, as expected. This behaviour changes when you append any data to the end of a signed Windows Installer (.MSI), the resulting file will pass the verification process of Microsoft Windows and will show just the original signature as valid without any other warning.
+
+This behaviour could be used to hide and distribute malicious code in MSI signed files, in fact several security solutions rely on the output of Microsoft Windows code signing validation to avoid an in-depth scan when the file has a valid signature by a well-known and trusted software developer. Such an attack vector is not very interesting if the resulting file is not designed to execute the attached payload, because the attacker would need an additional component already running in the target to extract and execute the appended malicious code. However, JAR files have a characteristic that allows them to run directly in this scenario, making them the perfect candidate to take advantage of this situation.
+
+A JAR file allows Java runtimes to efficiently deploy an entire application, including its classes and their associated resources, in a single request.[2] The interesting part for exploiting the commented scenario is the JAR file format is based on ZIP to store the different components and resources, and this kind of ZIP is correctly identified by the presence of an end of central directory record which is located at the end of the archive to allow the easy appending of new files.[3] When Java opens a JAR file it looks at the end instead of the beginning of the file, so a JAR file is executed independently of the data at the beginning of the file. In addition, on Microsoft Windows systems, the Java Runtime Environment's installation program will register a default association for JAR files so that double-clicking a JAR file on the desktop will automatically run it with "javaw -jar". Dependent extensions bundled with the application will also be loaded automatically. This feature makes the end-user runtime environment easier to use on Microsoft Windows systems.[4]
+
+In short, an attacker can append a malicious JAR to a MSI file signed by a trusted software developer (like Microsoft Corporation, Google Inc. or any other well-known developer), and the resulting file can be renamed with the .jar extension and will have a valid signature according Microsoft Windows. For example, via the command "copy /b signed.msi + malicious.jar signed_malicious.jar". The victim can be infected with just a double-click in such a file.
+
+This attack vector was detected in a sample sent to VirusTotal and flagged by VirusTotal Monitor (a service to detect and avoid false positives).[5] We have not found evidence of this technique being used massively to distribute malware.
+
+We would like to thank Mark Russinovich and Mark Cook from Microsoft for working with us in the study of the issue and their quick response with a Sysinternal's Sigcheck update to detect this kind of malformed files.[6] VirusTotal also detects this attack vector via the updated version of Sigcheck with the warning "Signed but the filesize is invalid (the file is too large)" in the Signature info section.[7]
+
+Thanks also to Microsoft Security Response Center for the study of the issue. This attack vector has been verified in the latest and updated versions of Windows 10 and Java available at the timing of writing (Windows 10 Version 1809 and Java SE Runtime Environment 8 Update 191). Microsoft has decided that it will not be fixing this issue in the current versions of Windows and agreed we are able to blog about this case and our findings publicly.
+
+Last but not least, thanks to all our security partners at VirusTotal for making Internet safer. An early version of this blog post has been shared with all of them in order to provide an adequate response to detect and stop these types of attacks with their antivirus, antimalware and next-gen solutions.
+
+
+[1] Code signing [Wikipedia] https://en.wikipedia.org/wiki/Code_signing
+
+[2] JAR (file format) [Wikipedia] https://en.wikipedia.org/wiki/JAR_(file_format)
+
+[3] Zip (file format) [Wikipedia] https://en.wikipedia.org/wiki/Zip_(file_format)#Structure
+
+[4] JAR File Overview [Oracle] https://docs.oracle.com/javase/6/docs/technotes/guides/jar/jarGuide.html
+
+[5] VirusTotal Monitor [VirusTotal] https://www.virustotal.com/#/monitor-overview
+
+[6] Sigcheck 2.70 [Microsoft Sysinternals] https://blogs.technet.microsoft.com/sysinternals/2018/10/21/sigcheck-2-70-bginfo-v4-26-and-vmmap-v3-22/
+
+[7] Signed .MSI with malicious JAR appended [VirusTotal] https://www.virustotal.com/gui/file/dd71284ac6be9758a5046740168164ae76f743579e24929e0a840afd6f2d0d8e/details
+
+
+
+
+
+Francisco Santos & Bernardo Quintero
+
+
+Email ThisBlogThis!Share to TwitterShare to Facebook
+
+
+

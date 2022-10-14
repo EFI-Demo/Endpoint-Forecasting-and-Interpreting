@@ -1,0 +1,73 @@
+
+		The skyrocketing demand for tools that enable real-time collaboration, remote desktops for accessing company information, and other services that enable remote work underlines the tremendous importance of building and shipping secure products and services. While this is magnified as organizations are forced to adapt to the new environment created by the global crisis, it’s not a new imperative. Microsoft has been investing heavily in security, and over the years our commitment to building proactive security into products and services has only intensified.
+To help deliver on this commitment, we continuously find ways to improve and secure Microsoft products. One aspect of our proactive security work is finding vulnerabilities and fixing them before they can be exploited. Our strategy is to take a holistic approach and drive security throughout the engineering lifecycle. We do this by:
+
+Building security early into the design of features.
+Developing tools and processes that proactively find vulnerabilities in code.
+Introducing mitigations into Windows that make bugs significantly harder to exploit.
+Having our world-class penetration testing team test the security boundaries of the product so we can fix issues before they can impact customers.
+
+This proactive work ensures we are continuously making Windows safer and finding as many issues as possible before attackers can take advantage of them. In this blog post we will discuss a recent vulnerability that we proactively found and fixed and provide details on tools and techniques we used, including a new set of tools that we built internally at Microsoft. Our penetration testing team is constantly testing the security boundaries of the product to make it more secure, and we are always developing tools that help them scale and be more effective based on the evolving threat landscape. Our investment in fuzzing is the cornerstone of our work, and we are constantly innovating this tech to keep on breaking new ground.
+Proactive security to prevent the next WannaCry
+In the past few years, much of our team’s efforts have been focused on uncovering remote network vulnerabilities and preventing events like the WannaCry and NotPetya outbreaks. Some bugs we have recently found and fixed include critical vulnerabilities that could be leveraged to exploit common secure remote communication tools like RDP or create ransomware issues like WannaCry: CVE-2019-1181 and CVE-2019-1182 dubbed “DejaBlue“, CVE-2019-1226 (RCE in RDP Server), CVE-2020-0611 (RCE in RDP Client), and CVE-2019-0787 (RCE in RDP client), among others.
+One of the biggest challenges we regularly face in these efforts is the sheer volume of code we analyze. Windows is enormous and continuously evolving 5.7 million source code files, with more than 3,500 developers doing 1,100 pull requests per day in 440 official branches. This rapid cadence and evolution allows us to add new features as well proactively drive security into Windows.
+Like many security teams, we frequently turn to fuzzing to help us quickly explore and assess large codebases. Innovations we’ve made in our fuzzing technology have made it possible to get deeper coverage than ever before, resulting in the discovery of new bugs, faster. One such vulnerability is the remote code vulnerability (RCE) in Microsoft Server Message Block version 3 (SMBv3) tracked as CVE-2020-0796 and fixed on March 12, 2020.
+In the following sections, we will share the tools and techniques we used to fuzz SMB, the root cause of the RCE vulnerability, and relevant mitigations to exploitation.
+Fully deterministic person-in-the-middle fuzzing
+We use a custom deterministic full system emulator tool we call “TKO” to fuzz and introspect Windows components.  TKO provides the capability to perform full system emulation and memory snapshottting, as well as other innovations.  As a result of its unique design, TKO provides several unique benefits to SMB network fuzzing:
+
+The ability to snapshot and fuzz forward from any program state.
+Efficiently restoring to the initial state for fast iteration.
+Collecting complete code coverage across all processes.
+Leveraging greater introspection into the system without too much perturbation.
+
+While all of these actions are possible using other tools, our ability to seamlessly leverage them across both user and kernel mode drastically reduces the spin-up time for targets. To learn more, check out David Weston’s recent BlueHat IL presentation “Keeping Windows secure”, which touches on fuzzing, as well as the TKO tool and infrastructure.
+Fuzzing SMB
+Given the ubiquity of SMB and the impact demonstrated by SMB bugs in the past, assessing this network transfer protocol has been a priority for our team. While there have been past audits and fuzzers thrown against the SMB codebase, some of which postdate the current SMB version, TKO’s new capabilities and functionalities made it worthwhile to revisit the codebase. Additionally, even though the SMB version number has remained static, the code has not! These factors played into our decision to assess the SMB client/server stack.
+After performing an initial audit pass of the code to understand its structure and dataflow, as well as to get a grasp of the size of the protocol’s state space, we had the information we needed to start fuzzing.
+We used TKO to set up a fully deterministic feedback-based fuzzer with a combination of generated and mutated SMB protocol traffic. Our goal for generating or mutating across multiple packets was to dig deeper into the protocol’s state machine. Normally this would introduce difficulties in reproducing any issues found; however, our use of emulators made this a non-issue. New generated or mutated inputs that triggered new coverage were saved to the input corpus. Our team had a number of basic mutator libraries for different scenarios, but we needed to implement a generator. Additionally, we enabled some of the traditional Windows heap instrumentation using verifier, turning on page heap for SMB-related drivers.
+We began work on the SMBv2 protocol generator and took a network capture of an SMB negotiation with the aim of replaying these packets with mutations against a Windows 10, version 1903 client. We added a mutator with basic mutations (e.g., bit flips, insertions, deletions, etc.) to our fuzzer and kicked off an initial run while we continued to improve and develop further.
+
+Figure 1. TKO fuzzing workflow
+A short time later, we came back to some compelling results. Replaying the first crashing input with TKO’s kdnet plugin revealed the following stack trace:
+> tkofuzz.exe repro inputs\crash_6a492.txt -- kdnet:conn 127.0.0.1:50002
+
+Figure 2. Windbg stack trace of crash
+We found an access violation in srv2!Smb2CompressionDecompress.
+Finding the root cause of the crash
+While the stack trace suggested that a vulnerability exists in the decompression routine, it’s the parsing of length counters and offsets from the network that causes the crash. The last packet in the transaction needed to trigger the crash has ‘\xfcSMB’ set as the first bytes in its header, making it a COMPRESSION_TRANSFORM packet.
+
+Figure 3. COMPRESSION_TRANSFORM packet details
+The SMBv2 COMPRESSION_TRANSFORM packet starts with a COMPRESSION_TRANSFORM_HEADER, which defines where in the packet the compressed bytes begin and the length of the compressed buffer.
+typedef struct _COMPRESSION_TRANSFORM_HEADER
+
+{
+
+UCHAR   Protocol[4]; // Contains 0xFC, 'S', 'M', 'B'
+
+ULONG    OriginalMessageSize;
+
+USHORT AlgorithmId;
+
+USHORT Flags;
+
+ULONG Length;
+
+}
+In the srv2!Srv2DecompressData in the graph below, we can find this COMPRESSION_TRANSFORM_HEADER struct being parsed out of the network packet and used to determine pointers being passed to srv2!SMBCompressionDecompress.
+
+Figure 4. Srv2DecompressData graph
+We can see that at 0x7e94, rax points to our network buffer, and the buffer is copied to the stack before the OriginalCompressedSegmentSize and Length are parsed out and added together at 0x7ED7 to determine the size of the resulting decompressed bytes buffer. Overflowing this value causes the decompression to write its results out of the bounds of the destination SrvNet buffer, in an out-of-bounds write (OOBW).
+
+Figure 5. Overflow condition
+Looking further, we can see that the Length field is parsed into esi at 0x7F04, added to the network buffer pointer, and passed to CompressionDecompress as the source pointer. As Length is never checked against the actual number of received bytes, it can cause decompression to read off the end of the received network buffer. Setting this Length to be greater than the packet length also causes the computed source buffer length passed to SmbCompressionDecompress to underflow at 0x7F18, creating an out-of-bounds read (OOBR) vulnerability. Combining this OOBR vulnerability with the previous OOBW vulnerability creates the necessary conditions to leak addresses and create a complete remote code execution exploit.
+
+Figure 6. Underflow condition
+Windows 10 mitigations against remote network vulnerabilities
+Our discovery of the SMBv3 vulnerability highlights the importance of revisiting protocol stacks regularly as our tools and techniques continue to improve over time. In addition to the proactive hunting for these types of issues, the investments we made in the last several years to harden Windows 10 through mitigations like address space layout randomization (ASLR), Control Flow Guard (CFG), InitAll, and hypervisor-enforced code integrity (HVCI) hinder trivial exploitation and buy defenders time to patch and protect their networks.
+For example, turning vulnerabilities like the ones discovered in SMBv3 into working exploits requires finding writeable kernel pages at reliable addresses, a task that requires heap grooming and corruption, or a separate vulnerability in Windows kernel address space layout randomization (ASLR). Typical heap-based exploits taking advantage of a vulnerability like the one described here would also need to make use of other allocations, but Windows 10 pool hardening helps mitigate this technique. These mitigations work together and have a cumulative effect when combined, increasing the development time and cost of reliable exploitation.
+Assuming attackers gain knowledge of our address space, indirect jumps are mitigated by kernel-mode CFG. This forces attackers to either use data-only corruption or bypass Control Flow Guard via stack corruption or yet another bug. If virtualization-based security (VBS) and HVCI are enabled, attackers are further constrained in their ability to map and modify memory permissions.
+On Secured-core PCs these mitigations are enabled by default.  Secured-core PCs combine virtualization, operating system, and hardware and firmware protection. Along with Microsoft Defender Advanced Threat Protection, Secured-core PCs provide end-to-end protection against advanced threats.
+While these mitigations collectively lower the chances of successful exploitation, we continue to deepen our investment in identifying and fixing vulnerabilities before they can get into the hands of adversaries.
+ 
+	

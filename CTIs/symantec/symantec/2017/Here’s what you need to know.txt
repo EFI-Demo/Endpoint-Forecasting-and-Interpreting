@@ -1,0 +1,171 @@
+A new strain of the Petya ransomware started propagating on June 27, 2017, infecting many organizations.
+.Similar to WannaCry, Petya uses the EternalBlue exploit as one of the means to propagate itself. However, it also uses classic SMB network spreading techniques, meaning that it can spread within organizations, even if they have patched against EternalBlue.
+.Initial infection vector
+
+Symantec has confirmed that MEDoc, a tax and accounting software package, is used for the initial insertion of Petya into corporate networks. MEDoc is widely used in Ukraine, indicating that organizations in that country were the primary target.
+
+After gaining an initial foothold, Petya then uses a variety of methods to spread across corporate networks.
+
+Spread and lateral movement
+
+Petya is a worm, meaning it has the ability to self-propagate. It does this by building a list of target computers and using two methods to spread to those computers.
+
+IP address and credential gathering
+
+Petya builds a list of IP addresses to spread to, which includes primarily addresses on the local area network (LAN) but also remote IPs. The full list is built as follows:
+
+
+	All IP addresses and DHCP servers of all network adaptors
+	All DHCP clients of the DHCP server if ports 445/139 are open
+	All IP addresses within the subnet as defined by the subnet mask if ports 445/139 are open
+	All computers you have a current open network connection with
+	All computers in the ARP cache
+	All resources in Active Directory
+	All server and workstation resources in Network Neighborhood
+	All resources in the Windows Credential Manager (including Remote Desktop Terminal Services computers)
+
+
+Once the list of target computers has been identified, Petya builds out a list of user names and passwords it can use to spread to those targets. The list of user names and passwords is stored in memory. It uses two methods to gather credentials:
+
+
+	Gathers user names and passwords from Windows Credential Manager
+	Drops and executes a 32bit or 64bit credential dumper
+
+
+Lateral movement
+
+Petya uses two primary methods to spread across networks:
+
+
+	Execution across network shares: It attempts to spread to the target computers by copying itself to [COMPUTER NAME]\\admin$ using the acquired credentials. It is then executed remotely using either PsExec or the Windows Management Instrumentation Command-line (WMIC) tool. Both are legitimate tools.
+	SMB exploits: It attempts to spread using variations of the EternalBlue and EternalRomance exploits.
+
+
+Petya checks for the presence of the following processes which are used by Norton products and Symantec Endpoint Protection:
+
+
+	ns.exe
+	ccsvchost.exe
+
+
+If found, Petya will not use the EternalBlue and EternalRomance exploits to spread.
+
+Initial infection and installation
+
+Petya is initially executed via rundll32.exe using the following command:
+
+
+	rundll32.exe perfc.dat, #1
+
+
+Once the DLL has been loaded, it will first attempt to remove itself from the infected system. This is done by opening the file and overwriting its contents with null bytes before finally deleting the file from disk. Overwriting the file with null bytes is used as an attempt to thwart recovery of the file using forensic techniques.
+
+Next, it attempts to create the following file to be used as a flag indicating that the computer has been infected:
+
+
+	C:\Windows\perfc
+
+
+MBR infection and encryption
+
+Once installed, Petya proceeds to modify the master boot record (MBR). This allows it to hijack the normal loading process of the infected computer during the next system reboot. The modified MBR is used to encrypt the hard disk while simulating a CHKDSK screen. It then displays a ransom note to the user.
+
+MBR modification does not succeed if the threat is executed as a normal user but the threat will still attempt to spread across the network
+
+At this point, a system reboot is scheduled using the following command:
+
+
+	"/c at 00:49 C:\Windows\system32\shutdown.exe /r /f"
+
+
+By scheduling and not forcing a reboot, it provides time to allow Petya to spread to other computers in the network before user-mode encryption occurs.
+
+File encryption
+
+Petya performs encryption in two ways:
+
+
+	After Petya has spread to other computers, user-mode encryption occurs where files with a specific extension are encrypted on disk.
+	The MBR is modified to add a custom loader which is used to load a CHKDSK simulator. This simulator is used to hide the fact that disk encryption is occurring. This is done after user-mode encryption occurs and thus encryption is twofold: user mode and full disk.
+
+
+User-mode encryption
+
+Once spreading has occurred, Petya then lists all files on any fixed drive (e.g. C:\) and checks for any of the following file extensions (skipping the %Windir% directory of that drive):
+
+.3ds .7z .accdb .ai .asp .aspx .avhd .back .bak .c .cfg .conf .cpp .cs .ctl .dbf .disk .djvu .doc .docx .dwg .eml .fdb .gz .h. hdd .kdbx .mail .mdb .msg .nrg .ora .ost .ova .ovf .pdf .php .pmf .ppt .pptx .pst .pvi .py .pyc .rar .rtf .sln .sql .tar .vbox .vbs .vcb .vdi .vfd .vmc .vmdk .vmsd .vmx .vsdx .vsv .work .xls .xlsx .xvd .zip
+
+If any of the file extensions match that of the file list, encryption occurs.
+
+Wiper vs ransomware
+
+As mentioned, encryption performed by Petya is twofold; firstly specific file types are encrypted in user-mode after spreading occurs and the key is encrypted with an embedded public key, Base64 encoded, and appended to the README.TXT file.
+
+After a system reboot occurs, the infected MBR is loaded, disk encryption begins, and the ransom note is displayed to the user. The "installation key" referenced in the ransom note is a randomly generated string that is displayed to the user. A randomly generated Salsa20 key is then used for disk encryption. As there is no relationship between the “installation key” and Salsa20 key, the disk can never be decrypted. This demonstrates that Petya is more accurately a wiper rather than ransomware.
+
+FAQs
+
+Am I protected from the Petya Ransomware?
+
+Symantec Endpoint Protection (SEP) and Norton products proactively protect customers against attempts to spread Petya using EternalBlue. SONAR behavior detection technology also proactively protects against Petya infections.
+
+Symantec products using definitions version 20170627.009 also detect Petya components as Ransom.Petya.
+
+What is Petya?
+
+Petya has been in existence since 2016. It differs from typical ransomware as it doesn’t just encrypt files, it also overwrites and encrypts the master boot record (MBR).
+
+In this latest attack, the following ransom note is displayed on infected computers, demanding that $300 in bitcoins be paid to recover files:
+.How does Petya spread and infect computers?
+
+The MEDoc accounting software is used to drop and install Petya into organizations’ networks. Once in the network it uses two methods to spread.
+
+One of the ways in which Petya propagates itself is by exploiting the MS17-010 vulnerability, also known as EternalBlue. It also spreads by acquiring user names and passwords and spreading across network shares.
+
+Who is impacted?
+
+Petya is primarily impacting organizations in Europe.
+
+Is this a targeted attack?
+
+It is unclear at this time, however, the initial infector is software used solely in Ukraine, indicating that organizations there were the initial targets.
+
+Should I pay the ransom?
+
+Symantec recommends that users do not pay the ransom, particularly as there is no evidence that files will be restored.
+
+What are the details of Symantec's protection?
+
+Network-based protection
+
+Symantec has the following IPS protection in place to protect customers against these attacks:
+
+
+	OS Attack: Microsoft SMB MS17-010 Disclosure Attempt (released May 2, 2017)
+	Attack: Shellcode Download Activity (released April 24, 2017)
+	Attack: SMB Double Pulsar Ping
+	Web Attack: Shellcode Download Activity 4
+
+
+Antivirus
+
+
+	Ransom.Petya
+	Ransom.Petya!g1
+
+
+SONAR behavior detection technology
+
+
+	SONAR.Module!gen3
+
+
+Skeptic
+
+
+	Trojan.gen
+
+
+For further detail see https://email.status.symantec.com/
+
+Symantec is continuing to analyze this threat and will post further information as soon as it becomes available.

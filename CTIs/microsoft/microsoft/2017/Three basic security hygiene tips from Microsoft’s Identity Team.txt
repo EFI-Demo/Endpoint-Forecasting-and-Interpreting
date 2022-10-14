@@ -1,0 +1,72 @@
+
+		This post is authored by Alex Weinert from the Identity Division’s Security and Protection Team.
+Hey there!
+I want to share three basic hygiene tips for account protection that every organization should consider. Applying these will go a long way in making sure that only the right users get into to their accounts (and all the things those accounts give access to). While there are many great security features available from Microsoft and our partners, in this blog post I am going to focus on three basic hygiene account security tasks:
+
+Ensure your users are registered and ready for multi-factor authentication (MFA) challenges;
+Detect and challenge risky logins; and
+Detect and change compromised credentials.
+
+While these don’t guarantee you’ll never deal with account compromises, we find that in most cases implementing these simple practices would have prevented attackers from getting initial intrusion. For account security, it really is true that “an ounce of prevention is worth a pound of cure.” So here is your “ounce of prevention.”
+Basic hygiene part 1: Ensure your users are registered for MFA challenges
+In a perfect world, no one would ever complete a multi-factor challenge. We would get rid of static rules (“MFA always”) which cause user friction, and replace them with perfect risk detection. Good users would never see MFA challenges – we’d always figure out we were working with a trusted person – and bad guys would never be able to solve them.
+Alas, despite many years of hard work on the problem (and substantial improvements), we still have “false positives,” where the system detects risk on a login that belongs to a good user. This could be because
+
+the person is travelling to a new location and on a new machine,
+because they are remoting into a machine in a datacenter far away, or
+because they are intentionally using anonymizing software and routing (such as TOR).
+
+These are simple examples, but this “grey area” will exist even as our detection gets more sophisticated, because, unfortunately, the bad guys are evolving too. It is their job – through phishing, malware, and the use of botnets – to act more and more like the people whose accounts they are trying to hack. Because of that, we must be able to challenge when we aren’t sure they are good – and that will mean some false positives that challenge good users.
+If your users aren’t set up for multi-factor authentication, then your security policy will effectively block them from signing in and doing their jobs. Now, good security enables better productivity, but when organizations (and individual users) are faced with the choice between security and productivity, they choose productivity. MFA readiness allows users to solve the occasional challenge from a false positive, which in turn allows you to have a great security posture. That is why a good MFA registration policy is first on our list for basic hygiene.
+In Azure Active Directory, you can use Azure AD Identity Protection to set up a policy to cover your users for MFA registration. Azure AD MFA will allow MFA challenges using voice, SMS, push-notification, or OAUTH token challenges. The registration policy will offer whatever you have configured in Azure AD MFA.
+To set up a registration policy with Azure AD Identity Protection, just look at the menu on the left, and under “Configure” choose “Multi-factor authentication registration”.
+
+Once you do this, you can choose the users to include in the policy, see the current state of MFA registration in your organization, and enable the policy.
+
+Now, when a user who hasn’t yet registered for MFA logs in, they will see this:
+
+
+This process has a few major benefits:
+
+The process is “self-help” and built into Azure Active Directory
+Users can be challenged with multi-factor authentication whenever we see risk in the login
+Users are familiarized with the process of receiving a challenge
+
+Ok, now that everyone is registered, let’s put all this MFA goodness to work.
+Basic hygiene part 2: Detect and challenge risky logins
+There are many tools out there for telling you when a login has gone wrong, and a bad guy got in to your resources by pretending to be a good user. While helpful for forensics and improving your security posture for future events, the second step in your “Basic Hygiene” is to prevent bad guys from logging in at all. Azure Active Directory Identity Protection can detect risky logins in real time. Examples are logins from TOR browsers, new or impossible locations, or Botnet infected devices. To see the events impacting your organization, check the “Risk Events” area in Azure AD Identity Protection.
+An unfortunate reality is that password leaks are happening daily (the biggest recorded breach was reported last week, at over 1B cred pairs), and 60% of people reuse their usernames and passwords. We detect and block tens of millions of credential replay attacks every day.
+
+Our detection algorithms are based on our experience defending Microsoft’s consumer and enterprise assets, and the assets of our customers. They benefit from the supervised machine learning system which processes 20TB of data a day and self-adapts to new attack patterns, as well as many applied data scientists. Applying this evaluation to conditional access is your path to ensuring that bad actors are stopped in their tracks. That’s where Azure AD Conditional Access comes in. Azure AD Conditional Access is your Swiss army knife for making sure all logins are secure and compliant. It allows you to specify conditions of a login which impose more requirements before a resource can be accessed. With login risk assessment, you can apply a policy to challenge risky logins. Pick “Sign-in Risk Policy” and enable the policy.
+
+With this policy enabled, you can apply a real-time intercept when risk is detected. The end user experience is as follows:
+If a bad guy logs in (in this case, emulated from TOR):
+
+The mobile app then gets the approval notification:
+
+And the user simply doesn’t approve (or, if it *is* the good user, can get in), with the same approval process as previously described.
+Basic hygiene part 3: Detect and challenge compromised credentials
+Users regularly fall for phishing scams, get malware, reuse their credentials on other systems, and use easily guessed passwords. As a result, we see a lot of cases where we are confident that the valid user is not the only one in possession of their password.
+If we are seeing a lot of attempted logins or bad activity in a login, or find your users’ credentials leaked on the black market, we notify you of this by setting the “User Risk” score, indicating a probability that the user’s password is known to a bad actor. You can see which users the system is detecting as “At Risk” and why in Azure AD Identity Protection under “Users flagged for risk”. Notice my account about mid-way down on the right is marked as being at medium risk with six events.
+(Please note that for hybrid environment, our ability to detect leaked credentials from black market finds requires that you have enabled password hash sync from your on-premises environment to Azure AD.)
+
+I am frequently asked if compromise of the password is significant if the user is configured for MFA – the answer is emphatically yes! Multi-factor authentication is multi-factor if it utilizes at least two different mechanisms (choosing from a secret you know, what you have, and what you are). If the password is compromised, then you really don’t have a valid secret anymore. So, once we detect a compromised credential, it is important to lock out that user until the credential can be remediated, or better, we can have the user change the password themselves as soon as they can do so safely (with MFA). We do this on our consumer (Microsoft account) side, and find that we can get the user to safely change their password before the bad guys have a chance to act about 80% of the time. Our investigations in the enterprise cases show roughly the same results in terms of stopping attacks even when the password is known to the attacker.
+Here again, Azure AD Conditional Access is your friend. When the condition includes users at risk of compromised credentials, we can challenge for MFA and require a password change. Look for “User Risk Policy”. In this case, I have configured the policy to require password change when user credential risk is medium or above. For this to work, you need to be mastering your passwords in the cloud, so if you are in a hybrid deployment, be sure password writeback is enabled!
+
+When a user logs in with a user risk score that triggers this policy, they see the following:
+
+On clicking next, they are asked to do multi-factor authentication:
+
+And upon approving the login, the user can change their password.
+
+And importantly – they can carry on with their work! Which emphasizes again the importance of getting those users registered!
+So, there you have it! Three easy steps to VASTLY better account protection by doing basic hygiene! In summary:
+
+Ensure your users are registered and ready for multi-factor authentication (MFA) challenges;
+Detect and challenge risky logins; and
+Detect and change compromised credentials.
+
+Azure Active Directory makes it easy!
+Be safe!
+Alex (@alex_t_weinert)
+	

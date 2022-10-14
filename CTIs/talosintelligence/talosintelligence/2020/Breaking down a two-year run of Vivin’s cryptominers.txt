@@ -1,0 +1,210 @@
+
+
+
+
+News Summary
+
+
+There is another large-scale cryptomining attack from an actor we are tracking as "Vivin" that has been active since at least November 2017.
+
+"Vivin" has consistently evolved over the past few years, despite having poor operational security and exposing key details of their campaign.
+
+By Andrew Windsor.
+
+Talos has identified a new threat actor, internally tracked as "Vivin," conducting a long-term cryptomining campaign. We first began linking different samples of malware dropping illicit coin miners to the same actor in November of 2019. However, upon further investigation, Talos established a much longer timeline of activity. Observable evidence shows that Vivin has been active since at least November 2017 and is responsible for mining thousands of U.S. dollars in Monero cryptocurrency off of their infected hosts.
+
+Vivin has shown to rotate the use of multiple cryptocurrency wallet addresses, in addition to altering the delivery chain of their payloads, over different time periods of activity. An interesting aspect of the actor's delivery method is their use of modified pirated software as their initial attack vector before the samples move on to common "living-off-the-land" methods at later stages of the attack. Vivin makes a minimal effort to hide their actions, making poor operational security decisions such as posting the same Monero wallet address found in our observable samples on online forms and social media. Nor do they discriminate in their targeting, attempting to capitalize on general user behavior, rather than targeting, to generate as large a victim pool as possible.
+
+Despite the market downturn for cryptocurrency values in 2018, cryptomining remained a popular attack method for malicious actors throughout 2019 and heading into 2020. Over the course of last year, Talos Incident Response observed a number of cryptomining attacks, some of which potentially involved higher coordinated cybercrime groups and collaboration between multiple different threat actors. While more sophisticated actors certainly pose a significant threat, organizations should remain cognizant of the additional threat posed by less advanced actors employing wide or unrestricted targeting. Talos has previously documented one such actor, "Panda," illustrating their potential for long-term exploitation of their victims' resources and their resilience from being deterred from future action. These attributes make Vivin, and other actors like them, legitimate risks to organizational resource abuse and potential data theft.
+
+
+The tactics, techniques, and procedures (TTPs) used by Vivin expose the actor's campaigns to multiple potential points of mitigation. Some of these include good systems hygiene such as preventing the use of pirated software on endpoints, proper event logging and monitoring, and systems resource monitoring. Other mitigation strategies involve a more active defense. For example, blocking the URIs used by the mining pools and the malware's intermediate stages. Detection signatures can also prevent the XMRig miner from being dropped and executed on targeted hosts.
+
+What's new?
+
+This is yet another reminder that malicious crypto mining still has a major spot on the threat landscape and, judging by this actor, are successful and long standing campaigns.  This actors use of pirated software as a mechanism for malware delivery isn't often seen, but can be highly effective.
+
+How did it work?
+
+This actor used pirated software as an initial infection vector, masquerading their malware as popular software. Once the initial infection was completed "Vivin" quickly moved to common Windows tools. This actor has been successful pivoting their infrastructure and wallets as needed to maintain effectiveness.
+
+So What? 
+
+
+
+Pirated software is dangerous and can be riddled with malware. Keeping it off your enterprise network will help mitigate the risks actors like "Vivin" present.
+
+Adversaries are increasingly leveraging LoLBins and organizations need to ensure they are capable of detecting and preventing attacks that leverage them, without hindering productivity.
+
+There is still significant money to be made from malicious crypto mining and actors are going to continue to deliver it, through any means necessary.
+
+Operational Security (OpSec) is difficult and adversaries make mistakes, this is another example of how those mistakes can be leveraged in analysis.
+
+
+
+
+Technical case overview
+Vivin has been observed slightly altering their TTPs over time. Because of their propensity to use commodity malware tools, Vivin's moderate changes are most likely due to incremental changes in these tools, such as the use of an updated or new packer, tweaked methods of obfuscation, and structural changes in PowerShell code, among others. However, the same baseline execution flow is observable in all of our available samples. The following technical description is largely based on samples observed in the cycle of activity beginning in November 2019.
+
+Initial infection occurs through the execution of malware made to resemble commonly used productivity software, tools, and games. These files were all likely obtained through pirated software forums and websites. Many of the samples are packed as self-extracting RAR files which extract and install what appears to be the actual software and covertly drop malicious files. The pirated software from our observed sample run contains a second stage payload that is written to \AppData\Local\Temp as "setup.exe." Upon successful execution, the observed samples dropped both a JavaScript ("setup.js") and VBScript ("dllm.vbs") file to the victim host's \AppData\Local\Temp and \Windows\Start Menu\Programs\Startup folders. 
+
+As part of this execution chain, the malware also reaches out to "csrss.publicvpn[.]com," a known malicious domain, to establish a TCP connection. During our analysis, the sample did not receive a response. The prevalence of this domain and others that are lexically similar within other sample runs associated with Vivin lead us to believe that these hosts act as a form of command and control, but we do not currently have enough information to glean its exact functionality and purpose. Nevertheless, the response failure does not hinder the rest of the sample's execution. Finally, in addition to immediately running the malicious script, the dropper also creates a job using Windows Task Scheduler. This job, called "anydesk"[1] in all of our samples, executes the dropped script every 30 minutes:
+
+c:\windows\system32\schtasks.exe /create /sc minute /mo 30 /tn anydesk /tr c:\users\{username}\appdata\localemp\setup.js
+The malicious script contains an obfuscated PowerShell command that executes a number of cascading PowerShell calls and additional payload stage downloads. In the sample Talos originally discovered, the command reaches out to "pastebin[.]com/raw/gc5dfjh9," a page containing a URL of a supposed image file at "www[.]m9c[.]net/uploads/15758872491.jpg." This file is actually raw text containing additional PowerShell commands and the ASCII representations of further payloads.
+
+These PowerShell commands reflectively load an included malicious .NET assembly. The sample then calls the "exe" method of the "Hackitup" class shown below, which performs more deobfuscation, in addition to some additional logic checks through more chained method calls, such as whether it's running on a 32- or 64-bit architecture. Finally, it constructs the configuration options to be loaded and executed with its final payload by invoking "cmd.exe."
+
+
+The final payload is a packed variant of the XMRig cryptominer. Examination of the reconstructed PE file reveals that it is compressed with UPX. Additionally, the miner is launched with a common configuration that we were able to extract from the binary as shown in the figure below. XMRig is set up to use a maximum of 80 percent of the host's CPU resources with the "CryptoNight" algorithm in order to mine the Monero cryptocurrency. The extracted configuration string also contains Vivin's Monero payment address, which Talos used as a starting point to track this actor.
+
+
+Vivin's malware employs a fair amount of obfuscation and evasion techniques throughout its execution. First, the initial droppers either install some form of the expected pirated software or they attempt to mimic a fake installation with paths that are named for associated programs. For example, our "PhantomPDF" sample installed to "F%3A/Software/Adobe/" which is neither Adobe softwares' or PhantomPDF's default install path. Furthermore, PhantomPDF is not developed by Adobe, but Adobe is arguably the most popular name associated with PDF software, thus the installation and execution paths may fool those not paying close attention. Second, the source code in the dropped JavaScript and VBScript files are heavily manipulated for obfuscation. Third, the .NET assemblies are reflectively loaded in order to keep additional files from being written to disk, in addition to their source code also being heavily obfuscated. Finally, all of the observable XMRIg payloads were packed using UPX.
+
+The actor also used multiple methods of persistence to keep the XMRig mining software on the victimized hosts. Windows Scheduler was used to create the job "anydesk" to execute setup.js every 30 minutes. The sample copied various sources of execution: setup.exe, setup.js, and dllm.vbs to \AppData\Local\Temp in order to have them persist on disk. Additionally, the malware sample created startup items in two separate locations, thereby enabling re-execution of the malware following any system restarts. One startup item was created by writing dllm.vbs and setup.js to \Windows\Start Menu\Programs\Startup. The other was established by adding dllm.vbs to the "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run" registry key. While none of these methods are particularly sophisticated, the amount of redundancies created could make it difficult to fully clean the XMRig miner off of the victimized system.
+
+While all samples and execution chains Talos found associated with this actor dropped XMRig as their final payload, there were additional variations observed in some of them. For example, other samples dropped a VBScript file as their intermediary although it performed the same functional role as our original sample's JavaScript file. Some samples simply contained only one referenced PE file at the PowerShell stage and hid their XMRig payloads inside of the reflectively loaded .NET assembly as base-64 encoded strings. One of the more interesting samples first checked to see if it had access to "MSBuild.exe." However, the sample that contained this check still only attempts to run the XMRig launch command to cmd.exe, rather than attempting to compile the next stage on the host or use the inline task function execution as other malware has been observed doing when attempting to access MSBuild. Finally, some XMRig payloads used a dropped JSON configuration file rather than specifying them on the command-line or packing them into the final XMRig binary.
+
+
+Tracking Vivin
+Talos assesses with high confidence that Vivin's campaigns are indiscriminate, meant to infect as many hosts and extract as much money as possible. Upon too much exposure, Vivin rotates the wallet address used along with potentially updating their infrastructure used. The actor's activity exhibits a general lack of operational security (OpSec). They have been observed publicly posting the wallet IDs used in the malicious samples on social media sites such as Reddit. The actor also reuses the same or slight variations of the same username for a number of online accounts, including services used in the execution chains of the cryptomining malware. At the time of writing, Talos has observed three separate aliases directly linked to the actor, although they are all lexically similar.
+
+We located the first username Talos linked to the actor through a Reddit post claiming the same Monero wallet address found hardcoded in our original sample's XMRig payload as their own. Further investigation into the user's posts revealed additional wallet addresses and an ongoing interest in various aspects of Monero coin mining, XMRig configurations, and the efficiency of different mining algorithms. The same user also posted about having issues with their account for the "minexmr[.]com" mining pool, the same pooling address used in the configurations of the XMRig payloads. A GitHub account also uses the same username as the Reddit account linked to Vivin that contains a forked repository of the XMRig coinminer source. Additionally, this user follows other accounts that house numerous repositories for file crypters, rootkits, process-hollowing, and other tools commonly used in malware packing and distribution. Finally, the two other aliases were found as users on Pastebin that had uploaded raw text links pointed at image and file hosting sites. These site links contain the PowerShell scripts used in the intermediary stages of Vivin's malware.
+
+Talos originally began tracking Vivin by investigating a suspicious PowerShell command found in our AMP telemetry. However, this was not the original source of infection. By reconstructing a timeline of event execution surrounding the initial PowerShell command, we traced the original dropper back to what appeared to be a pirated installation of "Foxit PhantomPDF." After locating the initially executed file within this installation, dynamic and static analysis confirmed it as the infection source. After tracing the file write operations for the software installation, we believe the dropper had been downloaded onto the victim host through BitTorrent. The parent process for this in our original sample references the uTorrent BitTorrent client. Additional evidence supporting this includes a user going by one of Vivin's aliases uploading files to torrent forums and sites with the same or similar names of the malicious samples seen in the wild and that have been associated with the actor's malware infrastructure. Here's one example:
+
+
+
+At the time of writing, Vivin remains active. After gathering pivot points and identifiers linked to to the actor, we broadened our investigation into additional ongoing activity and reconstruct patterns of historical activity through open source research and other data sources. We first saw this activity on Nov. 20, 2017. But because this date was a "last seen" value, Talos believes that Vivin's activity goes back further. The actor maintains multiple cryptocurrency wallet addresses, some of which have shown to go through cycles of dormancy and activity. Other associated wallet addresses have already been banned from mining pools under suspicion of botnet activity.
+
+Talos observed two recently active cryptominer wallet addresses linked to Vivin. The first, "45VgqBWVhgu5LHSafj4q5sB3wuYXGvrSs5N9KLH5Tijze9NbsvUSaaSjVk1vuGBMwY2eXEHtQf95CULQHGQbghU21x4aWLY," we found hard-coded in our original sample's XMRig payload. As shown in the figure below, this wallet first showed minimal mining activity on Oct. 29, 2019. Around Nov. 10 the hashrate associated with this wallet constantly increased at an almost linear fashion until Nov. 30, 2019. After the 30th, the hashrate drastically reduces to about 20 percent of its peak and has continued to operate at about that level until Dec. 9. Interestingly, the drop in this wallet's activity occurred only a couple of days after Talos began blocklisting the discovered infrastructure and assigning malicious dispositions to known associated samples. A smaller second drop in activity occurs again on Dec. 9 and continues to steadily diminish.
+
+
+The second wallet, "434PuVPN5tQ6xQA7pdB7NsNTJHWvUD5tL7rmsX7uzJgNdCAx7wo4yESiy51aqCcr13ZoYb3TFq3zw11BFQJiF1tnHibZ6EA," was found through an OSINT investigation into Vivin's online accounts and activity. The same Reddit user previously linked to Vivin also posted this wallet payment address in the MoneroMining subreddit in the later part of 2018. Further investigation revealed that this wallet has been in use at least as far back as Nov. 20, 2017, when it was active in the mining pool "dwarfpool." Activity associated with this wallet address once again resurfaced on Dec. 9, 2019. This time, the address is being observed on the "minexmr" mining pool, illustrated in the figure below, the same pool as our first active wallet address linked to Vivin.
+
+
+There are two noteworthy observations here. First, the timing of its new activity. Remember that the first wallet address' second significant decline began on Dec. 9, the same day of this wallet address' resurgence. We believe that the convergence of this date likely signifies a point of infrastructure turnover, where no new effort is being made into actively proliferating malware using the first wallet address and active operations now using the second address. As previously discussed, Talos believes that Vivin operates their active campaigns in cycles, in addition to recycling wallet addresses after too much exposure. The timing and evidence observed between these two wallet addresses lends further credence to that assertion.
+
+Secondly, the latter wallet address shows a total hashrate orders of magnitude above Vivin's other active wallet. This could indicate a much higher infection rate and proliferation of malware tied to that specific address. At the time of writing, Talos has not yet observed any specific samples in our telemetry directly tied to the second  wallet address; however, data from VirusTotal does link it to a cryptominer submitted back in December 2017. Talos will continue to monitor our telemetry and data sources for malware samples and related infrastructure linked to Vivin's ongoing activity.
+
+
+Mitigations
+Fortunately, Vivin's lack of sophistication, and the nature of cryptominers in general, afford multiple avenues for detection and prevention. One area of mitigation deals with methods for systems and user behavior monitoring. Restricting the use of pirated software on organizational hosts and networks could mitigate against the initial attack vector observed in this investigation and other malware in general. Torrent sites and pirated software have long been easy distribution avenues of malware for illicit actors. Systems and network monitoring  can be used to send alerts when associated behaviors are found. For example, monitoring for excessive or abnormal resource usage on endpoints could indicate cryptominer activity. Vivin set their miners to utilize up to 80 percent of a system's CPU resources. 
+
+Prevention of unnecessary and/or unauthorized system-level changes can help mitigate against intermediary stage behavior, such as PowerShell execution chains, in addition to persistence tactics used by Vivin, such as creating startup objects and scheduled tasks on victim hosts.
+
+Another area of mitigation involves more active detection and prevention strategies. URIs used by Vivin's malware can be blocklisted and blocked at the network level, such as the image host links used to download and deploy the malware's intermediate stages, IP addresses associated with command and control infrastructure, and the domains used to connect to the mining pools themselves. Additionally, signatures and other detection content used by antivirus and other endpoint security services can detect and prevent miner applications like XMRig from being illicitly installed on systems. Further recommendations on mitigating this type of threat can also be found by reviewing the Cisco Talos whitepaper, "Blocking Cryptocurrency Mining Using Cisco Security Products."
+
+
+Conclusion
+The length of historical activity by Vivin, the multitude of wallets and malware execution infrastructure, and the actor's somewhat flippant attitude towards operational security suggests that the Vivin will attempt to continue their operations for the foreseeable future. Perhaps more telling is the actor's willingness to continuously roll over their infrastructure over a long period of time. As evidenced before, if enough of their infrastructure gets exposed, Vivin will likely abandon the iteration of malware, their execution chains, and potentially switch mining services.
+
+It is easy to want to dismiss non targeted attacks and less sophisticated threat actors as inconsequential; however actors like Vivin remain viable threats to organizations. Among the wallet addresses Talos was able to link to Vivin, they have already mined thousands of dollars worth of cryptocurrency. The substantial growth in hash rates for the actor's Dec. 9 campaign also suggests that they could be significantly improving their delivery methods and infection rates. Aside from siphoning resources from organizations, the malware used to drop XMRig could also be modified for data theft, credential harvesting, and other malicious activity. Talos will continue to monitor activity by this actor and update or expand this post with any additional information.
+
+
+Coverage
+
+
+
+Ways our customers can detect and block this threat are listed below.
+
+
+
+
+
+
+
+
+
+
+
+Advanced Malware Protection (AMP) is ideally suited to prevent the execution of the malware used by these threat actors. Exploit Prevention present within AMP is designed to protect customers from unknown attacks such as this automatically.
+
+
+
+Cisco Cloud Web Security (CWS) or Web Security Appliance (WSA) web scanning prevents access to malicious websites and detects malware used in these attacks.
+
+
+Email Security can block malicious emails sent by threat actors as part of their campaign.
+
+Network Security appliances such as Next-Generation Firewall (NGFW), Next-Generation Intrusion Prevention System (NGIPS), Cisco ISR, and Meraki MX can detect malicious activity associated with this threat.
+
+AMP Threat Grid helps identify malicious binaries and build protection into all Cisco Security products.
+
+Umbrella, our secure internet gateway (SIG), blocks users from connecting to malicious domains, IPs, and URLs, whether users are on or off the corporate network.
+
+Open Source Snort Subscriber Rule Set customers can stay up to date by downloading the latest rule pack available for purchase on Snort.org.
+
+
+
+
+IOCs
+
+IPs
+116[.]203[.]234[.]128
+116[.]203[.]29[.]111
+
+
+Domains/URLs
+pastebin[.]com/raw/gc5dfjh9
+pastebin[.]com/dr9bzymZ
+mmc[.]publicvm[.]com:8002
+csrss[.]publicvm[.]com
+csrss[.]publicvm[.]com/Vre
+csrss[.]publicvm[.]com:8094/Vre
+csrss[.linkpc[.]net
+csrss[.]linkpc[.]net/Vre
+lsass[.]publicvm[.]com
+mstsc[.]publicvm[.]com
+spoolsv[.]linkpc[.]net
+winlogon[.]publicvm[.]com
+dwm[.]publicvm[.]com
+www[.]m9c[.]net/uploads/15743593161.jpg
+www[.]m9c[.]net/uploads/15723243711.png
+www[.]m9c[.]net/uploads/15723168051.png
+www[.]m9c[.]net/uploads/15572403801.jpg
+www[.]m9c[.]net:80/uploads/15621655811.jpg
+ddl3[.]data[.]hu/get/210358/11615096/Loader.jpg
+
+
+SHA256s
+aa6fa5b51a2e54a1aef50bc9ba3eb41b88b1834e867f09d2c8e29c0d41691ae6
+2b48269eec1a294a52049cbd35ebd6f6097e1c486d60febe836378714657978a
+da6908445649d30aff3f6ac9d9ec11c5f52c888c867ede766993c0fe731295fe
+51f9a6d7574361bcf49962e2471a1d096db6c0d713ae07485b2791e74134513c
+5dc7239df2e9fb497335cc846e09dfdd024e7345c44a96693022bedd240954de
+4ac6131d639aa802302ab4cf32b959f9ab5ec76752cc297eb380d5c23d4a68f2
+f476867d8152fcf0cb989b0e2c935db87c37162af33350874d671f99154752cf
+8b7c197efab6f6c40b51df125d00e3de211ebb5123ee876f1992f03401559cda
+31ac877d8c2c2a897eaff36b17d755466b8612ad2661510dd6b0d9484a2b1f6f
+8aa5d523158838bf58a80744f031192314215a3d4c32c4f8644f93370828825b
+ea647990182d7d3ac82ff9b6c99ed70a10473da16bc55eadb76131f78ed65fb9
+79557c6d190d7daf34f10c7929facf56838ab27a5925f6f5197e1c0cbd660de3
+524fbc5fff1e91adcd4c72ce83b7f33fa424acefafb198f1701484cedc17c590
+9d7f2684a4efdb4738527d37b7995a40d819909d08e7443a6583231a1454b50b
+705646f923a2412757bae71b60de0fef31284756768a59ef2057eaee7dfafe9f
+a115451603cf9687c8c46945432033a942b4cd46a4209868e226e25a1a2e0ee1
+d343e4b99b9cdaf2e7fc2283dda0e7e07cedf4bccf7f53869f2806b14113ab7d
+4b71cc1af01417d8b17f1158bbfa53e0bb09a7dc16bbdf3edd8f2f99b8fc667d
+f23ce16ad18907f0aa6957640dbe960daeaa33c714d0ca9f204a98800edc2df4
+9d7066f441a5a3df894d018143ae2778175f18408c2fbab52442ed4ad178ae8f
+25cc942e230b357a43297a8172a6700098b6ae152ef00acaa7e6a2c0fa07497d
+5331924e1e5a634e55e7a3daaff3d5204eff50c4dc166d4d9d516510fb91fa4e
+198a045c55710f8d32141c72e69b2cdd6c7a60b29ac9776046257897d612ceca
+47928d09921466ddf1597e1ef7e8ac12397df7e616cd0c1710f4fa8a6384b439
+d03054261a521440a7cfe281bd7d14f92610b54906df1dced8dbe6bc00e40029
+
+
+Cryptocurrency Payment Addresses
+Currently Active
+45VgqBWVhgu5LHSafj4q5sB3wuYXGvrSs5N9KLH5Tijze9NbsvUSaaSjVk1vuGBMwY2eXEHtQf95CULQHGQbghU21x4aWLY
+
+Currently Not Active
+44WzjC6ERyR7CMDXpkgVeGH9Tj4fnBeAuCdcaH79NkMPhKr3bQRKMKtJhzfhrmXJJ42sdFvAvg4b3L7zaYTwigeqBt9jDrQ
+
+4589o168fmkBrMVoR3qPQyXiDR3w9EFa3DajGUjY38MKLiaR4N5HbdFT7hw3iEh2mRZsABYvkgcFWaW5crPJQtVZ9ihwutP
+
+4AbjKdQkedGZXvzm6VxMJb1zLB2CAmCmXdoCisRsQFAUPs4TWFePDUcZzk5ui4EdZXT3uaXXtssqPCoKQPTz7PeZNkKASkm
+
+434PuVPN5tQ6xQA7pdB7NsNTJHWvUD5tL7rmsX7uzJgNdCAx7wo4yESiy51aqCcr13ZoYb3TFq3zw11BFQJiF1tnHibZ6EA
+

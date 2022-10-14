@@ -1,0 +1,211 @@
+
+
+By Chetan Raghuprasad, with contributions from Vanja Svajcer.
+News summary
+
+
+Cisco Talos discovered a new version of the Neurevt trojan with spyware and backdoor capabilities in June 2021 using Cisco Secure Endpoint product telemetry.
+
+This version of Neurevt appears to target users of Mexican financial institutions.
+
+This threat demonstrates several techniques of the MITRE ATT&CK framework, most notably T1547 – Boot or Login Autostart Execution, T1055 - Process Injection, T1546 - Event-Triggered Execution, T1056 - Credential API Hooking, T1553 – Subvert Trust Controls, T1562 – Impair Defences, T1112 – Modify Registry, T1497 – Virtualization\Sandbox Evasion, T1083 - File and directory discovery, T1120 - Peripheral device discovery, T1057 - Process Discovery, T1012 - Query Registry, T1518 - Software Discovery and T1082 - System Information Discovery.
+
+Cisco Secure Endpoint, SNORTⓇ and Cisco Umbrella can all protect users from downloading this malware, protecting their online banking accounts from potential theft.
+
+What's new?
+Although Neurevt has been around for a while, recent samples in Cisco Secure Endpoint show that the actors combined this trojan with backdoors and information stealers. This trojan appears to target Mexican organizations. Talos is tracking these campaigns embedding URLs in the associated droppers, which belong to many major banks in Mexico.
+ 
+How did it work? 
+The malware starts with an obfuscated PowerShell command that downloads an executable file belonging to the Neurevt family. The trojan drops other executables, scripts and files into the folders which it creates during runtime. The dropped payload ends up in a benign location of the filesystem and runs, thereby elevating its privilege by stealing service token information. It executes the following stages of the dropped executable file, which installs hook procedures to the monitor keystrokes and mouse input events. It captures the monitor screen and clipboard information. 
+Then, Neurevt detects the virtualized and debugger environment, disables the firewall, modifies the internet proxy settings in the victim's machine to evade detections and thwart analysis.
+Instead of calling known APIs for HTTP communication, the malware uses System.Web Namespace and includes HTTP classes to enable the browser-server communication with the command and control (C2) server to exfiltrate the data.
+So what?
+Online banking users in Mexico should be cautious while operating their computers, accessing emails and attachments, and refrain from accessing unsecured websites. This trojan mostly steals the username and passwords of users on the sites and may also target other intellectual information. Organizations and individuals should keep their systems updated with the latest security patches for the operating systems and applications and enable multi-factor authentication on their accounts if possible.
+Technical details
+While researching malicious activity in Cisco Secure Endpoint logs, we spotted the execution of a PowerShell command. Attackers usually leverage PowerShell by obfuscating scripts. In this case, we could not locate the source of this PowerShell command, but it's most likely a Microsoft Office document or JavaScript code.
+
+  PowerShell execution from the event logs of our telemetry.
+The attacker attempts to bypass the PowerShell execution policy of the compromised endpoint and creates a new Google Chrome web client object to connect to a domain saltoune[.]xyz and download an executable file, which is the first stage of the malware.
+We started our research by looking closely at the domain saltoune[.]xyz. It was created on June 21, 2021, and registered with NameCheap based out of Reykjavik, Iceland. The serving IP address of the domain saltoune[.]xyz is 162[.]213[.]251[.]176, detected as malicious by five security vendors in VirusTotal. The domain hosts a malicious Win32 EXE with sha256 value is 86aab09b278fe8e538d8cecd28f2d7a32fe413724d5ee52e2815a3267a988595.
+
+Cisco Umbrella Investigate showed a spike in DNS requests to the malicious domain.
+
+We downloaded the contents from the URL https://saltoune[.]xyz/pb/aa.exe.
+Downloading Stage 1 of the malware.
+We ran the stage 1 malware in the Cisco Secure Network Analytics environment and found that the activity started with the creation of directories and files.
+
+Files created by the Stage 1 malware.
+
+Files created by the Stage 1 malware.
+The Stage 1 malware creates a thread that sets registry keys to execute the file with the ".vbs" extension with the program IDs.
+
+Registry keys to execute a file with the extension.
+WScript.exe process launches and modifies internet settings. ZoneMap registry keys disable the automatic detection of the intranet. It maps the local sites to the Intranet Zone, bypasses the proxy server and maps all network paths into the Intranet Zone.
+
+Registry keys to set internet explorer ZoneMap.
+WScript.exe process reads the file "C:\LMPupdate\set\435246.vbs"and launches Windows shell and runs the batch file "C:\LMPupdate\set\183.bat".
+
+Contents of the 435246.vbs file.
+
+Contents of the 183.bat file.
+The batch file renames the file C:\LMPupdate\set\x0329847998 to a password-protected RAR file, 43939237cx.rar.
+It runs the unpakedree.exe to extract the contents of the RAR file using the password "67dah9fasdd8kja8ds9h9sad".
+
+The Windows shell launches a process WScript.exe and runs the 3980392cv.vbs file.
+
+Contents of the file 3980392cv.vbs.
+This launches another Windows shell instance and runs the batch file 48551.bat.
+
+Contents of the 48551.bat file.
+The 48551.bat instance runs the second-stage malware xc829374091FD.exe as a process that creates its child process with the name "xc829374091FD.exe" by writing its image to the child process virtual memory.The batch file deletes the files in the folder "C:\LMPupdate\set" and removes the empty folder to erase its footprints.
+The process xc829374091FD.exe will create the explorer.exe process and rename itself to "13q77qiq.exe" in the directory \ProgramData\Google Updater 2.09\13q77qiq.exe.
+The sha256 hash value of "13q77qiq.exe" is 5624eea08b241314b8bd13ee9429449c53085a6bb2bcc481655f1f28b4314122.
+"13q77qiq.exe" is a 32-bit portable executable, written in Russian which uses Windows graphical user interface (GUI) subsystem, with a version number of 234 234 23 (234 234 234 23).
+The process explorer.exe reads the executable 13q77qiq.exe and writes it to the administrator local temporary space: \Users\ADMINI~1\AppData\Local\Temp\13q77qiq_1.exe.This process also allocates memory in its virtual memory process and writes the image of 13q77qiq_1.exe, into which it exhibits the process injection mechanism.
+The malware contacts a few domains to download the executables:
+
+
+http://morningstarlincoln[.]co[.]uk/ with the IP address 79[.]170[.]44[.]146. When contacted, it downloads a PE file with SHA256 hash value is 35617cfc3e8cf02b91d59209fc1cd07c9c1bc4d639309d9ab0198cd60af05d29.
+
+http://russk17[.]icu with the IP address 23[.]95[.]225[.]105. When contacted, it downloads an executable file named "seer.exe" with SHA256 hash value is 4d3ee3c1f78754eb21b3b561873fab320b89df650bbb6a69e288175ec286a68f.
+
+We spotted embedded URLs while looking at the strings in the PE file with SHA256 hash value 35617cfc3e8cf02b91d59209fc1cd07c9c1bc4d639309d9ab0198cd60af05d29. They belong to many major financial institutions in Mexico.
+
+Embedded strings extracted showing URLs.
+
+Looking closely at the PE file, showed us functions with the capability of accessing the webpage panels and textboxes of the above banking websites. Actors use these techniques for stealing credentials and 2FA tokens. A few of malicious actor defined function calls and its address location are displayed below:
+
+Persistence and privilege escalation 
+The attacker leveraged the Windows registry features for establishing persistence and privilege escalation.
+The MITRE ATT&CK techniques used are:
+
+
+T1547 – Boot or Login Autostart Execution 
+
+T1055 - Process Injection
+
+T1546 - Event-Triggered Execution 
+
+T1056 - Credential API Hooking
+  
+We spotted a few processes that set Image File Execution Options in the registry to ensure malicious code runs when another application starts and adds the path to autostart registry keys.The Explorer.exe process creates a debugger value.This is standard for developers usually, but is out of place here since it's automated.
+
+Registry Key:
+HKLM\Software\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\RSTRUI.exe
+Value: Debuggre blvzufu.exes\\0
+Registry Key:
+HKLM\ Software\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\3K77573KMES7W.exe
+Value: DisableExceptiomChainVaidation
+Registry Key:
+HKCU\Software\Microscoft\Windows\CurrentVersion\Runonce
+Value: C:\ProgramData\Google Updater 2.09\13q77qiq.exe
+HKCU\Software\Microscoft\Windows\CurrentVersion\Run
+Value: C:\ProgramData\Google Updater 2.09\13q77qiq.exe
+HKLM\Software\Microscoft\Windows\CurrentVersion\Runonce
+Value: C:\ProgramData\Google Updater 2.09\13q77qiq.exe
+
+The malware tampers and enumerates user/account privilege by calling GetTokenInformation and AdjustTokenPrivileges.
+
+Function that enumerates the user/account privilege information.
+
+Function that tampers with the user/account privilege information.
+Defense evasion 
+We spotted several techniques the attacker used to evade detection, which we'll break down below.
+T1553 – Subvert Trust Controls
+The Explorer.exe process reads the Zone Identifier Alternate Data Stream. The downloaded files will add a Zone Identifier, also known as the mark-of-the-web, to the alternate data stream. The malware will check whether it has any zone identifier metadata and deletes it if it exists, thus bypassing any application protections.
+C:\ProgramData\Google Updater 2.09\q99ig1gy1.exe: Zone. Identifier
+
+T1562 – Impair Defences
+The Explorer.exe process sets the registry key value to zero and disables the Windows firewall. It also modified Internet Explorer security zone registry entries. The attacker weakened Internet Explorer security by allowing unsigned ActiveX controls, turning off pop-up blocking and changing Java permissions, among other options.
+
+Registry keys and values to disable the firewall.
+T1112 – Modify Registry
+We spotted a registry key with a large amount of data placed in the data field designed to conceal the attacker's presence: HKEY_CURRENT_USER\Software\AppDataLow\Software\{B56DA420-0B5E-0394-E271-7DACAF8D4BB5}\14FD1F9A\46a66dd5b340073ff9.
+
+Malware storing stream of binary values in the registry keys.
+T1497 – Virtualization\Sandbox Evasion
+The Explorer.exe process attempts to connect to a VirtualBox driver and VMware device or locate a VirtualBox DLL and VMware DLL. This attacker tried to detect the presence of VirtualBox and VMware as a means of anti-analysis. Neurevt also uses GetTickCount and IsDebuggerPresent APIs as anti-analysis techniques.
+Discovery and collection 
+Neurevt can enumerate information from the victim's machine. Below are the techniques used by the attacker.
+
+
+T1083 - File and directory discovery
+
+T1120 - Peripheral device discovery
+
+T1057 - Process Discovery
+
+T1012 - Query Registry
+
+T1518 - Software Discovery
+
+T1082 - System Information Discovery 
+
+The malware has functions that checks the operating system, enumerates system drivers, currently available disk drives with the victim's machine, gathers information about the disk drives or directories on the system, detects the Java Runtime Environment version, retrieves keyboard layout list and enumerates user location information.
+
+Functions that retrieve the operating system version information and the status of the logical drives.
+
+Functions that retrieve the volume information of the disks attached to the system.
+The malware can also take screenshots of the victim's monitor.
+
+Functions that capture the system monitor screen.
+It also can copy the data on the clipboard, empty it, and then close the clipboard.
+
+Functions that capture clipboard data.
+The malware also writes the data from the active console screen buffer to a file.
+
+Functions that write the data from the active screen buffer to a file.
+Neurevt sets the keyboard layout by calling the API GetKeyboardLayout, ActivateKeyboardLayout and calls GetKeyboardState which copies the status of 256 virtual keys to the buffer and calls GetKeyState, which retrieves the status of the virtual keys of the keyboard control characters Line Feed, Vertical Tab and Form Feed. It calls the MapVirtualKeyW, which maps the virtual key code into scan code.
+Neurevt installs a hook procedure that monitors messages generated as a result of an input event from keystrokes and mouse activity in a dialogue box, message box, menu, or scroll bar.
+
+Function hooks to monitor the keystrokes and mouse activities.
+It also monitors the keystroke messages posted to an application message queue.
+Neurevt waits for the messages from multiple objects, peeks for the message, checks if it's a Unicode window, gets the message, translates the virtual key's scan code to the characters, and dispatches them.
+
+Functions that check for the virtual keys, scan code messages and translate to character and dispatches them.
+Exfiltration
+The malware uses System.Web Namespace to enable the browser-server communication to the C2 server with a Nginx web server. The HTTP backdoor method is used by placing the information from the compromised machine into the data section of the HTTP POST request to the domains russk18[.]icu and moscow13[.]at.
+
+Wireshark displays the HTTP POST request traffic to the C2 russk18[.]icu and the data section of the packet.
+Conclusion
+This version of Neurevt exhibited multiple functionalities. Once infected, the attacker gains access to the victim's system and modifies their system settings to conceal their existence. The trojan will access the victim's system service tokens and elevate its privilege, thereby accessing the operating system, user's account information, credentials of banking websites, capture screenshots, and connecting to the C2 servers to steal intellectual property and personal information.This trojan could affect individual users and organizations leading to a data breach, or reputational damage that eventually results in a loss of financial value.
+Organizations and defenders can take proactive measures to mitigate the risk of infection and data theft, such as restricting users accessing suspicious websites and downloading malicious contents. Talos also encourages implementation of role-based access control for the use of Windows administrative tools, PowerShell execution policy and block suspicious IP addresses, domains and network traffic from C2.
+Individuals using their personal systems must ensure they have the latest updates installed, including anti-virus scan engines, operating systems and applications. Automatic execution of browser scripts should be disabled. Users should be careful while accessing websites that download their contents to their computer's file system.
+
+High level overview of Neurevt execution flow.
+Coverage
+Ways our customers can detect and block this threat are listed below.
+
+Cisco Secure Endpoint (formerly AMP for Endpoints) is ideally suited to prevent the execution of the malware detailed in this post. Try Secure Endpoint for free here.
+Cisco Secure Firewall (formerly Next-Generation Firewall and Firepower NGFW) appliances such as Threat Defense Virtual, Adaptive Security Appliance and Meraki MX can detect malicious activity associated with this threat.
+Cisco Secure Malware Analytics (formerly Threat Grid) identifies malicious binaries and builds protection into all Cisco Secure products.
+Umbrella, Cisco's secure internet gateway (SIG), blocks users from connecting to malicious domains, IPs and URLs, whether users are on or off the corporate network. Sign up for a free trial of Umbrella here.
+The following ClamAV signatures have been released to detect this threat:Win.Trojan.Neurevt-9880046-0Win.Trojan.Neurevt-9880047-0Win.Trojan.Neurevt-9880048-0
+Win.Trojan.Neurevt-9880049-1
+Open Source Snort Subscriber Rule Set customers can stay up to date by downloading the latest rule pack available for purchase on Snort.org. 
+SIDs 57989 has been released to detect this threat. 
+IOCs
+Domains:
+
+russk18[.]icu
+russk19[.]icu
+russk20[.]icu
+russk21[.]icu
+russk22[.]icu
+moscow13[.]at
+moscow11[.]at
+
+Hashes:
+
+86aab09b278fe8e538d8cecd28f2d7a32fe413724d5ee52e2815a3267a988595
+b5624eea08b241314b8bd13ee9429449c53085a6bb2bcc481655f1f28b4314122
+4d3ee3c1f78754eb21b3b561873fab320b89df650bbb6a69e288175ec286a68f
+35617cfc3e8cf02b91d59209fc1cd07c9c1bc4d639309d9ab0198cd60af05d29
+ 
+URLs:
+
+http://saltoune[.]xyz/pb/aa.exe
+https://saltoune[.]xyz/pb/aa.exe
+http://morningstarlincoln[.]co[.]uk/site/bmw/studi.exe
+http://russk17[.]icu/mailo/seer.exe
+

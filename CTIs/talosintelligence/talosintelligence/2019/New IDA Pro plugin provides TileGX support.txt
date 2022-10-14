@@ -1,0 +1,56 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+By Jonas Zaddach
+
+
+
+
+
+Overview
+Cisco Talos has a new plugin available for IDA Pro that provides a new disassembler for TileGX binaries. This tool should assist researchers in reverse-engineering threats in IDA Pro that target TileGX.
+
+We started developing this tool after the VPNFilter campaign last year, where attackers targeted hundreds of wireless routers across the globe. During our research of this attack, Talos researchers came across several sophisticated malware samples targeting Tilera's TileGX processor architecture. Processors based on TileGX are used in many small and home office routers (SOHO), which were the primary targets in VPNFilter. The analysis toolset for this architecture is quite limited: objdump is capable of disassembling the ELF binaries but more sophisticated and easier-to-use tools such as IDA Pro and Ghidra are not.
+
+This prompted us to look into developing an IDA Pro processor module. As libopcode —, the library powering objdump — already has support for the TileGX architecture, it seemed obvious to build the module on this library, instead of trying to write our own instruction decoder. Due to speed considerations, that also meant developing a processor module in C++, as opposed to most online available open-source processor modules written in Python. Luckily, the IDA Pro SDK has good source code examples of processor modules, which were a great help.
+
+The resulting processor module provides a working disassembler for TileGX programs. It is not the fastest at the moment, and due to the binutils dependency, it currently only compiles on Linux, but it should help any reverse engineer who has to look into threats targeting the TileGX architecture.
+
+
+Building and installing
+You can either download the pre-compiled plugin provided by us and copy it to your IDA Pro installation's plugin/ folder or compile the plugin yourself. As mentioned before, both are available only for Linux, as building on Windows or MacOS is not supported yet.
+
+The build process has been tested with IDA Pro 7.3 on Linux (Ubuntu 18.04). We recommend to use the same environment. After downloading the source code from github. Create the file idacfg.mk in the source code directory with the following content: 
+
+idabin=<PATH TO YOUR IDA INSTALLATION>
+
+idasdk=<PATH TO YOUR IDA SDK DIRECTORY>
+
+Then run:
+
+make -f Makefile.linux install
+
+to build and install the plugin. 
+
+
+Usage
+Start ida64. Select "Tilera Tile-GX" as processor in the dialog when opening the malware file. Accept to change the processor type. Enjoy the the TileGX disassembly. 
+
+
+
+
+
+Talos is releasing this alpha version knowing that it may contain a few bugs and can be improved upon in the future, but we still wanted to share with the community in the early stages. Please see the source code for where to send issues, bug reports and feature requests. Feel free to contact the author if you run into issues. We would also like to thank Igor Skochinsky from Hex-Rays who helped Talos hunt down a bug during the build process.
+
+
+

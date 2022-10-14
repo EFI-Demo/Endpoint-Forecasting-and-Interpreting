@@ -1,0 +1,114 @@
+We have recently came across a piece of malware which is known as HanciTor (as  ESET-NOD32 calls it) or Chanitor (based on the detection name given by Microsoft). The main purpose of this malware is to download other malware and maintain persistence on the system for further communication.
+
+There are quite a number of samples detected in the wild, as per the list below:
+– 17f4394a5540e69a79b3c8cff3e1f225
+– 151a8ce592d72b0b9ae4bb5c9283b8c8
+– 269f0f0e4c15f7a7e1b93a577d55cbce
+– 3810c185a71f261f1819262b6b372706
+– 5e8ee533b302245cc1d01fe3eb47e2b4
+– 6d35acab684d45d8a80c6201d060e6fa
+– 6e979b90d640a90e12f57c28f5055f23
+– 87ac0b513e79bdb9f066d077648ccfc9
+bcf0f48f4b2543199daccef747d4a6d6
+e51ac3d4c04a89813efc21f90f895216
+The sample analyzed in this paper is 17f4394a5540e69a79b3c8cff3e1f225.
+Initially Hancitor is delivered as a packed binary. Once executed, it unpacks itself in memory and starts executing the malicious code. Below is an excerpt of the unpacked memory.
+
+As shown in the previous screenshot, there are 5 interesting components that can be extracted:
+[1] The Tor hidden Web service name (i.e. “ho7rc[redacted]”)
+[2] The computed addresses of LocalAlloc, LocalFree and ExitProcess functions
+[3] Encrypted tor2web domain name (i.e. “.tor2web.ru”)
+[4] Encrypted .dll names (i.e. “kernel32”)
+[5] Encrypted strings (i.e. “winlogin”)
+The encryption method used by Hancitor to extract any of the encrypted strings is a XOR between each character in the word and (k – position), where k is a constant:
+s[i] = s[i] ^ (k – i)
+For the “.dll” names, constant k equals 0x20. For the rest of the strings k equals 0x12.
+After applying decryption, we obtain the next configuration information:
+"ho7rc[redacted]
+/gate.php
+.tor2web.org
+.tor2web.ru
+winlogin
+Software\Microsoft\Windows\CurrentVersion\Run
+05F16C88-[redacted]-42C1-[redacted]-E9BAF7DB4A9E
+Software\Microsoft\Active Setup\Installed Components\05F16C88-[redacted]-42C1-[redacted]-E9BAF7DB4A9E
+cfg
+Cookie:disclaimer_accepted=true
+Mozilla/5.0 (Windows NT 6.1; rv:24.0) Gecko/20100101 Firefox/24.0
+cmd /D /R ping -n 10 localhost && del "%S" && exit
+cmd /D /R ping -n 10 localhost && del "%S" && start /B "" "%S" && exit
+cmd /D /R type "%S" > ___ && move /Y ___ "%S"
+cmd /D /R start /B "" "%s" && exit
+rpcrt4
+msvcrt
+kernel32
+iphlpapi
+advapi32
+wininet
+ntdll”
+Once executed, the malware will check whether there exists a mutex with the name 05F16C88-[redacted]-42C1-[redacted]-E9BAF7DB4A9E in order to ensure that a single instance is running on the system. If such mutex is already present on the system, the malware calls ExitProcess, otherwise it moves forward and creates a folder called “Windows” in the %AppData%.
+Next, it creates a file called winlogin.exe in the previously created directory by executing the cmd /D /R ping -n 10 localhost && del %curr_path% && start /B “” %new_path% && exit command, where the %curr_path% is the current path of the execution process and %new_path% is the newly created path: %AppData%/Windows/winlogin.exe. This way, it deletes the initial file and start executing itself as winlogin.exe from a fake directory called Windows.
+In order to ensure persistence, it creates the following registry key:
+Software\Microsoft\Windows\CurrentVersion\Run\winlogin %AppData%\Windows\winlogin.exe under HKLM (HKEY_LOCAL_MACHINE). In case of failure, when the return value of RegSetValueEx  is non-zero, it attempts to create it under HKCU (HKEY_CURRENT_USER).
+Next, the malware stores its configuration under the registry key HKCU\\Software\Microsoft\Active Setup\Installed Components5F16C88-[redacted]-42C1-[redacted]-E9BAF7DB4A9E\cfg. It contains the UUID structure and the computer name. The pattern is %uuid%-%serv%-%pc-name%, where:
+ 
+– %uuid% is {%08lX-%04hX-%04hX-%02hhX%02hhX-%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX} (constructed from the UUID structure);
+ 
+– %serv% is “SERV” (written as 8 bytes long with space padding);
+ 
+– %pc-name% is “%PC-NAME%” (written as 64 bytes long with space padding);
+ 
+Following this, the malware tries to extract the IP address of the victim by contacting the service api.ipify.org.
+ 
+Communication with server
+After applying the initial settings, the malware runs in a loop condition in which it communicates with the server. The first step is to send the stored cfg data from the local registry to the server. Malware is trying to use the Tor2web proxy network in order to connect to a Tor hidden Web service. It does this by concatenating three fields:
+
+After each connection, it goes to sleep for about 300’000 +- (rand % 30’000) milliseconds.
+In the communication process, the malware starts by sending a POST request containing 0x80 bytes.  The request contains the same data that was stored in the cfg registry plus the IP address of the target.
+For example:
+“{FB7FE50E-E5E7-4B0D-BC5F-7818BD58B15E}SERV    }VTR-80222EFA6FC” + “}” + “192.168.1.2”;
+Next, it evaluates the response. The structure of the response is similar to this.
+
+The last 3 DWORDs are used for control.
+If DWORD1 is equal to 0xADDC0FF3, it continues the communication, otherwise it goes to sleep. Next, the LOBYTE from DWORD3 is extracted. Let’s call it COMMAND.
+Then some bitwise operations are made on the COMMAND in order to detect the command that the malware should execute next. Here is a breakdown of the bits in the COMMAND.
+ 
+– COMMAND & (0001) – Download a new file from server;
+ 
+– COMMAND & (0010) – Start the last downloaded file by executing cmd /D /R start /B “” “%s” && exit on that file;
+ 
+– COMMAND & (0100) – Delete the malware registry entries and delete the winlogin file; (Cleanup)
+ 
+– COMMAND & (1000) – Exit;
+ 
+If the malware has succeeded in downloading a new file (the size of read data is greater than 0) from the server, it confirms it by sending back 11 bytes using the following form “__%08x“, where the last 8 bytes are the CONFIRMATION_CODE (DWORD2).
+The manner in which a file is stored locally is by creating a temporary file in the %TEMP% folder that will have as prefix “___” and as extension “.exe”.
+Finally, here is a list of hidden service names which we were able to find:
+ 
+– bc7cx[redacted]
+– bmu3[redacted]
+– brk7t[redacted]
+– chngv[redacted]
+– emmo[redacted]
+– h5zuvy[redacted]
+– ho7rcj[redacted]
+– jwdmk[redacted]j
+– kaofzo[redacted]
+– lmgxm[redacted]
+– o3qz25[redacted]
+– xdndo2[redacted]
+ 
+After simulating the server communication, we were able to monitor the servers and to download other malware samples. The downloaded executables are in raw format (no encryption layer added) and are known as Vawtrak . We found 5 distinct executables so far:
+ 
+++2b092cr_110_inst.exe (df8640260d1c7d881049a35d1e7aad40);
+++f03e9cr_111_inst.exe (4d33019322701f6b2fa4f688b3cf26a1);
+++94142zxcv.exe (a0d35ce97f337486debac9f437aeae31);
+++9e514asdf.exe (7aec8a513ca400af6f8994fc2e72924d);
+++0dc8ecrw.exe (db7e0c385c6c0ddd2611ab1783bd6dd0);
+ 
+The CONFIRMATION_CODE seems to be a counter. Since this counter changes only when a new machine ID is received, we can assume it count the number of infections. Making requests in the order that appears in the next tables, we obtained the following statistics:
+
+
+
+These hidden services are somehow related as they are grouped together not only by the returned executable but also by the counter. Probably they point to the same IP.
+Also, while monitoring these servers we were able to see that, at some point, samples are changed.

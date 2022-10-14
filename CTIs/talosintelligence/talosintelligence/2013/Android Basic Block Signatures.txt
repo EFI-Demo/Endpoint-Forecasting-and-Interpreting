@@ -1,0 +1,22 @@
+
+
+Writing ClamAV signatures is a bit of an art. When matching bytes in a file, you need to make a selection that most, if not all of the malicious files will have, and hopefully, no clean files will have. Strings are an easy target. Often there are unique typos or a strange user-agent that you can match. However, when an application encrypts all of its strings you have to go looking elsewhere for bytes. The program's instructions are a great target for signatures.
+
+In Android, the Java bytecode is contained in the file classes.dex. The code is just a series of instructions.  The instruction unit is two bytes, so any instruction will be a multiple of two bytes. The first byte is the opcode which instructs the interpreter what to do. The rest of the bytes are additional information for each instruction.  
+
+My initial idea for generating Android signatures was to take the bytes of a malicious function, parse the instructions and wild card any non-opcode byte, then use that for detection. There were some issues to this. The first is that, for obvious performance reasons, ClamAV doesn't parse signatures with only single byte content matches. Since the opcodes are single bytes, this causes clamscan to emit the error:
+
+    Can't find a static subpattern of length 2
+
+I worked with this  while still pursuing this version of the idea. If you have one content match that is two bytes, you can then have other one byte content matches, like so:
+
+    Test.Signature;Engine:51-255,Target:0;0;41??4141??41
+
+This left a difficult decision. Which instruction should have the two byte match? While reviewing instructions, I noticed that the second byte  stays mostly unchanged between different versions of the same function. This second byte is generally a register and the changes are often not significant enough to require the introduction of another register into the function. For this reason, I decided to keep the first two bytes of each instruction instead of just the opcodes. It would allow for stronger matching and detection was not significantly affected.
+
+In testing, the functions changed a lot between versions of programs. Any code added to a function would break a signature. As well, signatures were pretty long. To get a finer granularity for selection, I parsed each function into its basic blocks. A basic block is a series of instructions that have only one entry point (the first instruction of the block) and one exit point (the last instruction of the block).
+
+With each basic block, I saved the first two bytes of each instruction and changed the rest to wild cards. I can now take a set of related samples, parse their basic blocks out, push them into a database, and then query for blocks that are in the most samples. Once I have these blocks, I can string them together into a signature and cover a lot of samples only knowing which malicious class to select from.
+
+That's the gist of basic block signatures. Android is a great test ground for a framework like this since Java bytecode is relatively simple to parse and the malware authors have not started employing dead code injection. This work also lays the foundation for control flow graph based signatures. This is an area of research I am pretty excited to look into.
+

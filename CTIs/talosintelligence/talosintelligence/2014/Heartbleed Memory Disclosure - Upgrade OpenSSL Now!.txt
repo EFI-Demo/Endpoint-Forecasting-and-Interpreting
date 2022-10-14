@@ -1,0 +1,32 @@
+
+Heartbleed is a serious vulnerability in OpenSSL 1.0.1 through 1.0.1f.   If you have not upgraded to OpenSSL 1.0.1g or installed a version of OpenSSL with -DOPENSSL_NO_HEARTBEATS it is strongly recommended that you do so immediately.
+
+This vulnerability allows the attacker to read up to 64KB of heap memory from the victim without any privileged information or credentials. How is this possible? In short, OpenSSL's heartbeat processing functions use an attacker controlled length for copying data into heartbeat responses. Both DTLS and TLS heartbeat implementations are vulnerable.
+
+The vulnerable functions are tls1_process_heartbeat() in ssl/t1_lib.c (for TLS) and dtls1_process_heartbeat() in ssl/d1_both.c (for DTLS). Looking at these functions you can see that OpenSSL first reads the heartbeat type and length:
+
+hbtype = *p++;
+n2s(p, payload);
+pl = p;
+
+n2s is a macro that takes two bytes from "p" and copies them to "payload". This is the length indicated by the SSL client for the heartbeat payload.  Note: The actual length of the SSL record is not checked. The variable "pl" is a pointer to the heartbeat data sent by the client.
+
+OpenSSL allocates as much memory as the client asked for (two byte length up to 65535 bytes) plus 1 byte for heartbeat type, 2 bytes for payload length, and 16 bytes for padding:
+
+buffer = OPENSSL_malloc(1 + 2 + payload + padding);
+bp = buffer;
+
+Then it builds the heartbeat response by copying the payload size sent in the request to the response using the macro s2n (opposite of n2s).  Finally (and here's the critical part), using the size supplied by the attacker rather than its actual length, it copies the request payload bytes to the response buffer.
+
+*bp++ = TLS1_HB_RESPONSE;
+s2n(payload, bp);
+memcpy(bp, pl, payload);
+
+If the specified heartbeat request length is larger than its actual length, this memcpy() will read memory past the request buffer and store it in the response buffer which is sent to the attacker. In internal testing we were able to successfully retrieve usernames, passwords, and SSL certificates.
+
+To detect this vulnerability we use detection_filter ("threshold") rules to detect too many inbound heartbeat requests, which would be indicative of someone trying to read arbitrary blocks of data. Since OpenSSL uses hardcoded values that normally result in a 61 byte heartbeat message size, we also use rules to detect outbound heartbeat responses that are significantly above this size. Note: you can't simply compare the TLS record size with the heartbeat payload size since the heartbeat message (including the indicated payload size) is encrypted.
+
+We have released detection in SIDs 30510 through 30517 to detect attacks targeting this vulnerability.
+
+To keep people updated, Heartbleed rules have been added to the community ruleset.
+

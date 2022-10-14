@@ -1,0 +1,92 @@
+
+Some of you may have already noticed that we have started to show new information for ASF files in the File details tab, example:
+
+https://www.virustotal.com/en/file/b44378bc5f32700edd97d3f66479d9665194cfef95a2252c70a4237263bdfafd/analysis/
+
+This information includes the content encryption object, the extended content encryption object and script command objects, if any at all.
+
+The Advanced Systems Format (ASF) is Microsoft’s proprietary audio/video container format, this specification defines the structure of the audio/video stream and provides a framework for digital rights management (DRM) of the contained streams. Files using such a format are commonly seen with wmv, wma or mp3 extensions.
+
+The Windows Media Rights Manager allows protection of the media content in such a way that once the user tries to play a file for which there is no valid license, Windows Media Player will display a URL defined by the content provider.
+
+This scheme allows attackers to create evil media files forcing visits to malicious URLs when the crafted file is opened. In the following screenshot we can observe how a wmv file (https://www.virustotal.com/en/file/9c3d364fb2f6e43a8c1d149bfb929bc5fc1ec2a9ae6ca424d87295e65b61e3c4/analysis/) forces the user to visit xvidprox.com, this site deceives the visitor making him think he has to download and install a “required” plugin in order to watch the video, a common social engineering trick.
+
+
+
+
+
+Parsing the file content encryption headers we find:
+
+Content Encryption Header:
+Secret Data: '\xcf\xb8\xba\xf2F2\xd3\xf7Sb\xd9D\xbd5\x936\x8c\xd2Tk\x97\xdbT'
+Protection Type: DRM
+Key ID: gAtyRGxTp0uyKC9AAbf3Gg==
+License URL: http://www.microsoft.com/isapi/redir.dll?prd=wmdrm&pver=2&os=win&sbp=newclient
+
+Extended Content Encryption Header:
+<WRMHEADER version="2.0.0.0">
+<DATA>
+ <RID>1</RID>
+ <CID>500</CID>
+ <LAINFO>http://xvidprox.com/index.html?id=&amp;dlgx=1000&amp;dlgy=600&amp;adv=0</LAINFO>
+ <KID>gAtyRGxTp0uyKC9AAbf3Gg==</KID>
+ <CHECKSUM>ErLnEFXO!A==</CHECKSUM>
+</DATA>
+<SIGNATURE>
+ <HASHALGORITHM type="SHA"></HASHALGORITHM>
+ <SIGNALGORITHM type="MSDRM"></SIGNALGORITHM>
+ <VALUE>Trh0AiQYQRBmw3qKi1i4Ox1Lv2FTC!4VFKZoCAJdGwnkPNC8z*bfDA==</VALUE>
+</SIGNATURE>
+</WRMHEADER>
+
+
+
+
+
+Needless to say, you will not be able to reproduce the video file (commonly they are small encrypted videos no bigger than 300k and padded with useless data to look like the latest 800MB movie release).
+
+Downloaded file analysis:
+https://www.virustotal.com/en/file/5e0b93dfa2aca2463aa022141f079b9bb455d5823f0ab2c9fca8254834bcd47b/analysis/
+
+Let us look at another example of a malicious video sample:
+https://www.virustotal.com/en/file/2b75d7be851514dbaf1fa1649f5eee29efc9669ca774bae98944b72356fef4d3/analysis/
+
+
+
+
+Again the ASF headers contain:
+
+Content Encryption Header:
+Secret Data: '\xfe\xf0\xfc\x0f\x8c\xf6^\xb9\x8eav\x9f\xfb\x92)\x9d'
+Protection Type: DRM
+Key ID: ldkokwerodkkkkkk
+License URL: http://free-media-player.info/play.cgi?DlgX=800&DlgY=600
+
+Extended Content Encryption Header:
+<WRMHEADER version="2.0.0.0">
+<DATA>
+ <CHECKSUM>KeBODgJtVQ==</CHECKSUM>
+ <KID>ldkokwerodkkkkkk</KID>
+ <LAINFO>http://free-media-player.info/play.cgi?DlgX=800&DlgY=600</LAINFO>
+</DATA>
+<SIGNATURE>
+ <HASHALGORITHM type="SHA"></HASHALGORITHM>
+ <SIGNALGORITHM type="MSDRM"></SIGNALGORITHM>
+ <VALUE>2tV2YzlYaZH1LFpq3CEUF+XrNT6+gh++dF3hNEWPONoVWUClPHXGKg==</VALUE>
+</SIGNATURE>
+</WRMHEADER>
+
+The downloaded file is, once again, clearly malicious:
+https://www.virustotal.com/en/file/38eb4c07d967862bbee40010671d111ca76d5e14c3ad23962bc0755ffeaf6fec/analysis/
+
+We successfully tried these videos on Windows Media Player 11 and 12, no user iteration was needed to show the malicious websites, this leads to even more interesting automated exploitation through browser vulnerabilities.
+
+We can find a deeper analysis of this matter in a 2010 post at http://habrahabr.ru/post/89676/ (Russian).
+
+We believe displaying these new file details will further help malware researchers in their fight against the bad guys. Additionally, this attack trend leaves room for new interesting features to be implemented in VirusTotal with regards to the relationships between files. Was this file downloaded from a given site? And if so, was this site used in a media content DRM social engineering attack? Which video file was the initial trigger for the whole infection process? Interesting questions that we will soon be addressing.
+
+
+Email ThisBlogThis!Share to TwitterShare to Facebook
+
+
+

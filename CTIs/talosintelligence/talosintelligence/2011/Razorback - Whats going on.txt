@@ -1,0 +1,42 @@
+
+Its been almost 3 weeks since I joined the VRT and started working on Razorback.  Over that time we have made some good progress with the project and I wanted to share what we have done and what we are going to be working on over the next few weeks.
+What we have completed so far:
+Subversion repository restructure:
+We have restructured the subversion repository in a way that has given us the following:
+The ability to build components separately with minimal cross project dependencies.
+The ability to release individual components of the system in separate tarballs, this is geared towards binary package maintainers.
+The ability to release a jumbo tarball with all of the razorback components in them for rapid deployment.
+More information on the new repository structure can be found the in Developers Guide here: https://sourceforge.net/apps/trac/razorbacktm/wiki/Developers/Repository Layout
+Integration of all nuggets from the nugget farm project into the main project:
+All of the nuggets that where in the nuggetfarm project on SourceForge have been pulled into the main project.  The aim of is is to make it simpler to maintain the official nuggets.  These nuggets are now available in the full release tarball or as individual components.
+API Project Improvements:
+The API has been split out of the dispatcher project to make it easier to maintain.
+API library symbol visibility - lots of the other components (disptacher and nuggets) required an un-installed build of the API to be available to them so that they could statically link in a sub library that was not installed; the utils library.  The should allow people to build components much easier if they have installed the system from packages or from the per component release tarballs.
+New/Improved configuration API. 
+We have replaced the hand rolled parser with libconfig (http://www.hyperrealm.com/libconfig/), which has drastically reduced the time that it takes to add configuration items to components.  
+We have also added routines to allow components to use the configuration api to load configuration files that they specify the structure of simply and in a standard fashion. This has allowed us to remove all hard coded configuration items from nuggets and put them into configuration files. 
+The configuration API now looks for configuration files in the configured sysconfdir by default, the API calls allow you to pass custom search locations in if required.  This means that you no longer have to run every command with --conf=...  which may be a relief to many of you.
+You can read up on the new configuration API here: http://razorbacktm.sourceforge.net/docs/api/trunk/
+Doxygen API Documentation: 
+We have started using doxygen to generate up to date API documentation and publish it to the project website.  Documentation is generated and published every 4 hours for supported branches.  Not all files have been fully documented yet but you can find out about what has been here: http://razorbacktm.sourceforge.net/docs/api/trunk/
+Continuous integration testing.
+As of the 0.1.5 release we have defined the officially supported platforms to run Razorback on and the architectures that we support for those platforms.  These are currently set out as the following base OS’s running on either i386 or amd64/x86_64 hardware:
+Debian 6.0
+FreeBSD 8.1
+RedHat Enterprise Linux 6.0
+Ubuntu 10.04 LTS
+In order to help maintain compatibility across these platforms and to reduce the amount of times developers spend testing on these platforms we have deployed BuildBot.  BuildBot is a continuous integration system that will run a sequence of actions when an event triggers them.  Currently we have it setup to build every component on every platform after 15 minutes of idle time in the repository after a commit.  In addition to this the system will trigger builds of the API if something that depends on it changes, or of all the things that depend on the API if a change is made to it. You can read more about buildbot here: http://trac.buildbot.net/
+System Manual and Developers Guide
+We have started writing better user and developer documentation for the system, with the aim of allowing more people to be able to setup and use the system. This information is available on the project wiki:
+https://sourceforge.net/apps/trac/razorbacktm/wiki
+Nugget cleanup:
+We have cleaned up and packaged all of the nuggets so that they are easy to install and simple to configure.  Where applicable we have integrated 3rd party libraries and components into the nuggets to make them faster to install.
+What's coming next?
+Here is a short list of the most exciting features being worked on (in no particular order): Complete redesign of the dispatcher.
+IPv6 Support for inter-component communication .
+Encryption support for data passing between components.
+API Improvements for none real time processing.
+Database improvements.
+Data block storage and transfer improvements.
+
+

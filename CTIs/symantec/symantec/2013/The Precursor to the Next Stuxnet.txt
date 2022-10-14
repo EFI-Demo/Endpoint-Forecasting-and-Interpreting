@@ -1,0 +1,31 @@
+On October 14, 2011, a research lab with strong international connections alerted us to a sample that appeared to be very similar to Stuxnet. They named the threat "Duqu" [dyü-kyü] because it creates files with the file name prefix “~DQ”. The research lab provided us with samples recovered from computer systems located in Europe, as well as a detailed report with their initial findings, including analysis comparing the threat to Stuxnet, which we were able to confirm. Parts of Duqu are nearly identical to Stuxnet, but with a completely different purpose.
+
+Duqu is essentially the precursor to a future Stuxnet-like attack. The threat was written by the same authors (or those that have access to the Stuxnet source code) and appears to have been created since the last Stuxnet file was recovered. Duqu's purpose is to gather intelligence data and assets from entities, such as industrial control system manufacturers, in order to more easily conduct a future attack against another third party. The attackers are looking for information such as design documents that could help them mount a future attack on an industrial control facility.
+
+Duqu does not contain any code related to industrial control systems and is primarily a remote access Trojan (RAT). The threat does not self-replicate. Our telemetry shows the threat was highly targeted toward a limited number of organizations for their specific assets. However, it’s possible that other attacks are being conducted against other organizations in a similar manner with currently undetected variants.
+
+The attackers used Duqu to install another infostealer that could record keystrokes and gain other system information. The attackers were searching for assets that could be used in a future attack. In one case, the attackers did not appear to successfully exfiltrate any sensitive data, but details are not available in all cases. Two variants were recovered, and in reviewing our archive of submissions, the first recording of one of the binaries was on September 1, 2011. However, based on file compile times, attacks using these variants may have been conducted as early as December 2010.
+
+One of the variant’s driver files was signed with a valid digital certificate that expires August 2, 2012. The digital certificate belongs to a company headquartered in Taipei, Taiwan. The certificate was revoked on October 14, 2011.
+
+Duqu uses HTTP and HTTPS to communicate with a command-and-control (C&C) server that at the time of writing is still operational. The attackers were able to download additional executables through the C&C server, including an infostealer that can perform actions such as enumerating the network, recording keystrokes, and gathering system information. The information is logged to a lightly encrypted and compressed local file, which then must be exfiltrated out.
+
+The threat uses a custom C&C protocol, primarily downloading or uploading what appear to be JPG files. However, in addition to transferring dummy JPG files, additional data for exfiltration is encrypted and sent, and likewise received. Finally, the threat is configured to run for 36 days. After 36 days, the threat will automatically remove itself from the system.
+
+Duqu shares a great deal of code with Stuxnet; however, the payload is completely different. Instead of a payload designed to sabotage an industrial control system, the payload has been replaced with general remote access capabilities. The creators of Duqu had access to the source code of Stuxnet, not just the Stuxnet binaries. The attackers intend to use this capability to gather intelligence from a private entity to aid future attacks on a third party. While suspected, no similar precursor files have been recovered that predate the Stuxnet attacks.
+
+You can find additional details in our paper here. The research lab that originally found the sample has allowed us to share their initial report as an appendix. We expect to make further updates over the coming days.
+
+Key points:
+
+
+	Executables using the Stuxnet source code have been discovered. They appear to have been developed since the last Stuxnet file was recovered.
+	The executables are designed to capture information such as keystrokes and system information.
+	Current analysis shows no code related to industrial control systems, exploits, or self-replication.
+	The executables have been found in a limited number of organizations, including those involved in the manufacturing of industrial control systems.
+	The exfiltrated data may be used to enable a future Stuxnet-like attack.
+
+
+Note: At press time we have recovered additional variants from an additional organization in Europe with a compilation time of October 17, 2011. These variants have not yet been analyzed. More information will follow.
+
+Update [October 18, 2011] - Symantec has known that some of the malware files associated with the W32.Duqu threat were signed with private keys associated with a code signing certificate issued to a Symantec customer. Symantec revoked the customer certificate in question on October 14, 2011. Our investigation into the key’s usage leads us to the conclusion that the private key used for signing Duqu was stolen, and not fraudulently generated for the purpose of this malware. At no time were Symantec’s roots and intermediate CAs at risk, nor were there any issues with any CA, intermediate, or other VeriSign or Thawte brands of certificates. Our investigation shows zero evidence of any risk to our systems; we used the correct processes to authenticate and issue the certificate in question to a legitimate customer in Taiwan.

@@ -1,0 +1,37 @@
+
+		Here’s a quiz for you. Quick, tell me what page the following URL is going to take you to: 
+ 
+http://www.somebank.com/welcome.aspx?p=http%3A%2F%2Fwww.somebank.com%2Flogin.aspx 
+ 
+If you answered “www.somebank.com/welcome.aspx”, you’re right. But if you answered “www.somebank.com/login.aspx”, you’re also right. How can both of these be true? Because the page www.somebank.com/welcome.aspx redirects the user to whatever location is specified in the “p” parameter of the querystring, highlighted below: 
+ 
+http://www.somebank.com/welcome.aspx?p=http%3A%2F%2Fwww.somebank.com%2Flogin.aspx 
+ 
+This may look pretty innocent to you. But what if I sent you an email claiming to be from “SomeBank,” telling you that your account was under investigation, and that you needed to login at the following link to confirm your good standing: http://www.somebank.com/welcome.aspx?p=http%3A%2F%2Fwww.evilphishers.com%2F 
+ 
+Now you, being a technologically savvy reader of the SDL blog, probably wouldn’t fall for such a transparent phishing scheme. But it’s not hard to imagine that some people would see that the link takes them to www.somebank.com and believe the message to be legitimate. 
+ 
+This security vulnerability is commonly referred to as an “open redirector”, and we’re going to be proposing a requirement for the next version of the SDL that will help prevent these vulnerabilities. At the heart of this requirement is a new library we’ve adapted from the Windows Live Spaces team called SafeRedirect. 
+ 
+SafeRedirect is an alternative to the ASP.NET method System.Web.HttpResponse.Redirect (hence forth referred to as Response.Redirect). While Response.Redirect will redirect the client to any specified URL (as shown below): 
+ 
+Response.Redirect(Request.QueryString[“p”]); 
+ 
+,calls to SafeRedirect.Redirect will only succeed if the specified URL belongs to a predefined “allow list” of known good domains specified in the application’s configuration file. To continue our example, let’s say that “SomeBank” rewrites its application to use the SafeRedirect library and allows only redirects to the domain somebank.com. The new redirection code will look like this: 
+ 
+SafeRedirect.Redirect(Request.QueryString[“p”]); 
+ 
+And while the following legitimate request will succeed: 
+ 
+http://www.somebank.com/welcome.aspx?p=http%3A%2F%2Fwww.somebank.com%2Flogin.aspx 
+ 
+,the following phishing attempt request will now fail: 
+ 
+http://www.somebank.com/welcome.aspx?p=http%3A%2F%2Fwww.evilphishers.com%2F 
+ 
+,and the user will instead be redirected to a safe warning page. 
+ 
+I’m personally very excited about this proposal, since it succeeds on two important levels: first, it addresses an important vulnerability that harms our users and undermines trust in our online services; and second, it is very quick and simple for development teams to implement. We can even take this a step further and write an FxCop rule that would detect usage of the old, vulnerable Response.Redirect and flag those calls as errors. For virtually no effort, product teams will be able to detect and fix phishing holes that could have potentially harmed their users. And that’s good news for everyone. Except the phishers. 
+ 
+
+	

@@ -1,0 +1,73 @@
+
+		
+
+
+
+Modern social engineering attacks use non-portable executable (PE) files like malicious scripts and macro-laced documents. Every month, Windows Defender AV detects non-PE threats on over 10 million machines.
+Learn how machine learning drives next-gen protection capabilities and cloud-based, real-time blocking of new and unknown threats:
+Machine learning vs. social engineering
+
+
+
+Cybercriminals are using a combination of improved script and well-maintained download sites to attempt installing Locky and Kovter on more computers.
+A few months ago, we reported an email campaign distributing .lnk files with a malicious script that delivered Locky ransomware. Opening the malicious .lnk files executed a PowerShell script that performed a download routine. More recently, we have found a more complex version of the script, delivering more malware from more download sites.
+This new script has no less than five different hardcoded domains from which it attempts to download the payload malware. In addition to Locky, this script also now downloads Kovter.
+The script attempts to access a specific location in the domains by using a parameter. It does this for all domains, one by one, until it is able to successfully download its payload. If unsuccessful in the first pass, it uses another parameter and goes through the five domains again. It exits after a second pass and still no successful download.
+The use of multiple domains and the technique of storing the rest of the URL as a parameter is a way to circumvent URL filtering solutions. All the script needs is one URL that is not blocked in order to successfully download malware.
+On the other hand, the use of specific parameters means the cybercriminals have complete control of the domains, whether they are compromised websites or were set up specifically for this purpose. More importantly, we observed that the malicious websites are updated with new versions of the malware payload every day.
+This setup gives cybercriminals behind these attacks a great level of flexibility. They have the option to update the malware payload pointed to by the URLs, change the URLs in the script, or do both to try and evade detection.
+Email campaigns distribute the updated script
+Just like the previous version, the new PowerShell script is contained in .lnk files within .zip files that are spread via email.
+The email messages in this new campaign spoof US Postal Service (USPS) delivery emails.
+
+Figure 1. Sample spam email with malicious .zip attachment.
+
+Figure 2. Another sample spam email with malicious .zip attachment.
+The attachment is a multi-layer .zip file. The second .zip file contains the malicious .lnk file.
+
+Figure 3. The attachment is a .zip file, which contains another .zip file, which in turn contains the malicious .lnk file.
+The .lnk file points to a command line containing the PowerShell script. Opening the shortcut file executes the PowerShell command.
+
+Figure 4. Command line with the PowerShell script.
+The script contains the hardcoded domains and the parameters it uses for the download routine. For each attempt to download, it checks if download is successful and if the downloaded file is at least 10KB. It stops trying to download when these conditions are met, or when it has gone through the five domains twice with no successful download.
+
+Figure 5. The malicious PowerShell code in readable format
+Locky and Kovter as payload
+During our testing, the URLs that result from adding the first parameter to the five domains point to a copy of Locky ransomware, similar to the previous campaign. Locky is one of the most prominent ransomware families, with almost 500,000 encounters in 2016 alone. It’s known to use the email vector, so this campaign is consistent with previous campaigns. When executed, it encrypts files and renames them using the following filename extensions: .locky (where it got its name), .zepto, .odin, .thor, .aeris, and .osiris (used by the Locky version in this attack).
+
+Figure 6. The part of the script that adds a parameter to the domain
+The second parameter results in URLs that point to a copy of the click-fraud Trojan Kovter. Kovter is a complex malware whose file-less persistence makes it more difficult to detect than traditional malware.
+As mentioned, the cybercriminals update the payload downloaded by the PowerShell script. We have seen this being done on a day-to-day basis. During our testing, the malware payload was updated with newer versions of either Locky and Kovter, but technically the attackers can change this to any malware they wish to use.
+It is important to note that Locky and Kovter have not been observed to be related in the past. However, they can both be used by cybercriminals to earn money at the expense of victims. The use of these two distinct malware families demonstrates the flexibility that attackers have in a setup like this. This may also indicate that the attackers in control of the servers can sell or rent them out as pay-per-install service. This also proves that cybercriminals will use whatever is available to them to accomplish their goal of siphoning money off victims.
+Windows 10 protection against more complex attacks
+This new campaign shows how determined cybercriminals can be in improving their tools to try and evade security solutions. The attackers came up with a setup that gives them the flexibility to launch campaigns with fresh payloads. Complex attacks like this that combine the use of email, web, and malicious file require a strong defense stack that will stop the attack chain at multiple points.
+In Windows 10, lock down PowerShell version 5 to “Constrained Mode“, which limits the extended language features that can lead to unverifiable code execution such as direct .NET scripting, invocation of Win32 APIs via the Add-Type cmdlet, and interaction with COM objects.
+
+Figure 7. “Constrained Mode” stops the malicious PowerShell from connecting to the web to download the payload
+Enable Windows Defender in Windows 10 to get up-to-date, real-time protection against threats. PowerShell is deeply integrated with Antimalware Scan Interface (AMSI) in Windows 10 to allow registered antivirus software that support AMSI, like Windows Defender, to inspect content at runtime, enabling the antivirus software to detect malicious code regardless of obfuscation. Windows Defender detects the malicious PowerShell script as TrojanDownloader:PowerShell/Ploprolo.B or TrojanDownloader:PowerShell/Ploprolo.C, and the payload as Ransom:Win32/Locky and Trojan:Win32/Kovter.
+For enterprises, use Office 365 Advanced Threat Protection. It has machine learning capability that helps network administrators to block dangerous email threats.
+Use Device Guard, which can lock down devices and provide kernel-level virtualization-based security, allowing only trusted applications to run.
+For security operations teams, use Windows Defender Advanced Threat Protection to get alerts about suspicious activities, including the download of malware, so you can detect, investigate, and respond to attacks.
+
+Figure 8. Windows Defender Advanced Threat Protection raises an alert for malicious PowerShell script downloading malware.
+To test how Windows Defender ATP can help your organization detect, investigate, and respond to advanced attacks, sign up for a free trial.
+Additional resources
+Check out the following resources to know more about PowerShell protection:
+
+“Constrained PowerShell”, Windows PowerShell blog
+“Windows 10 to offer application developers new malware defenses”, Microsoft Malware Protection Center blog
+“How to think about those darn PowerShell attacks” (video), DerbyCon 2016 keynote by Jeffrey Snover and Lee Holmes
+
+ 
+Duc Nguyen
+ 
+ 
+ 
+
+ 
+
+Talk to us
+Questions, concerns, or insights on this story? Join discussions at the Microsoft community and Windows Defender Security Intelligence.
+Follow us on Twitter @WDSecurity and Facebook Windows Defender Security Intelligence.
+ 
+	
